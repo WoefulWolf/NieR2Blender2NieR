@@ -107,15 +107,20 @@ if __name__ == '__main__':
 	extract_dir = ''
 	dirname = ''
 	useage = "\nUseage:\npython dat_unpacker.py your_dat_path your_extract_path"
+	useage1 = "\nUseage:\nblender --background --python dat_unpacker.py your_dat_path your_extract_path"
 	if len(sys.argv) < 3:
 		print(useage)
 		exit()
 	if len(sys.argv) > 2:
 		dir_name = sys.argv[1]
 		extract_dir = sys.argv[2]
-		if sys.argv[0].lower().find("blender") > -1:
-				dir_name = sys.argv[4]
-				extract_dir = sys.argv[5]
+		print()
+		if os.path.split(sys.argv[0])[-1].lower().find("blender") >-1:
+			if len(sys.argv) < 6:
+				print(useage1)
+				exit()
+			dir_name = sys.argv[4]
+			extract_dir = sys.argv[5]
 		if not os.path.exists(extract_dir):
 			create_dir(extract_dir)
 	ROOT_DIR = dir_name
