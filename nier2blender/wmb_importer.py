@@ -3,7 +3,7 @@ from mathutils import Vector, Matrix
 from nier2blender.wmb import *
 
 def reset_blend():
-	bpy.ops.object.mode_set(mode='OBJECT')
+	#bpy.ops.object.mode_set(mode='OBJECT')
 	for collection in bpy.data.collections:
 		for obj in collection.objects:
 			collection.objects.unlink(obj)
@@ -25,7 +25,7 @@ def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneNa
 		enter_editmode=True,
 		location=(0,0,0))
 	ob = bpy.context.object
-	ob.show_x_ray = False
+	ob.show_in_front = False
 	ob.name = name
 	amt = ob.data
 	amt.name = name +'Amt'
@@ -90,7 +90,7 @@ def construct_mesh(mesh_data):
 	else:
 		obj = bpy.data.objects[name]	
 	obj.location = Vector((0,0,0))
-	bpy.context.scene.objects.link(obj)
+	bpy.context.collection.objects.link(obj)
 	objmesh.from_pydata(vertices, [], faces)
 	objmesh.update(calc_edges=True)
 	if has_bone:
@@ -264,7 +264,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	materials = []
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
-		materials.append(consturct_materials(texture_dir, material))
+		#materials.append(consturct_materials(texture_dir, material))
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
 			mesh_start = meshGroupInfo.meshStart
@@ -275,7 +275,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
 				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
 				uv.append( uvs[groupIndex][VertexIndex])
-			add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
+			#add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
 	amt = bpy.data.objects.get(wmbname.replace('.wmb',''))
 	if wmb.hasBone:
 		for mesh in meshes:
