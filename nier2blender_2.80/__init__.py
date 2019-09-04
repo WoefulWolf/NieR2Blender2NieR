@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Nier: Automata model importer",
-    "author": "C4nf3ng",
+    "author": "C4nf3ng (2.80 by Woeful_Wolf)",
     "version": (1, 1),
     "blender": (2, 80, 0),
     "api": 38019,
