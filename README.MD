@@ -1,6 +1,8 @@
 # README
 <br>
 
+This fork is being maintained by Woeful_Wolf in an attempt to update Nier2Blend for Blender 2.80.
+
 ## What is nier2blender?
 
 * A blender plugin for import "Nier:Automata" .wmb file to blender with official rig<br>
