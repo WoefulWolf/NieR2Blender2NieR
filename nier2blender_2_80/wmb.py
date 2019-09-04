@@ -1,5 +1,5 @@
-from nier2blender.util import *
-from nier2blender.wta import *
+from nier2blender_2_80.util import *
+from nier2blender_2_80.wta import *
 class WMB_Header(object):
 	""" fucking header	"""
 	def __init__(self, wmb_fp):

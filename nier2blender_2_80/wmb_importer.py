@@ -1,6 +1,6 @@
 import bpy, bmesh, math
 from mathutils import Vector, Matrix
-from nier2blender.wmb import *
+from nier2blender_2_80.wmb import *
 
 def reset_blend():
 	#bpy.ops.object.mode_set(mode='OBJECT')

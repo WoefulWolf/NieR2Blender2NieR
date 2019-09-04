@@ -1,6 +1,6 @@
 import os
 import sys
-from nier2blender.util import *
+from nier2blender_2_80.util import *
 
 class WTA(object):
 	def __init__(self, wta_fp):
