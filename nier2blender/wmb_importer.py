@@ -4,10 +4,10 @@ from nier2blender.wmb import *
 
 def reset_blend():
 	bpy.ops.object.mode_set(mode='OBJECT')
-	for scene in bpy.data.scenes:
-		for obj in scene.objects:
-			scene.objects.unlink(obj)
-	for bpy_data_iter in (bpy.data.objects,bpy.data.meshes,bpy.data.lamps,bpy.data.cameras):
+	for collection in bpy.data.collections:
+		for obj in collection.objects:
+			collection.objects.unlink(obj)
+	for bpy_data_iter in (bpy.data.objects,bpy.data.meshes,bpy.data.lights,bpy.data.cameras):
 		for id_data in bpy_data_iter:
 			bpy_data_iter.remove(id_data)
 	for material in bpy.data.materials:
