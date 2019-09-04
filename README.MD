@@ -1,7 +1,9 @@
 # README
 <br>
 
-This fork is being maintained by Woeful_Wolf in an attempt to update Nier2Blend for Blender 2.80.
+This fork is being updated by Woeful_Wolf in an attempt to update Nier2Blend for Blender 2.80.
+Currently only mesh data and armatures are supported and importing materials/textures have been disabled as it needs <br>
+to be redone due to the new Blender 2.80 rendering updates.
 
 ## What is nier2blender?
 
