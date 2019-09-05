@@ -1,9 +1,15 @@
 # README
 <br>
 
-This fork is being updated by Woeful_Wolf in an attempt to update Nier2Blend for Blender 2.80.
-Currently only mesh data and armatures are supported and importing materials/textures have been disabled as it needs <br>
-to be redone due to the new Blender 2.80 rendering updates.
+This fork is being updated by *Woeful_Wolf* in an attempt to update Nier2Blend for Blender 2.8 <br>
+Materials/textures have been redone due to the new Blender 2.8 rendering engines updates. <br>
+This means it now has **Eevee/Cycles material import support for the Principled Shader! PBR Yay!** <br>
+
+<br>
+
+This is still a bit WIP so reporting any bugs would be appreciated, I could not test with every <br>
+model in the game but if you find any that are problematic, be sure to include what model it was (helps with debugging). <br>
+A known bug (that existed in the original Nier2Blender) is a 'list index out of range' when importing some meshes with large materialCounts.<br>
 
 ## What is nier2blender?
 
@@ -26,12 +32,6 @@ blender --background --python dat_unpacker.py cpk_unpacked_folder your_extract_f
 
 #### blender addons
 * copy the whole repo foleder to blender addons folder and active it in blender preferences
-
-<br>
-
-## TO_DO
-* PBR materials support
-* motion parse and import
 
 <br>
 
