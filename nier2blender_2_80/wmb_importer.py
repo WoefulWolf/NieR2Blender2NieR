@@ -116,12 +116,25 @@ def set_partent(parent, child):
 	child.select = False
 	parent.select = False
 
-def consturct_materials(texture_dir ,material):
+def consturct_materials(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
 	uniforms = material[2]
 	print('[+] importing material %s' % material_name)
 	material = bpy.data.materials.new( '%s' % (material_name))
+	# Enable Nodes
+	material.use_nodes = True
+	# Clear Nodes and Links
+	material.node_tree.links.clear()
+	material.node_tree.nodes.clear()
+	# Recreate Nodes and Links with references
+	nodes = material.node_tree.nodes
+	links = material.node_tree.links
+	# PrincipledBSDF and Ouput Shader
+	output = nodes.new(type='ShaderNodeOutputMaterial')
+	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
+	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
+
 	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
 	for key in uniforms.keys():
 		if key.lower().find("g_glossiness") > -1:
@@ -129,7 +142,7 @@ def consturct_materials(texture_dir ,material):
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower() 
 		flag = False
-		for type_key in ['albedo', "normal"]:				# TO_DO:, 'mask', 'light', 'env','parallax','irradiance','curvature']:
+		for type_key in ['albedo', "normal", "mask"]:				# TO_DO:, 'light', 'env','parallax','irradiance','curvature']:
 			if textures_type.find(type_key) > -1:
 				flag = True
 		if flag:
@@ -142,45 +155,63 @@ def consturct_materials(texture_dir ,material):
 					texture.image = bpy.data.images.load(texture_file)
 				else:
 					texture = bpy.data.textures[texture_name]
-				material_textureslot = material.texture_slots.add()
-				material_textureslot.use_map_color_diffuse = False
+				#material_textureslot = material.texture_slots.add()
+				#material_textureslot.use_map_color_diffuse = False
 				if textures_type.find("normal") > -1:
-					texture.use_normal_map = True
-					material_textureslot.use_map_normal = True
+					#Normal Map
+					normal_map = nodes.new(type='ShaderNodeNormalMap')
+					normal_map_link = links.new(normal_map.outputs['Normal'], principled.inputs['Normal'])
+					#Normal Image Texture
+					normal_image = nodes.new(type='ShaderNodeTexImage')
+					normal_image.image = bpy.data.images.load(texture_file)
+					normal_image.image.colorspace_settings.name = 'Non-Color'
+					normal_image_link = links.new(normal_image.outputs['Color'], normal_map.inputs['Color'])
 				elif textures_type.find("mask") > -1:
-					material_textureslot.use_map_specular = True
-					#texture.use_calculate_alpha = True
-					#material_textureslot.use_map_alpha = True
+					#Mask Image Texture (Specularity I assumed)
+					mask_image = nodes.new(type='ShaderNodeTexImage')
+					mask_image.image = bpy.data.images.load(texture_file)
+					mask_image.image.colorspace_settings.name = 'Non-Color'
+					mask_map_link = links.new(mask_image.outputs['Color'], principled.inputs['Specular'])
 				elif textures_type.find("light") > -1:
-					material_textureslot.use_map_diffuse = True
+					print("light not implemented yet in Nier2Blender_2_80")
+					#material_textureslot.use_map_diffuse = True
 				elif textures_type.find("env") > -1:
-					material_textureslot.use_map_ambient = True
+					print("env not implemented yet in Nier2Blender_2_80")
+					#material_textureslot.use_map_ambient = True
 				elif textures_type.find("parallax") > -1:
-					material_textureslot.use_map_displacement
+					print("parralax not implemented yet in Nier2Blender_2_80")
+					#material_textureslot.use_map_displacement
 				elif textures_type.find("irradiance") > -1:
-					material_textureslot.use_map_emit = True
+					print("irradiance not implemented yet in Nier2Blender_2_80")
+					#material_textureslot.use_map_emit = True
 				elif textures_type.find("curvature") > -1:
-					material_textureslot.use_map_warp = True
+					print("curvature not implemented yet in Nier2Blender_2_80")
+					#material_textureslot.use_map_warp = True
 				else:
-					material_textureslot.use_map_color_diffuse = True
+					# Diffuse Image Texture (Albedo)
+					diffuse_image = nodes.new(type='ShaderNodeTexImage')
+					diffuse_image.image = bpy.data.images.load(texture_file)
+					diffuse_image_link = links.new(diffuse_image.outputs['Color'], principled.inputs['Base Color'])
+
+					#material_textureslot.use_map_color_diffuse = True
 				print('[+] adding texture %s to material %s' % (texture_name, material_name))
-				material_textureslot.texture = texture
-				material_textureslot.texture_coords = 'UV'
+				#material_textureslot.texture = texture
+				#material_textureslot.texture_coords = 'UV'
 		else:
 			print("[!] not supported texture %s_%s" % (textures[texturesType], texturesType))
-	if not material.texture_slots[0]:
-		print("[!] no textute found for material %s" % material_name)
+	#if not material.texture_slots[0]:
+		#print("[!] no textute found for material %s" % material_name)
 	return material
 
 def add_material_to_mesh(mesh, materials , uvs):
 	for material in materials:
 		print('linking material %s to mesh object %s' % (material.name, mesh.name))
 		mesh.data.materials.append(material)
-	bpy.context.scene.objects.active = mesh
+	bpy.context.view_layer.objects.active = mesh
 	bpy.ops.object.mode_set(mode="EDIT")
 	bm = bmesh.from_edit_mesh(mesh.data)
 	uv_layer = bm.loops.layers.uv.verify()
-	bm.faces.layers.tex.verify()
+	#bm.faces.layers.tex.verify()
 	for face in bm.faces:
 		face.material_index = 0
 		for l in face.loops:
@@ -188,10 +219,10 @@ def add_material_to_mesh(mesh, materials , uvs):
 			ind = l.vert.index
 			luv.uv = Vector(uvs[ind])
 	bpy.ops.object.mode_set(mode='OBJECT')
-	mesh.select = True
+	mesh.select_set(True)
 	bpy.ops.object.shade_smooth()
 	#mesh.hide = True
-	mesh.select = False
+	mesh.select_set(False)
 	
 def format_wmb_mesh(wmb):
 	meshes = []
@@ -264,7 +295,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	materials = []
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
-		#materials.append(consturct_materials(texture_dir, material))
+		materials.append(consturct_materials(texture_dir, material))
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
 			mesh_start = meshGroupInfo.meshStart
@@ -275,7 +306,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
 				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
 				uv.append( uvs[groupIndex][VertexIndex])
-			#add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
+			add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
 	amt = bpy.data.objects.get(wmbname.replace('.wmb',''))
 	if wmb.hasBone:
 		for mesh in meshes:
