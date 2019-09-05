@@ -23,7 +23,7 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
     bl_label = "Import WMB Data"
     bl_options = {'PRESET'}
     filename_ext = ".wmb"
-    filter_glob = StringProperty(default="*.wmb", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
     def execute(self, context):
         from nier2blender_2_80 import wmb_importer
