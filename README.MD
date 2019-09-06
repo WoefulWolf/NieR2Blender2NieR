@@ -2,14 +2,15 @@
 <br>
 
 This fork is being updated by *Woeful_Wolf* in an attempt to update Nier2Blend for Blender 2.8 <br>
+
+<br>
+
 Materials/textures have been redone due to the new Blender 2.8 rendering engines updates. <br>
 This means it now has **Eevee/Cycles material import support for the Principled Shader! PBR Yay!** <br>
 
 <br>
 
-This is still a bit WIP so reporting any bugs would be appreciated, I could not test with every <br>
-model in the game but if you find any that are problematic, be sure to include what model it was (helps with debugging). <br>
-A known bug (that existed in the original Nier2Blender) is a 'list index out of range' when importing some meshes with large materialCounts.<br>
+This is still a bit WIP so reporting any bugs would be appreciated, I could not test with every model in the game but if you find any that are problematic, be sure to include what model it was (helps with debugging). <br>
 
 ## What is nier2blender?
 
