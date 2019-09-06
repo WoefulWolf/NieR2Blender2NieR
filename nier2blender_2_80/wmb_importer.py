@@ -97,7 +97,7 @@ def construct_mesh(mesh_data):
 		weight_infos = mesh_data[4]
 		group_names = sorted(list(set(["bone%d" % i  for weight_info in weight_infos for i in weight_info[0]])))
 		for group_name in group_names:
-			obj.vertex_groups.new(group_name)
+			obj.vertex_groups.new(name=group_name)
 		for i in range(len(weight_infos)):
 			for index in range(4):
 				group_name = "bone%d"%weight_infos[i][0][index]
@@ -109,12 +109,12 @@ def construct_mesh(mesh_data):
 	return obj
 
 def set_partent(parent, child):
-	bpy.context.scene.objects.active = parent
-	child.select = True
-	parent.select = True
+	bpy.context.view_layer.objects.active = parent
+	child.select_set(True)
+	parent.select_set(True)
 	bpy.ops.object.parent_set(type="ARMATURE")
-	child.select = False
-	parent.select = False
+	child.select_set(False)
+	parent.select_set(False)
 
 def consturct_materials(texture_dir, material):
 	material_name = material[0]
@@ -132,7 +132,9 @@ def consturct_materials(texture_dir, material):
 	links = material.node_tree.links
 	# PrincipledBSDF and Ouput Shader
 	output = nodes.new(type='ShaderNodeOutputMaterial')
+	output.location = 1200,0
 	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
+	principled.location = 600,-100
 	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
 	# Normal Map Amount Counter
 	normal_map_count = 0
@@ -144,7 +146,7 @@ def consturct_materials(texture_dir, material):
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower() 
 		flag = False
-		for type_key in ['albedo', "normal", "mask"]:				# TO_DO:, 'light', 'env','parallax','irradiance','curvature']:
+		for type_key in ['albedo', "normal", "mask", "light"]:				# TO_DO:, 'env','parallax','irradiance','curvature']:
 			if textures_type.find(type_key) > -1:
 				flag = True
 		if flag:
@@ -163,9 +165,11 @@ def consturct_materials(texture_dir, material):
 					#Normal Map
 					if normal_map_count == 0: # Only 1 Normal Map
 						normal_map = nodes.new(type='ShaderNodeNormalMap')
+						normal_map.location = 420,-500
 						normal_map_link = links.new(normal_map.outputs['Normal'], principled.inputs['Normal'])
 						#Normal Image Texture
 						normal_image = nodes.new(type='ShaderNodeTexImage')
+						normal_image.location = 0,-600
 						normal_image.image = bpy.data.images.load(texture_file)
 						normal_image.image.colorspace_settings.name = 'Non-Color'
 						normal_image_link = links.new(normal_image.outputs['Color'], normal_map.inputs['Color'])
@@ -174,22 +178,29 @@ def consturct_materials(texture_dir, material):
 						links.remove(normal_image_link)
 
 						mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+						mixRGB_shader.location = 260,-500
 						mixRGB_shader_link = links.new(mixRGB_shader.outputs['Color'], normal_map.inputs['Color'])
 						normal_image_link = links.new(normal_image.outputs['Color'], mixRGB_shader.inputs['Color1'])
 
 						normal_image2 = nodes.new(type='ShaderNodeTexImage')
+						normal_image2.location = 0,-800
 						normal_image2.image = bpy.data.images.load(texture_file)
 						normal_image2.image.colorspace_settings.name = 'Non-Color'
 						normal_image_link2 = links.new(normal_image2.outputs['Color'], mixRGB_shader.inputs['Color2'])
 				elif textures_type.find("mask") > -1:
 					#Mask Image Texture (Specularity I assumed)
 					mask_image = nodes.new(type='ShaderNodeTexImage')
+					mask_image.location = 0,-200
 					mask_image.image = bpy.data.images.load(texture_file)
 					mask_image.image.colorspace_settings.name = 'Non-Color'
 					mask_map_link = links.new(mask_image.outputs['Color'], principled.inputs['Specular'])
 				elif textures_type.find("light") > -1:
-					print("light not implemented yet in Nier2Blender_2_80")
-					#material_textureslot.use_map_diffuse = True
+					#Light Image Texture (Roughness in Blender)
+					light_image = nodes.new(type='ShaderNodeTexImage')
+					light_image.location = 0,-400
+					light_image.image = bpy.data.images.load(texture_file)
+					light_image.image.colorspace_settings.name = 'Non-Color'
+					light_map_link = links.new(light_image.outputs['Color'], principled.inputs['Roughness'])
 				elif textures_type.find("env") > -1:
 					print("env not implemented yet in Nier2Blender_2_80")
 					#material_textureslot.use_map_ambient = True
@@ -205,17 +216,21 @@ def consturct_materials(texture_dir, material):
 				else:
 					# Diffuse Image Texture (Albedo)
 					diffuse_image = nodes.new(type='ShaderNodeTexImage')
+					diffuse_image.location = 0,0
 					diffuse_image.image = bpy.data.images.load(texture_file)
 					diffuse_image_link = links.new(diffuse_image.outputs['Color'], principled.inputs['Base Color'])
 
+					# Alpha Channel
 					material.blend_method = 'CLIP'
 
 					links.remove(output_link)
 
 					mix_shader = nodes.new(type='ShaderNodeMixShader')
+					mix_shader.location = 1000,0
 					output_link = links.new(mix_shader.outputs['Shader'], output.inputs['Surface'])
 
 					transparent_shader = nodes.new(type='ShaderNodeBsdfTransparent')
+					transparent_shader.location = 600, 0
 					transparent_link = links.new(transparent_shader.outputs['BSDF'], mix_shader.inputs[1])
 
 					principled_link = links.new(principled.outputs['BSDF'], mix_shader.inputs[2])
