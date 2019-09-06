@@ -173,14 +173,14 @@ def consturct_materials(texture_dir, material):
 					else: # 2 Normal Maps
 						links.remove(normal_image_link)
 
-						mix_shader = nodes.new(type='ShaderNodeMixRGB')
-						mix_shader_link = links.new(mix_shader.outputs['Color'], normal_map.inputs['Color'])
-						normal_image_link = links.new(normal_image.outputs['Color'], mix_shader.inputs['Color1'])
+						mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+						mixRGB_shader_link = links.new(mixRGB_shader.outputs['Color'], normal_map.inputs['Color'])
+						normal_image_link = links.new(normal_image.outputs['Color'], mixRGB_shader.inputs['Color1'])
 
 						normal_image2 = nodes.new(type='ShaderNodeTexImage')
 						normal_image2.image = bpy.data.images.load(texture_file)
 						normal_image2.image.colorspace_settings.name = 'Non-Color'
-						normal_image_link2 = links.new(normal_image2.outputs['Color'], mix_shader.inputs['Color2'])
+						normal_image_link2 = links.new(normal_image2.outputs['Color'], mixRGB_shader.inputs['Color2'])
 				elif textures_type.find("mask") > -1:
 					#Mask Image Texture (Specularity I assumed)
 					mask_image = nodes.new(type='ShaderNodeTexImage')
@@ -208,7 +208,20 @@ def consturct_materials(texture_dir, material):
 					diffuse_image.image = bpy.data.images.load(texture_file)
 					diffuse_image_link = links.new(diffuse_image.outputs['Color'], principled.inputs['Base Color'])
 
-					#material_textureslot.use_map_color_diffuse = True
+					material.blend_method = 'CLIP'
+
+					links.remove(output_link)
+
+					mix_shader = nodes.new(type='ShaderNodeMixShader')
+					output_link = links.new(mix_shader.outputs['Shader'], output.inputs['Surface'])
+
+					transparent_shader = nodes.new(type='ShaderNodeBsdfTransparent')
+					transparent_link = links.new(transparent_shader.outputs['BSDF'], mix_shader.inputs[1])
+
+					principled_link = links.new(principled.outputs['BSDF'], mix_shader.inputs[2])
+
+					alpha_link = links.new(diffuse_image.outputs['Alpha'], mix_shader.inputs['Fac'])
+					
 				print('[+] adding texture %s to material %s' % (texture_name, material_name))
 				#material_textureslot.texture = texture
 				#material_textureslot.texture_coords = 'UV'
