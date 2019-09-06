@@ -134,6 +134,8 @@ def consturct_materials(texture_dir, material):
 	output = nodes.new(type='ShaderNodeOutputMaterial')
 	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
 	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
+	# Normal Map Amount Counter
+	normal_map_count = 0
 
 	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
 	for key in uniforms.keys():
@@ -159,13 +161,26 @@ def consturct_materials(texture_dir, material):
 				#material_textureslot.use_map_color_diffuse = False
 				if textures_type.find("normal") > -1:
 					#Normal Map
-					normal_map = nodes.new(type='ShaderNodeNormalMap')
-					normal_map_link = links.new(normal_map.outputs['Normal'], principled.inputs['Normal'])
-					#Normal Image Texture
-					normal_image = nodes.new(type='ShaderNodeTexImage')
-					normal_image.image = bpy.data.images.load(texture_file)
-					normal_image.image.colorspace_settings.name = 'Non-Color'
-					normal_image_link = links.new(normal_image.outputs['Color'], normal_map.inputs['Color'])
+					if normal_map_count == 0: # Only 1 Normal Map
+						normal_map = nodes.new(type='ShaderNodeNormalMap')
+						normal_map_link = links.new(normal_map.outputs['Normal'], principled.inputs['Normal'])
+						#Normal Image Texture
+						normal_image = nodes.new(type='ShaderNodeTexImage')
+						normal_image.image = bpy.data.images.load(texture_file)
+						normal_image.image.colorspace_settings.name = 'Non-Color'
+						normal_image_link = links.new(normal_image.outputs['Color'], normal_map.inputs['Color'])
+						normal_map_count += 1
+					else: # 2 Normal Maps
+						links.remove(normal_image_link)
+
+						mix_shader = nodes.new(type='ShaderNodeMixRGB')
+						mix_shader_link = links.new(mix_shader.outputs['Color'], normal_map.inputs['Color'])
+						normal_image_link = links.new(normal_image.outputs['Color'], mix_shader.inputs['Color1'])
+
+						normal_image2 = nodes.new(type='ShaderNodeTexImage')
+						normal_image2.image = bpy.data.images.load(texture_file)
+						normal_image2.image.colorspace_settings.name = 'Non-Color'
+						normal_image_link2 = links.new(normal_image2.outputs['Color'], mix_shader.inputs['Color2'])
 				elif textures_type.find("mask") > -1:
 					#Mask Image Texture (Specularity I assumed)
 					mask_image = nodes.new(type='ShaderNodeTexImage')
