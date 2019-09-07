@@ -2,6 +2,12 @@ import bpy, bmesh, math
 from mathutils import Vector, Matrix
 from nier2blender_2_80.wmb import *
 
+def show_message(message = "", title = "Message Box", icon = 'INFO'):
+	def draw(self, context):
+		self.layout.label(text = message)
+		self.layout.alignment = 'CENTER'
+	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
 def reset_blend():
 	#bpy.ops.object.mode_set(mode='OBJECT')
 	for collection in bpy.data.collections:
@@ -322,7 +328,8 @@ def get_wmb_material(wmb, texture_dir):
 						texture_fp.close()
 			materials.append([material_name,textures,uniforms])
 	else:
-		print('missing wta')
+		print('Missing .wta')
+		show_message("Error: Could not open .wta file, materials not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
 	return materials
 
 def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
@@ -338,6 +345,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	materials = []
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
+		print(material)
 		materials.append(consturct_materials(texture_dir, material))
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
@@ -349,7 +357,8 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
 				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
 				uv.append( uvs[groupIndex][VertexIndex])
-			add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
+			if len(materials) > 0:
+				add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
 	amt = bpy.data.objects.get(wmbname.replace('.wmb',''))
 	if wmb.hasBone:
 		for mesh in meshes:
