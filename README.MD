@@ -1,7 +1,7 @@
 # README
 <br>
 
-This fork is being updated by *Woeful_Wolf* in an attempt to update Nier2Blender for Blender 2.8 <br>
+This fork is being updated by **Woeful_Wolf** in an attempt to update Nier2Blender for Blender 2.8 <br>
 
 <br>
 
