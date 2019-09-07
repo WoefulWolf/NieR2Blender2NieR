@@ -12,9 +12,21 @@ This means it now has **Eevee/Cycles material import support for the Principled 
 
 This is still a bit WIP so reporting any bugs would be appreciated, I could not test with every model in the game but if you find any that are problematic, be sure to include what model it was (helps with debugging). <br>
 
+## What have I added exactly?
+
+* Blender 2.8 Support
+* Importing to Eevee/Cycles
+* MaskMap Support
+* LightMap Support
+* Multiple Normal Map Support
+* Importing straight from .DTT files directly (skips manual extraction)
+* (and probably some other small things I've forgotten)
+
+<br>
+
 ## What is nier2blender?
 
-* A blender plugin for import "Nier:Automata" .wmb file to blender with official rig<br>
+* A blender plugin for import "Nier:Automata" .wmb (or now .dtt) file to blender with official rig<br>
 * codes can only run with python3
 
 
