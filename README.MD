@@ -16,6 +16,7 @@ This is still a bit WIP so reporting any bugs would be appreciated, I could not 
 
 * Blender 2.8 Support
 * Importing to Eevee/Cycles
+* Alpha Channel Support
 * MaskMap Support
 * LightMap Support
 * Multiple Normal Map Support
