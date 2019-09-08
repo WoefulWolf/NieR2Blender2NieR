@@ -42,16 +42,16 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
         head = os.path.split(self.filepath)[0]
         tail = os.path.split(self.filepath)[1]
         tailless_tail = tail[:-4]
-        dat_filepath = head + '/' + tailless_tail + '.dat'
-        extract_dir = head + '/nier2blender_extracted'
+        dat_filepath = head + '\\' + tailless_tail + '.dat'
+        extract_dir = head + '\\nier2blender_extracted'
         from nier2blender_2_80 import dat_unpacker
         if os.path.isfile(dat_filepath):
-            dat_unpacker.main(dat_filepath, extract_dir + '/' + tailless_tail + '.dat', dat_filepath)   # dat
+            dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
         else:
             print('DAT not found. Only extracting DTT. (No materials will automatically be imported)')
-        dat_unpacker.main(self.filepath, extract_dir + '/' + tailless_tail + '.dtt', self.filepath)       # dtt
+        dat_unpacker.main(self.filepath, extract_dir + '\\' + tailless_tail + '.dtt', self.filepath)       # dtt
 
-        wmb_filepath = extract_dir + '/' + tailless_tail + '.dtt/' + tailless_tail + '.wmb'
+        wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + tailless_tail + '.wmb'
         print(self.filepath)
         print(dat_filepath)
         print(wmb_filepath)
