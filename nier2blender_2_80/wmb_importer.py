@@ -339,7 +339,10 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	texture_dir = wmb_file.replace(wmbname, '') 
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex , bone.world_position, bone.world_rotation, bone.boneNumber] for bone in wmb.boneArray]
-		construct_armature(wmbname.replace('.wmb','') ,boneArray)
+		armature_no_wmb = wmbname.replace('.wmb','')
+		armature_name_split = armature_no_wmb.split('/')
+		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
+		construct_armature(armature_name, boneArray)
 	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
@@ -359,7 +362,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 				uv.append( uvs[groupIndex][VertexIndex])
 			if len(materials) > 0:
 				add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
-	amt = bpy.data.objects.get(wmbname.replace('.wmb',''))
+	amt = bpy.data.objects.get(armature_name)
 	if wmb.hasBone:
 		for mesh in meshes:
 			set_partent(amt,mesh)
