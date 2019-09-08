@@ -20,7 +20,7 @@ This is still a bit WIP so reporting any bugs would be appreciated, I could not 
 * MaskMap Support
 * LightMap Support
 * Multiple Normal Map Support
-* Importing straight from .DTT files directly (skips manual extraction)
+* Importing straight from .DTT files directly (skips manual extraction, SOMETIMES STILL A BIT BUGGY)
 * (and probably some other small things I've forgotten)
 
 <br>
