@@ -5,7 +5,7 @@ This fork is being updated by **Woeful_Wolf** in an attempt to update Nier2Blend
 
 <br>
 
-Materials/textures have been redone due to the new Blender 2.8 rendering engines updates. <br>
+Materials/textures have been redone completely due to the new Blender 2.8 rendering engines updates. <br>
 This means it now has **Eevee/Cycles material import support for the Principled Shader! PBR Yay!** <br>
 
 <br>
@@ -20,7 +20,7 @@ This is still a bit WIP so reporting any bugs would be appreciated, I could not 
 * MaskMap Support
 * LightMap Support
 * Multiple Normal Map Support
-* Importing straight from .DTT files directly (skips manual extraction, SOMETIMES STILL A BIT BUGGY)
+* Importing straight from .DTT files directly (skips manual extraction)
 * (and probably some other small things I've forgotten)
 
 <br>
