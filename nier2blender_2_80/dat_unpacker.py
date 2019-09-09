@@ -101,6 +101,7 @@ def main(filename, extract_dir, ROOT_DIR):
 			if extract_dir != '':
 				extract_dir_sub = extract_dir + '\\' + filename.replace(ROOT_DIR ,'') 
 				extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
+	return Filename
 
 
 if __name__ == '__main__':

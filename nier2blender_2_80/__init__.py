@@ -49,9 +49,11 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
             dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
         else:
             print('DAT not found. Only extracting DTT. (No materials will automatically be imported)')
-        dat_unpacker.main(self.filepath, extract_dir + '\\' + tailless_tail + '.dtt', self.filepath)       # dtt
 
-        wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + tailless_tail + '.wmb'
+        wtp_filename = dat_unpacker.main(self.filepath, extract_dir + '\\' + tailless_tail + '.dtt', self.filepath)       # dtt
+
+        print(wtp_filename)
+        wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + wtp_filename[:-4] + '.wmb'
         print(self.filepath)
         print(dat_filepath)
         print(wmb_filepath)
