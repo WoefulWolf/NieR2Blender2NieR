@@ -12,6 +12,9 @@ This means it now has **Eevee/Cycles material import support for the Principled 
 
 This is still a bit WIP so reporting any bugs would be appreciated, I could not test with every model in the game but if you find any that are problematic, be sure to include what model it was (helps with debugging). <br>
 
+<br>
+(And thanks for helping with testing; Kekoulis)
+
 ## What have I added exactly?
 
 * Blender 2.8 Support
