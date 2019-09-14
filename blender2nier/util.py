@@ -42,3 +42,13 @@ def write_xyz(file, xyz):
 def close_wmb(wmb_file):
     wmb_file.flush()
     wmb_file.close()
+
+def uInt32_array_size(array):
+    return len(array) * 4
+
+class Vector3(object):
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.xyz = [x, y, z]

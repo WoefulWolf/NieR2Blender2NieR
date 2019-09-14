@@ -1,6 +1,8 @@
 import bpy, bmesh, math
 from blender2nier.util import *
-from blender2nier.wmb_header import *
+from blender2nier.generate_data import *
+from blender2nier.header.wmb_header import *
+from blender2nier.bones.wmb_bones import *
 
 def reset_blend():
     print('Preparing .blend File:')
@@ -14,7 +16,11 @@ def main(filepath):
 
     wmb_file = create_wmb(filepath)
 
-    create_wmb_head(wmb_file)
+    generated_data = c_generate_data()
+
+    create_wmb_header(wmb_file, generated_data)
+
+    #create_wmb_bones(wmb_file, generated_data)
     
     close_wmb(wmb_file)
     return {'FINISHED'}

@@ -23,6 +23,8 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
         from blender2nier import wmb_exporter
         return wmb_exporter.main(self.filepath)
 
+
+
 def menu_func_export(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
     self.layout.operator(ExportBlender2Nier.bl_idname, text="WMB File for Nier: Automata (.wmb)")
