@@ -24,7 +24,7 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional ]
+def construct_armature(name, bone_data_array):			# bone_data =[boneNumber, boneIndex, boneName, parentIndex, parentName, bone_pos, optional ]
 	print('[+] importing armature')
 	bpy.ops.object.add(
 		type='ARMATURE', 
@@ -36,15 +36,15 @@ def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneNa
 	amt = ob.data
 	amt.name = name +'Amt'
 	for bone_data in bone_data_array:	
-		bone = amt.edit_bones.new(bone_data[1])
-		bone.head = Vector(bone_data[4]) 
-		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))
+		bone = amt.edit_bones.new(bone_data[2] + '_' + str(bone_data[0]))
+		bone.head = Vector(bone_data[5]) 
+		bone.tail = Vector(bone_data[5]) + Vector((0 , 0.01, 0))
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
-		if bone_data[2] < 0xffff:						#this value need to edit in different games
-			bone = bones[bone_data[1]]
-			bone.parent = bones[bone_data[3]]
-			bones[bone_data[3]].tail = bone.head
+		if bone_data[3] < 0xffff:						#this value need to edit in different games
+			bone = bones[bone_data[2]]
+			bone.parent = bones[bone_data[4]]
+			bones[bone_data[4]].tail = bone.head
 	bpy.ops.object.mode_set(mode='OBJECT')
 	ob.rotation_euler = (math.tan(1),0,0)
 	#split_armature(amt.name)							#current not used
@@ -338,7 +338,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	wmbname = wmb_file.split('\\')[-1]
 	texture_dir = wmb_file.replace(wmbname, '') 
 	if wmb.hasBone:
-		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex , bone.world_position, bone.world_rotation, bone.boneNumber] for bone in wmb.boneArray]
+		boneArray = [[bone.boneNumber, bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex , bone.world_position, bone.world_rotation, bone.boneNumber] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
