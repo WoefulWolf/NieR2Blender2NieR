@@ -39,6 +39,7 @@ def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneNa
 		bone = amt.edit_bones.new(bone_data[1])
 		bone.head = Vector(bone_data[4]) 
 		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))
+		bone['ID'] = bone_data[6]
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
 		if bone_data[2] < 0xffff:						#this value need to edit in different games
@@ -338,7 +339,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	wmbname = wmb_file.split('\\')[-1]
 	texture_dir = wmb_file.replace(wmbname, '') 
 	if wmb.hasBone:
-		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex , bone.world_position, bone.world_rotation, bone.boneNumber] for bone in wmb.boneArray]
+		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
