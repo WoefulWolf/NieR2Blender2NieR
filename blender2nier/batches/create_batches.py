@@ -21,3 +21,4 @@ class c_batches(object):
             return batches
 
         self.batches = get_batches(self)
+        self.batches_StructSize =len(self.batches) * 28

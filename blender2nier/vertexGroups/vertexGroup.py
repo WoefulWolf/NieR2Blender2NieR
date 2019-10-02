@@ -42,7 +42,7 @@ class c_vertexGroup(object):
                     obj_name = obj.name.split('_')
                     if int(obj_name[-1]) == vertexGroupIndex:
                         obj.data.calc_tangents()
-                        blenderLoops = obj.data.loops
+                        blenderLoops += obj.data.loops
             return blenderLoops
 
         def get_blenderUVCoords(self, loopIndex):
@@ -68,14 +68,14 @@ class c_vertexGroup(object):
                         sign = round(loop.bitangent_sign*127.0+128.0)
 
                         uv_coords = get_blenderUVCoords(self, loop.index)
-                        mapping = [round(uv_coords.x, 6), round(1-uv_coords.y, 6)]      # NieR uses inverted Y from Blender, thus 1-y
+                        mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
                         mapping2 = mapping                                              # These 2 always seem to be the same (I think)
                         break
 
                 tangents = [tx, ty, tz, sign]
                 color = [0, 0, 0, 255]   
 
-                # print([position.xyz, tangents, mapping, mapping2, color]) 
+                #print([position.xyz, tangents, mapping, mapping2, color]) 
                 vertexes.append([position.xyz, tangents, mapping, mapping2, color])
             return vertexes
 
@@ -84,9 +84,9 @@ class c_vertexGroup(object):
             for bvertex in get_blenderVertices(self):
                 vertexNormal = bvertex.normal
 
-                nx = round(vertexNormal[0], 6)
-                ny = round(vertexNormal[1], 6)
-                nz = round(vertexNormal[2], 6)
+                nx = -round(vertexNormal[0]/2, 6)
+                ny = -round(vertexNormal[1], 6)
+                nz = -round(vertexNormal[2], 6)
                 dummy = 0
                 vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
                 vertexesExData.append(vertexExData)

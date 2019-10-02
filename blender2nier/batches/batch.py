@@ -6,10 +6,6 @@ class c_batch(object):
         self.boneSetIndex = -1
         self.vertexStart = 0
         self.indexStart = indexStart
-        print('indexStart: ', indexStart)
         self.numVertexes = len(obj.data.vertices) + prev_numVertexes
-        print('numVertexes: ', self.numVertexes)
         self.numIndexes = len(obj.data.polygons) * 3
-        print('numIndexes: ', self.numIndexes)
         self.numPrimitives = len(obj.data.polygons)
-        print('numPrimitives: ', self.numPrimitives)

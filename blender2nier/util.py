@@ -1,6 +1,7 @@
 import os
 import sys
 import struct
+import numpy as np
 
 def create_wmb(filepath):
     print('Creating wmb file: ', filepath)
@@ -18,13 +19,14 @@ def write_char(file, char):
 def write_string(file, str):
     for char in str:
         write_char(file, char)
+    write_buffer(file, 1)
 
 def write_Int32(file, int):
-    entry = struct.pack('<L', int)
+    entry = struct.pack('<i', int)
     file.write(entry)
 
 def write_uInt32(file, int):
-    entry = struct.pack('<l', int)
+    entry = struct.pack('<I', int)
     file.write(entry)
 
 def write_Int16(file, int):
@@ -36,8 +38,20 @@ def write_uInt16(file, int):
     file.write(entry)
 
 def write_xyz(file, xyz):
-    for float in xyz:
-        write_float(file, float)
+    for val in xyz:
+        write_float(file, val)
+
+def write_buffer(file, size):
+    for i in range(size):
+        write_char(file, '')
+
+def write_byte(file, val):
+    entry = struct.pack('B', val)
+    file.write(entry)
+
+def write_float16(file, val):
+    f16 = np.float16(val)
+    f16.tofile(file)
 
 def close_wmb(wmb_file):
     wmb_file.flush()

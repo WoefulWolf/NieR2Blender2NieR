@@ -9,12 +9,7 @@ class c_bones(object):
             for obj in bpy.data.objects:
                 if obj.type == 'ARMATURE':
                     for bone in obj.data.bones:
-                        bone_shortID_split = bone.name.split('_')                                                          # Think this refers to the games boneID table, dunno what everything is so just check binary for now.
-                        try:
-                            bone_shortID = int(bone_shortID_split[-1])
-                        except ValueError:
-                            bone_shortID = -1
-
+                        ID = bone['ID']
                         parentIndex = -1                                                                                    # This is complicated, will maybe sort out later
 
                         localPosition = Vector3(round(bone.head[0], 6), round(bone.head[1], 6), round(bone.head[2], 6))
@@ -27,7 +22,7 @@ class c_bones(object):
 
                         tPosition = localPosition
 
-                        bone = [bone_shortID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz]
+                        bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz]
                         _bones.append(bone)
             return _bones
                         
