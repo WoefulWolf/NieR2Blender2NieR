@@ -10,7 +10,7 @@ class c_meshes(object):
                 if obj.type == 'MESH':
                     mesh = c_mesh(offsetMeshes, obj, bones)
                     meshes.append(mesh)
-                    offsetMeshes += 4 + len(mesh.name) + 1
+                    offsetMeshes += len(mesh.name) + 1 + 4
             return meshes
 
         def get_meshes_StructSize(self, meshes):

@@ -22,7 +22,6 @@ class c_vertexGroups(object):
                     vertexGroups.append(c_vertexGroup(index, offsetVertexGroups))
                 else:
                     vertexGroups.append(c_vertexGroup(index, vertexGroups[index-1].vertexGroupStart + vertexGroups[index-1].vertexGroupSize))
-
             return vertexGroups
 
         self.vertexGroups = get_vertexGroups(self, self.offsetVertexGroups)

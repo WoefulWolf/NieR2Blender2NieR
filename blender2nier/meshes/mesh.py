@@ -9,8 +9,8 @@ class c_mesh(object):
             z = obj.dimensions[2]
             u = x/2
             v = y/2
-            m = z/2
-            return [x, y, z, u, v, m]
+            w = z/2
+            return [x, y, z, u, v, w]
 
         def get_materials(self, obj):
             materials = []
@@ -23,7 +23,7 @@ class c_mesh(object):
 
         self.boundingBox = get_BoundingBox(self, obj)
 
-        self.offsetMaterials = self.nameOffset + len(obj.name) + 1
+        self.offsetMaterials = self.nameOffset + len(obj.name) + 1 - 4
 
         self.numMaterials = len(get_materials(self, obj))
 

@@ -94,8 +94,14 @@ class c_vertexGroup(object):
 
         def get_indexes(self):
             indexes = []
-            for loop in get_blenderLoops(self):
-                indexes.append(loop.vertex_index)
+
+            for obj in bpy.data.objects:
+                if obj.type == 'MESH':
+                    obj_name = obj.name.split('_')
+                    if int(obj_name[-1]) == vertexGroupIndex:
+                        obj.data.calc_tangents()
+                        for loop in obj.data.loops:
+                            indexes.append(loop.vertex_index + int(obj_name[-2]) * len(obj.data.vertices))
             return indexes
 
         self.vertexSize = 28                                            # Always 28?
