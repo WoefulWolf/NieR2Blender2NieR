@@ -34,12 +34,20 @@ def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneNa
 	ob.show_in_front = False
 	ob.name = name
 	amt = ob.data
-	amt.name = name +'Amt'
+	amt.name = name +'Amt' 
 	for bone_data in bone_data_array:	
 		bone = amt.edit_bones.new(bone_data[1])
 		bone.head = Vector(bone_data[4]) 
 		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))
-		bone['ID'] = bone_data[6]
+
+		boneNumber = bone_data[6]		# This is temporary, there is a algorithm
+		ID = boneNumber
+		Count = 1
+		while boneNumber > (32 * 7 * Count):
+			ID = boneNumber - (32 * 7 * Count)
+			Count += 1
+		
+		bone['ID'] = ID
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
 		if bone_data[2] < 0xffff:						#this value need to edit in different games
@@ -127,8 +135,13 @@ def consturct_materials(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
 	uniforms = material[2]
+	shader_name = material[3]
+	technique_name = material[4]
+	parameterGroups = material[5]
 	print('[+] importing material %s' % material_name)
 	material = bpy.data.materials.new( '%s' % (material_name))
+	material['Shader_Name'] = shader_name
+	material['Technique_Name'] = technique_name
 	# Enable Nodes
 	material.use_nodes = True
 	# Clear Nodes and Links
@@ -146,13 +159,20 @@ def consturct_materials(texture_dir, material):
 	# Normal Map Amount Counter
 	normal_map_count = 0
 
+	for gindx, parameterGroup in enumerate(parameterGroups):
+		for pindx, parameter in enumerate(parameterGroup):
+			material[str(gindx) + '_' + str(pindx)] = parameter
+
 	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
 	for key in uniforms.keys():
+		material[key] = uniforms.get(key)
+		print(key, material[key])
 		if key.lower().find("g_glossiness") > -1:
 			material.specular_intensity = uniforms[key]
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower() 
 		flag = False
+		material[texturesType] = textures.get(texturesType)					# Add textures as custom properties
 		for type_key in ['albedo', "normal", "mask", "light"]:				# TO_DO:, 'env','parallax','irradiance','curvature']:
 			if textures_type.find(type_key) > -1:
 				flag = True
@@ -315,8 +335,11 @@ def get_wmb_material(wmb, texture_dir):
 		for materialIndex in range(len(wmb.materialArray)):
 			material = wmb.materialArray[materialIndex]
 			material_name = material.materialName
+			shader_name = material.effectName
+			technique_name = material.techniqueName
 			uniforms = material.uniformArray
 			textures = material.textureArray
+			parameterGroups = material.parameterGroups
 			for key in textures.keys():
 				identifier = textures[key]
 				texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
@@ -327,7 +350,7 @@ def get_wmb_material(wmb, texture_dir):
 						print('[+] dumping %s.dds'% identifier)
 						texture_fp.write(texture_stream)
 						texture_fp.close()
-			materials.append([material_name,textures,uniforms])
+			materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
 	else:
 		print('Missing .wta')
 		show_message("Error: Could not open .wta file, materials not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
