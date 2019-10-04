@@ -212,8 +212,8 @@ class wmb3_material(object):
 		to_int(wmb_fp.read(4))
 		textureOffset = to_int(wmb_fp.read(4))
 		textureNum = to_int(wmb_fp.read(4))
-		to_int(wmb_fp.read(4))
-		to_int(wmb_fp.read(4))
+		paramterGroupsOffset = to_int(wmb_fp.read(4))
+		numParameterGroups = to_int(wmb_fp.read(4))
 		varOffset = to_int(wmb_fp.read(4))
 		varNum = to_int(wmb_fp.read(4))
 		wmb_fp.seek(materialNameOffset)
@@ -229,6 +229,21 @@ class wmb3_material(object):
 			identifier = "%08x"%to_int(wmb_fp.read(4))
 			wmb_fp.seek(offset)
 			self.textureArray[to_string(wmb_fp.read(256))] = identifier
+
+		wmb_fp.seek(paramterGroupsOffset)
+		self.parameterGroups = []
+		for i in range(numParameterGroups):
+			wmb_fp.seek(paramterGroupsOffset + i * 12)
+			parameters = []
+			index = to_int(wmb_fp.read(4))
+			offset = to_int(wmb_fp.read(4))
+			num = to_int(wmb_fp.read(4))
+			wmb_fp.seek(offset)
+			for k in range(num):
+				param = to_float(wmb_fp.read(4))
+				parameters.append(param)
+			self.parameterGroups.append(parameters)
+
 		wmb_fp.seek(varOffset)
 		self.uniformArray = {}
 		for i in range(varNum):
