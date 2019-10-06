@@ -13,9 +13,11 @@ class c_material(object):
                 if (isinstance(value, str)) and (key.find('g_') != -1):
                     numTextures += 1
 
+            offsetName = offset + numTextures * 8
+
+
             for key, value in material.items():
                 if (isinstance(value, str)) and (key.find('g_') != -1):
-                    offsetName = offset + numTextures * 8
                     texture = value
                     name = key
 
@@ -31,9 +33,28 @@ class c_material(object):
                 textures_StructSize += len(texture[2]) + 1
             return textures_StructSize
 
+        def get_numParameterGroups(self, material):
+            numParameterGroups = 0
+            parameterGroups = []
+
+            def Check(char):
+                try: 
+                    int(char)
+                    return True
+                except ValueError:
+                    return False
+
+            for key, value in material.items():
+                if Check(key[0]):
+                    if not key[0] in parameterGroups:
+                        numParameterGroups += 1
+                        parameterGroups.append(key[0])
+
+            return numParameterGroups
+
         def get_parameterGroups(self, material, offsetParameterGroups, numParameterGroups):
             parameterGroups = []
-            offsetParameters = offsetParameterGroups + numParameterGroups * 12 + 8
+            offsetParameters = offsetParameterGroups + numParameterGroups * 12
 
             for i in range(numParameterGroups):
                 index = i
@@ -58,8 +79,6 @@ class c_material(object):
             parameterGroups_StructSize = 0
             for parameterGroup in parameterGroups:
                 parameterGroups_StructSize += 12 + parameterGroup[2] * 4
-                parameterGroups_StructSize += 8
-            parameterGroups_StructSize -= 8
             return parameterGroups_StructSize
 
         def get_variables(self, material, offsetVariables):
@@ -102,9 +121,9 @@ class c_material(object):
 
         self.numTextures = len(self.textures)
 
-        self.offsetParameterGroups = self.offsetTextures + get_textures_StructSize(self, self.textures) + 14
+        self.offsetParameterGroups = self.offsetTextures + get_textures_StructSize(self, self.textures)
 
-        self.numParameterGroups = 2                  # IMMA DO THIS AS 2, BITE ME LATER
+        self.numParameterGroups = get_numParameterGroups(self, self.b_material)  
 
         self.parameterGroups = get_parameterGroups(self, self.b_material, self.offsetParameterGroups, self.numParameterGroups)
 

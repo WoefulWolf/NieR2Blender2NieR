@@ -1,6 +1,7 @@
 from blender2nier.util import *
 
 def create_wmb_bones(wmb_file, data):
+    wmb_file.seek(data.bones_Offset)
 
     for bone in data.bones.bones:               # [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz]
         write_Int16(wmb_file, bone[0])          # ID

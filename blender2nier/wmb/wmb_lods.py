@@ -1,6 +1,8 @@
 from blender2nier.util import *
 
 def create_wmb_lods(wmb_file, data):
+    wmb_file.seek(data.lods_Offset)
+
     lods = data.lods
     write_uInt32(wmb_file, lods.offsetName)                 # offsetName
     write_Int32(wmb_file, lods.lodLevel)                    # lodLevel

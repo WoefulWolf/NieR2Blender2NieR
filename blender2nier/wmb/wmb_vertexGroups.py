@@ -1,6 +1,8 @@
 from blender2nier.util import *
 
 def create_wmb_vertexGroups(wmb_file, data):
+    wmb_file.seek(data.vertexGroups_Offset)
+
     for vertexGroup in data.vertexGroups.vertexGroups:
         write_uInt32(wmb_file, vertexGroup.vertexOffset)            # vertexOffset
         write_uInt32(wmb_file, vertexGroup.vertexExDataOffset)      # vertexExDataOffset
@@ -26,6 +28,7 @@ def create_wmb_vertexGroups(wmb_file, data):
             for val in vertex[4]:                                   # color
                 write_byte(wmb_file, val)
 
+        wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # vertexesExData
             for val in vertexExData:                                # normal
                 write_float16(wmb_file, val)

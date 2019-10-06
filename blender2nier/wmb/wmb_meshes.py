@@ -1,6 +1,8 @@
 from blender2nier.util import *
 
 def create_wmb_meshes(wmb_file, data):
+    wmb_file.seek(data.meshes_Offset)
+
     for mesh in data.meshes.meshes:
         write_uInt32(wmb_file, mesh.nameOffset)             # nameOffset
         for val in mesh.boundingBox:                        # boundingBox [x, y, z, u, v, m]

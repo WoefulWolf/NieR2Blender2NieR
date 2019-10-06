@@ -16,12 +16,11 @@ class c_lods(object):
                 batchesInfos.append(batchInfo)
             return batchesInfos
 
-
-        self.offsetName = lodsStart + 68
+        self.numBatchInfos = len(batches.batches)
+        self.offsetName = lodsStart + 20 + self.numBatchInfos * 24
         self.lodLevel = 0
         self.batchStart = 0
         self.name = 'LOD0'
         self.offsetBatchInfos = self.offsetName - 24 * len(batches.batches)
-        self.numBatchInfos = len(batches.batches)
         self.batchInfos = get_batchInfos(self, batches)
         self.lods_StructSize = 20 + len(self.name) + 1 + len(self.batchInfos) * 24

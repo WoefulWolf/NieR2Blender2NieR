@@ -6,11 +6,17 @@ class c_meshes(object):
 
         def get_meshes(self, offsetMeshes, bones):
             meshes = []
+            numMeshes = 0
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
-                    mesh = c_mesh(offsetMeshes, obj, bones)
+                    numMeshes += 1
+
+            for obj in bpy.data.objects:
+                if obj.type == 'MESH':
+                    mesh = c_mesh(offsetMeshes, numMeshes, obj, bones)
                     meshes.append(mesh)
                     offsetMeshes += len(mesh.name) + 1 + 4
+
             return meshes
 
         def get_meshes_StructSize(self, meshes):

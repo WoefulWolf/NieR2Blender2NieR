@@ -1,6 +1,7 @@
 from blender2nier.util import *
 
 def create_wmb_boneIndexTranslateTable(wmb_file, data):
+    wmb_file.seek(data.boneIndexTranslateTable_Offset)
 
     for entry in data.boneIndexTranslateTable.firstLevel:    # firstLevel
         write_Int16(wmb_file, entry)

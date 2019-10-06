@@ -1,6 +1,8 @@
 from blender2nier.util import *
 
 def create_wmb_materials(wmb_file, data):
+    wmb_file.seek(data.materials_Offset)
+
     for material in data.materials.materials:
         for val in material.unknown0:                           # unknown0
             write_uInt16(wmb_file, val)
@@ -22,12 +24,10 @@ def create_wmb_materials(wmb_file, data):
             write_uInt32(wmb_file, int(texture[1], 16))
         for texture in material.textures:
             write_string(wmb_file, texture[2])
-        write_buffer(wmb_file, 14)
         for parameterGroup in material.parameterGroups:         # [index, offsetParameters, numParameters, parameters]
             write_Int32(wmb_file, parameterGroup[0])
             write_uInt32(wmb_file, parameterGroup[1])
             write_uInt32(wmb_file, parameterGroup[2])
-        write_buffer(wmb_file, 8)
         for parameterGroup in material.parameterGroups:
             for value in parameterGroup[3]:
                 write_float(wmb_file, value)

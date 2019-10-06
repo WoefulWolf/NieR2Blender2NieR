@@ -11,8 +11,7 @@ class c_boneIndexTranslateTable(object):
             for bone in bones.bones:
                 if len(bones.bones) == 1:
                     print(bone[0])
-                    if bone[0] == 5:
-                        firstLevel[0] = 16
+                    firstLevel[0] = 16
             
             print(firstLevel)
             return firstLevel

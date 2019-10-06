@@ -22,6 +22,7 @@ def reset_blend():
 def main(filepath):
     reset_blend()
 
+    
     wmb_file = create_wmb(filepath)
 
     generated_data = c_generate_data()

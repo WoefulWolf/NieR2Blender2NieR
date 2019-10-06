@@ -108,7 +108,7 @@ class c_vertexGroup(object):
 
         self.vertexOffset = self.vertexGroupStart + 48                  # 48 cus it's 30h
 
-        self.vertexExDataOffset = self.vertexOffset + get_numVertices(self) * self.vertexSize
+        self.vertexExDataOffset = (self.vertexOffset + get_numVertices(self) * self.vertexSize) + ((self.vertexOffset + get_numVertices(self) * self.vertexSize) % 16)
 
         self.unknownOffset = [0, 0]                                      # Don't question it, it's unknown okay?
 

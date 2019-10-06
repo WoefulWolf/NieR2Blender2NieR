@@ -1,15 +1,15 @@
 import bpy, bmesh, math
 
 class c_mesh(object):
-    def __init__(self, offsetMeshes, obj, bones):
+    def __init__(self, offsetMeshes, numMeshes, obj, bones):
 
         def get_BoundingBox(self, obj,):
             x = obj.dimensions[0]
-            y = obj.dimensions[1]
-            z = obj.dimensions[2]
+            y = obj.dimensions[1]/2
+            z = obj.dimensions[2]/2
             u = x/2
-            v = y/2
-            w = z/2
+            v = y
+            w = z
             return [x, y, z, u, v, w]
 
         def get_materials(self, obj):
@@ -19,7 +19,7 @@ class c_mesh(object):
                 materials.append(indx)
             return materials
 
-        self.nameOffset = offsetMeshes + 88
+        self.nameOffset = offsetMeshes + numMeshes * 44
 
         self.boundingBox = get_BoundingBox(self, obj)
 
