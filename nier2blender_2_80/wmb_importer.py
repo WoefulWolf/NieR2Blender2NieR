@@ -386,7 +386,8 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 				uv.append( uvs[groupIndex][VertexIndex])
 			if len(materials) > 0:
 				add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
-	amt = bpy.data.objects.get(armature_name)
+	if wmb.hasBone:
+		amt = bpy.data.objects.get(armature_name)
 	if wmb.hasBone:
 		for mesh in meshes:
 			set_partent(amt,mesh)
