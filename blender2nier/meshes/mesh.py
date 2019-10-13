@@ -19,6 +19,17 @@ class c_mesh(object):
                 materials.append(indx)
             return materials
 
+        def get_bones(self, obj):
+            bones = []
+            for vertexGroup in obj.vertex_groups:
+                boneName = vertexGroup.name
+                bones.append(int(boneName[-1]))
+            if len(bones) == 0:
+                bones.append(0)
+            return bones
+                
+        self.bones = get_bones(self, obj)
+
         self.nameOffset = offsetMeshes + numMeshes * 44
 
         self.boundingBox = get_BoundingBox(self, obj)
@@ -29,13 +40,11 @@ class c_mesh(object):
 
         self.offsetBones = self.offsetMaterials + 2*self.numMaterials
 
-        self.numBones = len(bones.bones)
+        self.numBones = len(self.bones)
 
         self.name = obj.name[:-4]
 
-        self.materials =  get_materials(self, obj)
-
-        self.bones = 0                                  # TODO LATER IM LAZY
+        self.materials =  get_materials(self, obj)     
 
         def get_mesh_StructSize(self):
             mesh_StructSize = 0

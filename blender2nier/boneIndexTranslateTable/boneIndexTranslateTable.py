@@ -9,9 +9,8 @@ class c_boneIndexTranslateTable(object):
                            
 
             for bone in bones.bones:
-                if len(bones.bones) == 1:
-                    print(bone[0])
-                    firstLevel[0] = 16
+                print(bone[0])
+                firstLevel[0] = 16
             
             print(firstLevel)
             return firstLevel
@@ -31,6 +30,8 @@ class c_boneIndexTranslateTable(object):
             secondLevel = [-1] * get_secondLevel_Size(self)
 
             secondLevel[0] = 32             # THIS IS NOT LEGIT, GOT FROM BINARY NEEDS TO BE CHANGED PER MODEL TYPE
+            secondLevel[1] = 48             # THIS IS NOT LEGIT, GOT FROM BINARY NEEDS TO BE CHANGED PER MODEL TYPE
+            secondLevel[2] = 64             # THIS IS NOT LEGIT, GOT FROM BINARY NEEDS TO BE CHANGED PER MODEL TYPE
             
             print(secondLevel)
             return secondLevel
@@ -48,9 +49,9 @@ class c_boneIndexTranslateTable(object):
 
         def get_thirdLevel(self):
             thirdLevel = [4095] * get_thirdLevel_Size(self)
-
+            
             for bone in bones.bones:
-                thirdLevel[bone[0]] = 0
+                thirdLevel[bone[0]] = int(bone[-1][-1])
 
             print(thirdLevel)
             return thirdLevel

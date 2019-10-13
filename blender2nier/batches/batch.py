@@ -1,9 +1,9 @@
 import bpy, bmesh, math, mathutils
 
 class c_batch(object):
-    def __init__(self, obj, vertexGroupIndex, indexStart, prev_numVertexes):
+    def __init__(self, obj, vertexGroupIndex, indexStart, prev_numVertexes, boneSetIndex):
         self.vertexGroupIndex = vertexGroupIndex
-        self.boneSetIndex = -1
+        self.boneSetIndex = boneSetIndex
         self.vertexStart = 0
         self.indexStart = indexStart
         self.numVertexes = len(obj.data.vertices) + prev_numVertexes

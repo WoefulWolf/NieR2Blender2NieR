@@ -7,6 +7,7 @@ from blender2nier.boneMap.boneMap import *
 from blender2nier.materials.create_materials import *
 from blender2nier.meshes.create_meshes import *
 from blender2nier.meshes.meshMaterials import *
+from blender2nier.boneSet.boneSet import *
 
 class c_generate_data(object):
     def __init__(self):
@@ -43,8 +44,10 @@ class c_generate_data(object):
 
         currentOffset += (currentOffset % 16)
 
+        self.boneMap = c_boneMap(self.bones)
+
         self.batches_Offset = currentOffset
-        self.batches = c_batches()
+        self.batches = c_batches(self.boneMap)
         self.batches_Size = self.batches.batches_StructSize
         currentOffset += self.batches_Size
         print('batches_Size: ', self.batches_Size)
@@ -64,8 +67,18 @@ class c_generate_data(object):
 
         currentOffset += (currentOffset % 16)
 
+        self.boneSet_Offset = currentOffset
+
+        if len(self.boneMap.boneMap) > 1:
+            self.boneSet = c_boneSet(self.boneMap, self.boneSet_Offset)
+            self.boneSet_Size = self.boneSet.boneSet_StructSize
+            currentOffset += self.boneSet_Size
+        else:
+            self.boneSet_Offset = 0
+
+        currentOffset += (currentOffset % 16)
+
         self.boneMap_Offset = currentOffset
-        self.boneMap = c_boneMap(self.bones)
         self.boneMap_Size = self.boneMap.boneMap_StructSize
         currentOffset += self.boneMap_Size
         print('boneMap_Size: ', self.boneMap_Size)

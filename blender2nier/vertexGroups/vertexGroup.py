@@ -7,101 +7,117 @@ class c_vertexGroup(object):
         self.vertexGroupIndex = vertexGroupIndex
         self.vertexGroupStart = vertexGroupStart
 
-        # Number of vertices
-        def get_numVertices(self):
-            numVertices = 0
+        def get_blenderObjects(self):
+            blenderObjectsTemp = []
+
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('_')
                     if int(obj_name[-1]) == vertexGroupIndex:
-                        numVertices += len(obj.data.vertices)
+                        blenderObjectsTemp.append(obj)
+
+            blenderObjects = []
+            objIndex = 0
+            while objIndex <= len(blenderObjectsTemp)-1:
+                for obj in blenderObjectsTemp:
+                    obj_name = obj.name.split('_')
+                    if int(obj_name[-2]) == objIndex:
+                        print('blenderObj: ', obj)
+                        obj.data.calc_tangents()
+                        blenderObjects.append(obj)
+                        objIndex += 1 
+
+            return blenderObjects
+        
+        self.blenderObjects = get_blenderObjects(self)
+
+        def get_numVertices(self):
+            numVertices = 0
+            for obj in self.blenderObjects:
+                numVertices += len(obj.data.vertices)
             return numVertices
 
         def get_numIndexes(self):
             numIndexes = 0
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
-                    if int(obj_name[-1]) == vertexGroupIndex:
-                        numIndexes += len(obj.data.polygons)
+            for obj in self.blenderObjects:
+                numIndexes += len(obj.data.polygons)
             return numIndexes * 3
 
         def get_blenderVertices(self):
             blenderVertices = []
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
-                    if int(obj_name[-1]) == vertexGroupIndex: 
-                        blenderVertices += obj.data.vertices        
+            blenderObjects = self.blenderObjects
+
+            for obj in blenderObjects:
+                blenderVertices.append([obj.data.vertices, obj])
             return blenderVertices
 
-        def get_blenderLoops(self):
+        def get_blenderLoops(self, objOwner):
             blenderLoops = []
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
-                    if int(obj_name[-1]) == vertexGroupIndex:
-                        obj.data.calc_tangents()
-                        blenderLoops += obj.data.loops
+            blenderLoops += objOwner.data.loops
+
             return blenderLoops
 
-        def get_blenderUVCoords(self, loopIndex):
+        def get_blenderUVCoords(self, objOwner, loopIndex):
             uv_coords = []
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
-                    if int(obj_name[-1]) == vertexGroupIndex:
-                        obj.data.calc_tangents()
-                        uv_coords = obj.data.uv_layers.active.data[loopIndex].uv
+            uv_coords = objOwner.data.uv_layers.active.data[loopIndex].uv
             return uv_coords
 
         def get_vertexes(self):
             vertexes = []
-            for bvertex in get_blenderVertices(self):
-                position = Vector3(round(bvertex.co.x, 6), round(bvertex.co.y, 6), round(bvertex.co.z, 6))
+            blenderVertices = get_blenderVertices(self)
+            for bvertex_obj in blenderVertices:
+                for bvertex in bvertex_obj[0]:
+                    position = Vector3(round(bvertex.co.x, 6), round(bvertex.co.y, 6), round(bvertex.co.z, 6))
 
-                for loop in get_blenderLoops(self):
-                    if loop.vertex_index == bvertex.index:
-                        tx = round(loop.tangent[0]*127.0+127.0)
-                        ty = round(loop.tangent[1]*127.0+127.0)
-                        tz = round(loop.tangent[2]*127.0+127.0)
-                        sign = round(loop.bitangent_sign*127.0+128.0)
+                    for loop in get_blenderLoops(self, bvertex_obj[1]):
+                        if loop.vertex_index == bvertex.index:
+                            tx = round(loop.tangent[0]*127.0+127.0)
+                            ty = round(loop.tangent[1]*127.0+127.0)
+                            tz = round(loop.tangent[2]*127.0+127.0)
+                            sign = round(loop.bitangent_sign*127.0+128.0)
 
-                        uv_coords = get_blenderUVCoords(self, loop.index)
-                        mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
-                        mapping2 = mapping                                              # These 2 always seem to be the same (I think)
-                        break
+                            uv_coords = get_blenderUVCoords(self, bvertex_obj[1], loop.index)
+                            mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
+                            mapping2 = mapping                                              # These 2 always seem to be the same (I think)
+                            break
 
-                tangents = [tx, ty, tz, sign]
-                color = [0, 0, 0, 255]   
+                    tangents = [tx, ty, tz, sign]
+                    color = [0, 0, 0, 255]   
 
-                #print([position.xyz, tangents, mapping, mapping2, color]) 
-                vertexes.append([position.xyz, tangents, mapping, mapping2, color])
+                    #print([position.xyz, tangents, mapping, mapping2, color]) 
+                    vertexes.append([position.xyz, tangents, mapping, mapping2, color])
             return vertexes
 
         def get_vertexesExData(self):
             vertexesExData = []
-            for bvertex in get_blenderVertices(self):
-                vertexNormal = bvertex.normal
+            for bvertex_obj in get_blenderVertices(self):
+                for bvertex in bvertex_obj[0]:
+                    vertexNormal = bvertex.normal
 
-                nx = -round(vertexNormal[0]/2, 6)
-                ny = -round(vertexNormal[1], 6)
-                nz = -round(vertexNormal[2], 6)
-                dummy = 0
-                vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
-                vertexesExData.append(vertexExData)
+                    nx = round(vertexNormal[0]/2, 6)
+                    ny = round(vertexNormal[1], 6)
+                    nz = round(vertexNormal[2], 6)
+                    dummy = 0
+                    vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
+                    vertexesExData.append(vertexExData)
             return vertexesExData
 
         def get_indexes(self):
+            indexesOffset = 0
             indexes = []
+            for obj in self.blenderObjects:
+                for loop in obj.data.loops:
+                    indexes.append(loop.vertex_index + indexesOffset)
+                indexesOffset += len(obj.data.vertices)
+            
+            i = 1
+            while i < len(indexes)-1:
+                temp = indexes[i]
+                indexes[i] = indexes[i+1]
+                indexes[i+1] = temp
+                i += 3
+            
 
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
-                    if int(obj_name[-1]) == vertexGroupIndex:
-                        obj.data.calc_tangents()
-                        for loop in obj.data.loops:
-                            indexes.append(loop.vertex_index + int(obj_name[-2]) * len(obj.data.vertices))
             return indexes
 
         self.vertexSize = 28                                            # Always 28?

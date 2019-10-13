@@ -11,17 +11,27 @@ from blender2nier.wmb.wmb_meshMaterials import *
 from blender2nier.wmb.wmb_boneMap import *
 from blender2nier.wmb.wmb_meshes import *
 from blender2nier.wmb.wmb_materials import *
+from blender2nier.wmb.wmb_boneSet import *
 
-def reset_blend():
+def prepare_blend():
     print('Preparing .blend File:')
     for obj in bpy.data.objects:
+        if obj.type == 'MESH':
+            #obj.data.flip_normals()
+            print(obj)
+
         if obj.type not in ['MESH', 'ARMATURE']:
             print('[-] Removing ', obj)
             bpy.data.objects.remove(obj)
 
-def main(filepath):
-    reset_blend()
+def restore_blend():
+    print('Restoring .blend File:')
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH':
+            obj.data.flip_normals()
 
+def main(filepath):
+    prepare_blend()
     
     wmb_file = create_wmb(filepath)
 
@@ -41,6 +51,9 @@ def main(filepath):
 
     create_wmb_meshMaterials(wmb_file, generated_data)
 
+    if hasattr(generated_data, 'boneSet'):
+        create_wmb_boneSet(wmb_file, generated_data)
+
     create_wmb_boneMap(wmb_file, generated_data)
 
     create_wmb_meshes(wmb_file, generated_data)
@@ -48,4 +61,6 @@ def main(filepath):
     create_wmb_materials(wmb_file, generated_data)
 
     close_wmb(wmb_file)
+
+    restore_blend()
     return {'FINISHED'}

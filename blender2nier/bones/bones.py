@@ -6,24 +6,67 @@ class c_bones(object):
 
         def get_bones(self):
             _bones = []
+            numBones = 0
             for obj in bpy.data.objects:
                 if obj.type == 'ARMATURE':
-                    for bone in obj.data.bones:
-                        ID = bone['ID']
-                        parentIndex = -1                                                                                    # This is complicated, will maybe sort out later
+                    numBones = len(obj.data.bones)
 
-                        localPosition = Vector3(round(bone.head[0], 6), round(bone.head[1], 6), round(bone.head[2], 6))
-                        localRotation = Vector3(0, 0, 0)                                                                    # I haven't seen anything here 0, 0, 0.
-                        localScale = Vector3(1, 1, 1)                                                                       # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
+            if numBones > 1:
+                ID = 0
+                parentIndex = -1
+                localPosition = Vector3(0, 0, 0)
+                localRotation = Vector3(0, 0, 0)  
+                localScale = Vector3(1, 1, 1)  
+                position = localPosition
+                rotation = localRotation
+                scale = localScale
+                tPosition = localPosition
+                blenderName = '_0'
+                bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                _bones.append(bone)
 
-                        position = localPosition
-                        rotation = localRotation
-                        scale = localScale
+                for obj in bpy.data.objects:
+                    if obj.type == 'ARMATURE':
+                        for bone in obj.data.bones:
+                            ID = bone['ID']
+                            if bone.parent:
+                                parentIndex = int(bone.parent.name[-1])                                                         
+                            else:
+                                parentIndex = 0
+                            localPosition = Vector3(round(bone.head[0], 6), round(bone.head[1], 6), round(bone.head[2], 6))
+                            localRotation = Vector3(0, 0, 0)                                                                    # I haven't seen anything here besides 0, 0, 0.
+                            localScale = Vector3(1, 1, 1)                                                                       # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
 
-                        tPosition = localPosition
+                            position = localPosition
+                            rotation = localRotation
+                            scale = localScale
 
-                        bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz]
-                        _bones.append(bone)
+                            tPosition = localPosition
+
+                            blenderName = bone.name
+                            bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                            _bones.append(bone)
+                
+            elif numBones == 1:
+                for obj in bpy.data.objects:
+                    if obj.type == 'ARMATURE':
+                        for bone in obj.data.bones:
+                            ID = bone['ID']
+                            parentIndex = -1                                                         
+                            localPosition = Vector3(round(bone.head[0], 6), round(bone.head[1], 6), round(bone.head[2], 6))
+                            localRotation = Vector3(0, 0, 0)                                                                    # I haven't seen anything here besides 0, 0, 0.
+                            localScale = Vector3(1, 1, 1)                                                                       # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
+
+                            position = localPosition
+                            rotation = localRotation
+                            scale = localScale
+
+                            tPosition = localPosition
+
+                            blenderName = bone.name
+                            bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                            _bones.append(bone)
+
             return _bones
                         
         self.bones = get_bones(self)
