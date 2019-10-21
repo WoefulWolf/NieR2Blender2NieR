@@ -16,5 +16,6 @@ def create_wmb_meshes(wmb_file, data):
         write_string(wmb_file, mesh.name)                   # name
         for material in mesh.materials:
             write_uInt16(wmb_file, material)                # materials
-        for bone in mesh.bones:
-            write_uInt16(wmb_file, bone)                    # bones
+        if mesh.numBones != 0:
+            for bone in mesh.bones:
+                write_uInt16(wmb_file, bone)                    # bones

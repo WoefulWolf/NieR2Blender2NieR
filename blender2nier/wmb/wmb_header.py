@@ -16,7 +16,7 @@ def create_wmb_header(wmb_file, data):
     write_uInt32(wmb_file, offsetBones)                          # offsetBones
     print(' + offsetBones: ', offsetBones)
 
-    numBones = len(data.bones.bones)
+    numBones = data.numBones
     write_uInt32(wmb_file, numBones)                            # numBones
     print(' + numBones: ', numBones)
 
@@ -64,7 +64,7 @@ def create_wmb_header(wmb_file, data):
     write_uInt32(wmb_file, offsetBoneMap)                       # offsetBoneMap
     print(' + offsetBoneMap: ', offsetBoneMap)
 
-    numBoneMap = len(data.boneMap.boneMap)
+    numBoneMap = data.numBoneMap
     write_uInt32(wmb_file, numBoneMap)                          # numBoneMap/boneMapSize
     print(' + numBoneMap: ', numBoneMap)
 

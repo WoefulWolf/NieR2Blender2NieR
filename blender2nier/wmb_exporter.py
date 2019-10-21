@@ -39,9 +39,11 @@ def main(filepath):
 
     create_wmb_header(wmb_file, generated_data)
 
-    create_wmb_bones(wmb_file, generated_data)
+    if generated_data.bones is not None:
+        create_wmb_bones(wmb_file, generated_data)
 
-    create_wmb_boneIndexTranslateTable(wmb_file, generated_data)
+    if hasattr(generated_data, 'boneIndexTranslateTable'):
+        create_wmb_boneIndexTranslateTable(wmb_file, generated_data)
 
     create_wmb_vertexGroups(wmb_file, generated_data)
 
@@ -54,7 +56,8 @@ def main(filepath):
     if hasattr(generated_data, 'boneSet'):
         create_wmb_boneSet(wmb_file, generated_data)
 
-    create_wmb_boneMap(wmb_file, generated_data)
+    if generated_data.boneMap is not None:
+        create_wmb_boneMap(wmb_file, generated_data)
 
     create_wmb_meshes(wmb_file, generated_data)
 

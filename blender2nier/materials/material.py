@@ -1,8 +1,8 @@
 import bpy, bmesh, math, mathutils
 
 class c_material(object):
-    def __init__(self, offsetMaterial, material):
-        self.offsetMaterial = offsetMaterial
+    def __init__(self, offsetMaterialName, material):
+        self.offsetMaterial = offsetMaterialName
         self.b_material = material
 
         def get_textures(self, material, offsetTextures):
@@ -102,12 +102,12 @@ class c_material(object):
             variables_StructSize = 0
             for variable in variables:
                 variables_StructSize += 8
-                variables_StructSize += len(variable[2])
+                variables_StructSize += len(variable[2]) + 1
             return variables_StructSize
 
         self.unknown0 = [2016, 7, 5, 15]            # This is probably always the same as far as I know?
 
-        self.offsetName = self.offsetMaterial + 48
+        self.offsetName = self.offsetMaterial
 
         self.offsetShaderName = self.offsetName + len(self.b_material.name) + 1
 
@@ -139,4 +139,4 @@ class c_material(object):
 
         self.techniqueName = self.b_material['Technique_Name']
 
-        self.material_StructSize = self.offsetVariables + get_variables_StructSize(self, self.variables) - self.offsetMaterial
+        self.materialNames_StructSize = self.offsetVariables + get_variables_StructSize(self, self.variables) - self.offsetName

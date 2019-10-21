@@ -1,7 +1,7 @@
 import bpy, bmesh, math
 
 class c_mesh(object):
-    def __init__(self, offsetMeshes, numMeshes, obj, bones):
+    def __init__(self, offsetMeshes, numMeshes, obj):
 
         def get_BoundingBox(self, obj,):
             x = obj.dimensions[0]
@@ -14,10 +14,14 @@ class c_mesh(object):
 
         def get_materials(self, obj):
             materials = []
-            for indx, slot in enumerate(obj.material_slots):
+            for slot in obj.material_slots:
                 material = slot.material
-                materials.append(indx)
-            return materials
+                for indx, mat in enumerate(bpy.data.materials):
+                    if mat == material:
+                        print('Material: ', mat)
+                        print('Index: ', indx)
+                        materials.append(indx)
+                        return materials
 
         def get_bones(self, obj):
             bones = []
@@ -27,7 +31,7 @@ class c_mesh(object):
             if len(bones) == 0:
                 bones.append(0)
             return bones
-                
+      
         self.bones = get_bones(self, obj)
 
         self.nameOffset = offsetMeshes + numMeshes * 44
@@ -51,7 +55,7 @@ class c_mesh(object):
             mesh_StructSize += 4 + 24 + 4 + 4 + 4 + 4
             mesh_StructSize += len(self.name) + 1
             mesh_StructSize += len(self.materials) * 2
-            mesh_StructSize += 2
+            mesh_StructSize += len(self.bones) * 2
             return mesh_StructSize
 
         self.mesh_StructSize = get_mesh_StructSize(self)

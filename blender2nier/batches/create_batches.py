@@ -14,10 +14,11 @@ class c_batches(object):
                     obj_name = obj.name.split('_')
                     obj_vertexGroupIndex = int(obj_name[-1])
 
-                    for index, bone in enumerate(boneMap.boneMap):
-                        if len(obj.vertex_groups) > 0:
-                            if bone == int(obj.vertex_groups[0].name[-1]):
-                                boneSetIndex = index
+                    if boneMap is not None:
+                        for index, bone in enumerate(boneMap.boneMap):
+                            if len(obj.vertex_groups) > 0:
+                                if bone == int(obj.vertex_groups[0].name[-1]):
+                                    boneSetIndex = index
 
 
                     if len(batches) == 0:

@@ -36,6 +36,7 @@ class c_vertexGroup(object):
             for obj in self.blenderObjects:
                 numVertices += len(obj.data.vertices)
             return numVertices
+        numVertices = get_numVertices(self)
 
         def get_numIndexes(self):
             numIndexes = 0
@@ -50,6 +51,7 @@ class c_vertexGroup(object):
             for obj in blenderObjects:
                 blenderVertices.append([obj.data.vertices, obj])
             return blenderVertices
+        blenderVertices = get_blenderVertices(self)
 
         def get_blenderLoops(self, objOwner):
             blenderLoops = []
@@ -64,7 +66,6 @@ class c_vertexGroup(object):
 
         def get_vertexes(self):
             vertexes = []
-            blenderVertices = get_blenderVertices(self)
             for bvertex_obj in blenderVertices:
                 for bvertex in bvertex_obj[0]:
                     position = Vector3(round(bvertex.co.x, 6), round(bvertex.co.y, 6), round(bvertex.co.z, 6))
@@ -90,7 +91,7 @@ class c_vertexGroup(object):
 
         def get_vertexesExData(self):
             vertexesExData = []
-            for bvertex_obj in get_blenderVertices(self):
+            for bvertex_obj in blenderVertices:
                 for bvertex in bvertex_obj[0]:
                     vertexNormal = bvertex.normal
 
@@ -120,11 +121,11 @@ class c_vertexGroup(object):
 
             return indexes
 
-        self.vertexSize = 28                                            # Always 28?
+        self.vertexSize = 28                                            # 28
 
         self.vertexOffset = self.vertexGroupStart + 48                  # 48 cus it's 30h
 
-        self.vertexExDataOffset = (self.vertexOffset + get_numVertices(self) * self.vertexSize) + ((self.vertexOffset + get_numVertices(self) * self.vertexSize) % 16)
+        self.vertexExDataOffset = (self.vertexOffset + numVertices * self.vertexSize) + ((self.vertexOffset + numVertices * self.vertexSize) % 16)
 
         self.unknownOffset = [0, 0]                                      # Don't question it, it's unknown okay?
 
@@ -132,7 +133,7 @@ class c_vertexGroup(object):
 
         self.unknownSize = [0, 0]                                        # THIS IS UNKOWN TOO OKAY? LEAVE ME BE
 
-        self.numVertexes = get_numVertices(self)
+        self.numVertexes = numVertices
     
         self.vertexFlags = 4                                             # I guess this is 4 huh
 

@@ -16,6 +16,7 @@ def create_wmb_materials(wmb_file, data):
         write_uInt32(wmb_file, material.numParameterGroups)     # numParameterGroups
         write_uInt32(wmb_file, material.offsetVariables)        # offsetVariables
         write_uInt32(wmb_file, material.numVariables)           # numVariables
+    for material in data.materials.materials:
         write_string(wmb_file, material.name)                   # name
         write_string(wmb_file, material.shaderName)             # shaderName
         write_string(wmb_file, material.techniqueName)          # techniqueName

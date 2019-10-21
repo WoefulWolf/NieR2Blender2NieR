@@ -6,7 +6,7 @@ class c_meshMaterials(object):
             meshMaterials = []
             for indx, mesh in enumerate(meshes.meshes):
                 meshID = indx
-                materialID = 0                              # TODO
+                materialID = mesh.materials[0]                  
                 meshMaterial = [meshID, materialID]
 
                 meshMaterials.append(meshMaterial)
@@ -14,3 +14,4 @@ class c_meshMaterials(object):
 
         self.meshMaterials = get_meshMaterials(self)
         self.meshMaterials_StructSize = len(self.meshMaterials) * 8
+        
