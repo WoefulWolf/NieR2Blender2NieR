@@ -250,19 +250,7 @@ def consturct_materials(texture_dir, material):
 					# Alpha Channel
 					material.blend_method = 'CLIP'
 
-					links.remove(output_link)
-
-					mix_shader = nodes.new(type='ShaderNodeMixShader')
-					mix_shader.location = 1000,0
-					output_link = links.new(mix_shader.outputs['Shader'], output.inputs['Surface'])
-
-					transparent_shader = nodes.new(type='ShaderNodeBsdfTransparent')
-					transparent_shader.location = 600, 0
-					transparent_link = links.new(transparent_shader.outputs['BSDF'], mix_shader.inputs[1])
-
-					principled_link = links.new(principled.outputs['BSDF'], mix_shader.inputs[2])
-
-					alpha_link = links.new(diffuse_image.outputs['Alpha'], mix_shader.inputs['Fac'])
+					alpha_link = links.new(diffuse_image.outputs['Alpha'], principled.inputs['Alpha'])
 					
 				print('[+] adding texture %s to material %s' % (texture_name, material_name))
 				#material_textureslot.texture = texture
