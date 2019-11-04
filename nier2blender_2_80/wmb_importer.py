@@ -158,6 +158,8 @@ def consturct_materials(texture_dir, material):
 	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
 	# Normal Map Amount Counter
 	normal_map_count = 0
+	# Mask Map Count
+	mask_map_count = 0
 
 	for gindx, parameterGroup in enumerate(parameterGroups):
 		for pindx, parameter in enumerate(parameterGroup):
@@ -168,7 +170,7 @@ def consturct_materials(texture_dir, material):
 		material[key] = uniforms.get(key)
 		print(key, material[key])
 		if key.lower().find("g_glossiness") > -1:
-			material.specular_intensity = uniforms[key]
+			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower() 
 		flag = False
@@ -214,13 +216,34 @@ def consturct_materials(texture_dir, material):
 						normal_image2.image = bpy.data.images.load(texture_file)
 						normal_image2.image.colorspace_settings.name = 'Non-Color'
 						normal_image_link2 = links.new(normal_image2.outputs['Color'], mixRGB_shader.inputs['Color2'])
-				elif textures_type.find("mask") > -1:
-					#Mask Image Texture (Specularity I assumed)
+				elif textures_type.find("mask") > -1:	#Only add first MaskMap
+					#Mask Image Texture (R = Metallic, G = Glossines (Inverted Roughness), B = AO)
 					mask_image = nodes.new(type='ShaderNodeTexImage')
-					mask_image.location = 0,-200
+					mask_image.location = -250,-250
 					mask_image.image = bpy.data.images.load(texture_file)
 					mask_image.image.colorspace_settings.name = 'Non-Color'
-					mask_map_link = links.new(mask_image.outputs['Color'], principled.inputs['Specular'])
+					if mask_map_count == 0:
+						if not 'Hair' in material['Shader_Name']:
+							seperate_rgb = nodes.new(type="ShaderNodeSeparateRGB")
+							seperate_rgb.location = 25,-250
+							mask_map_link = links.new(mask_image.outputs['Color'], seperate_rgb.inputs['Image'])
+							r_channel_link = links.new(seperate_rgb.outputs['R'], principled.inputs['Metallic'])				# R -> Mettalic
+							g_channel_invert = nodes.new(type="ShaderNodeInvert")
+							g_channel_invert.location = 200,-325
+							g_channel_link = links.new(seperate_rgb.outputs['G'], g_channel_invert.inputs['Color'])				# G -> Invert
+							g_inverted_link = links.new(g_channel_invert.outputs['Color'], principled.inputs['Roughness'])		# Invert -> Roughness
+							""" DISABLED AO FOR NOW
+							b_channel_multiply = nodes.new(type="ShaderNodeMath")
+							b_channel_multiply.location = 350,0
+							b_channel_multiply.operation = 'MULTIPLY'
+							b_channel_link = links.new(seperate_rgb.outputs['B'], b_channel_multiply.inputs[1])					# AO
+							albedo_multiply_link = links.new(diffuse_image.outputs['Color'], b_channel_multiply.inputs[0])
+							multiply_link = links.new(b_channel_multiply.outputs['Value'], principled.inputs['Base Color'])
+							"""
+						else:
+							mask_link = links.new(mask_image.outputs['Color'], principled.inputs['Specular'])
+
+						mask_map_count += 1
 				elif textures_type.find("light") > -1:
 					#Light Image Texture (Roughness in Blender)
 					light_image = nodes.new(type='ShaderNodeTexImage')
