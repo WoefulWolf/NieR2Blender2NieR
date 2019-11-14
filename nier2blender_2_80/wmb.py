@@ -335,6 +335,28 @@ class WMB3(object):
 		self.boneArray = []
 		for boneIndex in range(self.wmb3_header.boneCount):
 			self.boneArray.append(wmb3_bone(wmb_fp,boneIndex))
+		
+		self.firstLevel = []
+		for entry in range(16):
+			self.firstLevel.append(to_int(wmb_fp.read(2)))
+
+		firstLevel_Entry_Count = 0
+		for entry in self.firstLevel:
+			if entry != -1:
+				firstLevel_Entry_Count += 1
+
+		self.secondLevel = []
+		for entry in range(firstLevel_Entry_Count * 16):
+			self.secondLevel.append(to_int(wmb_fp.read(2)))
+
+		secondLevel_Entry_Count = 0
+		for entry in self.secondLevel:
+			if entry != -1:
+				secondLevel_Entry_Count += 1
+
+		self.thirdLevel = []
+		for entry in range(secondLevel_Entry_Count * 16):
+			self.thirdLevel.append(to_int(wmb_fp.read(2)))
 
 		wmb_fp.seek(self.wmb3_header.unknownChunk1Offset)
 		unknownData1Array = []

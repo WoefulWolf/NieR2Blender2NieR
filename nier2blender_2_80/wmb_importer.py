@@ -24,7 +24,7 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber ]
+def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber ]
 	print('[+] importing armature')
 	bpy.ops.object.add(
 		type='ARMATURE', 
@@ -34,20 +34,18 @@ def construct_armature(name, bone_data_array):			# bone_data =[boneIndex, boneNa
 	ob.show_in_front = False
 	ob.name = name
 	amt = ob.data
-	amt.name = name +'Amt' 
+	amt.name = name +'Amt'
+	 
+	amt['firstLevel'] = firstLevel
+	amt['secondLevel'] = secondLevel
+	amt['thirdLevel'] = thirdLevel
+
 	for bone_data in bone_data_array:	
 		bone = amt.edit_bones.new(bone_data[1])
 		bone.head = Vector(bone_data[4]) 
 		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))
-
-		boneNumber = bone_data[6]		# This is temporary, there is a algorithm
-		ID = boneNumber
-		Count = 1
-		while boneNumber > (32 * 7 * Count):
-			ID = boneNumber - (32 * 7 * Count)
-			Count += 1
-		
-		bone['ID'] = ID
+		boneNumber = bone_data[6]				
+		bone['ID'] = boneNumber
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
 		if bone_data[2] < 0xffff:						#this value need to edit in different games
@@ -161,16 +159,22 @@ def consturct_materials(texture_dir, material):
 	# Mask Map Count
 	mask_map_count = 0
 
-	for gindx, parameterGroup in enumerate(parameterGroups):
-		for pindx, parameter in enumerate(parameterGroup):
-			material[str(gindx) + '_' + str(pindx)] = parameter
-
 	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
+	# Shader Parameters
 	for key in uniforms.keys():
 		material[key] = uniforms.get(key)
 		print(key, material[key])
 		if key.lower().find("g_glossiness") > -1:
 			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
+
+	# Custom Shader Parameters
+	for gindx, parameterGroup in enumerate(parameterGroups):
+		for pindx, parameter in enumerate(parameterGroup):
+			if pindx == 5:
+				material[str(gindx) + '_Alpha_' + str(pindx)] = parameter
+			else:
+				material[str(gindx) + '_' + str(pindx)] = parameter
+
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower() 
 		flag = False
@@ -377,7 +381,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
-		construct_armature(armature_name, boneArray)
+		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel)
 	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
