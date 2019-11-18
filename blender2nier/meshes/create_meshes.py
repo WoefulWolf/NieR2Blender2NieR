@@ -10,14 +10,16 @@ class c_meshes(object):
             numMeshes = 0
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
-                    if obj.name[:-4] not in meshes_names_added:
+                    obj_name = obj.name.split('-')
+                    if obj_name[1] not in meshes_names_added:
                         numMeshes += 1
-                        meshes_names_added.append(obj.name[:-4])
+                        meshes_names_added.append(obj_name[1])
 
             meshes_names_added = []
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
-                    if obj.name[:-4] not in meshes_names_added:
+                    obj_name = obj.name.split('-')
+                    if obj_name[1] not in meshes_names_added:
                         mesh = c_mesh(offsetMeshes, numMeshes, obj)
                         meshes.append(mesh)
                         meshes_names_added.append(mesh.name)
