@@ -331,7 +331,7 @@ def format_wmb_mesh(wmb):
 				for meshArrayIndex in (meshIndexArray):
 					meshVertexGroupIndex = wmb.meshArray[meshArrayIndex].vertexGroupIndex
 					if meshVertexGroupIndex == vertexGroupIndex:
-						meshName = "%s_%d_%d"%(meshGroup.meshGroupname, meshArrayIndex, vertexGroupIndex)
+						meshName = "%d-%s-%d"%(meshArrayIndex, meshGroup.meshGroupname, vertexGroupIndex)
 						meshInfo = wmb.clear_unused_vertex(meshArrayIndex, meshVertexGroupIndex)
 						vertices = meshInfo[0]
 						faces =  meshInfo[1]
@@ -392,9 +392,9 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
 			mesh_start = meshGroupInfo.meshStart
-			meshIndex = int(meshes[Index + mesh_start].name.split('_')[-2])
+			meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
 			materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
-			groupIndex = int(meshes[Index + mesh_start].name.split('_')[-1])
+			groupIndex = int(meshes[Index + mesh_start].name.split('-')[-1])
 			uv = []
 			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
 				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
