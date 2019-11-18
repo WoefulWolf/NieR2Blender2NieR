@@ -11,7 +11,7 @@ class c_vertexGroups(object):
 
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
+                    obj_name = obj.name.split('-')
                     obj_vertexGroupIndex = int(obj_name[-1])
                     if not obj_vertexGroupIndex in vertexGroupIndex:
                         vertexGroupIndex.append(obj_vertexGroupIndex)
