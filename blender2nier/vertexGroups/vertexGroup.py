@@ -8,8 +8,8 @@ class c_vertexGroup(object):
         self.vertexGroupStart = vertexGroupStart
 
         def get_blenderObjects(self):
+            """
             blenderObjectsTemp = []
-
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('_')
@@ -26,6 +26,13 @@ class c_vertexGroup(object):
                         obj.data.calc_tangents()
                         blenderObjects.append(obj)
                         objIndex += 1 
+            """
+            blenderObjects = []
+            for obj in bpy.data.objects:
+                if obj.type == 'MESH':
+                    obj_name = obj.name.split('-')
+                    if int(obj_name[-1]) == vertexGroupIndex:
+                        blenderObjects.append(obj)
 
             return blenderObjects
         
@@ -64,6 +71,16 @@ class c_vertexGroup(object):
             uv_coords = objOwner.data.uv_layers.active.data[loopIndex].uv
             return uv_coords
 
+        if len(blenderVertices[0][0][0].groups) == 0:
+            self.vertexFlags = 4                                             # 4 static, 11 rigged
+        else:    
+            self.vertexFlags = 11
+
+        if self.vertexFlags == 4:
+            self.vertexExDataSize = 8                                        # SIZE OF ONE 'vertexesExData' ENTRY [ 8 if static, 20 if rigged with weights ]
+        else:
+            self.vertexExDataSize = 20
+
         def get_vertexes(self):
             vertexes = []
             for bvertex_obj in blenderVertices:
@@ -79,11 +96,16 @@ class c_vertexGroup(object):
 
                             uv_coords = get_blenderUVCoords(self, bvertex_obj[1], loop.index)
                             mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
-                            mapping2 = mapping                                              # These 2 always seem to be the same (I think)
+                            if self.vertexFlags == 4:
+                                mapping2 = mapping
+                                color = [0, 0, 0, 255]  
+                            else:
+                                mapping2 = [bvertex.groups[0].group, 0, 0, 0]
+                                color = [255, 0, 0, 0]  
+
                             break
 
-                    tangents = [tx, ty, tz, sign]
-                    color = [0, 0, 0, 255]   
+                    tangents = [tx, ty, tz, sign] 
 
                     #print([position.xyz, tangents, mapping, mapping2, color]) 
                     vertexes.append([position.xyz, tangents, mapping, mapping2, color])
@@ -92,15 +114,33 @@ class c_vertexGroup(object):
         def get_vertexesExData(self):
             vertexesExData = []
             for bvertex_obj in blenderVertices:
-                for bvertex in bvertex_obj[0]:
-                    vertexNormal = bvertex.normal
+                for idx, bvertex in enumerate(bvertex_obj[0]):
+                    if self.vertexExDataSize == 8:
+                        vertexNormal = bvertex.normal
 
-                    nx = round(vertexNormal[0]/2, 6)
-                    ny = round(vertexNormal[1], 6)
-                    nz = round(vertexNormal[2], 6)
-                    dummy = 0
-                    vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
-                    vertexesExData.append(vertexExData)
+                        nx = round(vertexNormal[0]/2, 6)
+                        ny = round(vertexNormal[1], 6)
+                        nz = round(vertexNormal[2], 6)
+                        dummy = 0
+                        vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
+                        vertexesExData.append(vertexExData)
+                    else:
+                        mapping2 = self.vertexes[idx][2]
+                        color = [255, 255, 255, 255]
+
+                        vertexNormal = bvertex.normal
+                        nx = round(vertexNormal[0]/2, 6)
+                        ny = round(vertexNormal[1], 6)
+                        nz = round(vertexNormal[2], 6)
+                        dummy = 0
+
+                        normal = [nx, ny, nz, dummy] # Normal xyz + dummy
+
+                        mapping3 = mapping2
+
+                        vertexExData = [mapping2, color, normal, mapping3]
+                        vertexesExData.append(vertexExData)
+
             return vertexesExData
 
         def get_indexes(self):
@@ -117,25 +157,20 @@ class c_vertexGroup(object):
                 indexes[i] = indexes[i+1]
                 indexes[i+1] = temp
                 i += 3
-            
 
             return indexes
 
         self.vertexSize = 28                                            # 28
 
-        self.vertexOffset = self.vertexGroupStart + 48                  # 48 cus it's 30h
+        self.vertexOffset = self.vertexGroupStart + 48                  # 48 cus it's 30h duhhh
 
         self.vertexExDataOffset = (self.vertexOffset + numVertices * self.vertexSize) + ((self.vertexOffset + numVertices * self.vertexSize) % 16)
 
         self.unknownOffset = [0, 0]                                      # Don't question it, it's unknown okay?
 
-        self.vertexExDataSize = 8                                        # SIZE OF ONE 'vertexesExData' ENTRY [ 8 if static, 20 if rigged with weights ]
-
         self.unknownSize = [0, 0]                                        # THIS IS UNKOWN TOO OKAY? LEAVE ME BE
 
-        self.numVertexes = numVertices
-    
-        self.vertexFlags = 4                                             # I guess this is 4 huh
+        self.numVertexes = numVertices                                            
 
         self.indexBufferOffset = self.vertexExDataOffset + self.numVertexes * self.vertexExDataSize
 
