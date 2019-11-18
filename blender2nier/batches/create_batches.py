@@ -11,7 +11,7 @@ class c_batches(object):
 
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
-                    obj_name = obj.name.split('_')
+                    obj_name = obj.name.split('-')
                     obj_vertexGroupIndex = int(obj_name[-1])
 
                     if boneMap is not None:
@@ -25,6 +25,7 @@ class c_batches(object):
                         batches.append(c_batch(obj, obj_vertexGroupIndex, 0, 0, boneSetIndex))
                     else:
                         batches.append(c_batch(obj, obj_vertexGroupIndex, batches[len(batches)-1].indexStart + batches[len(batches)-1].numIndexes, batches[len(batches)-1].numVertexes, boneSetIndex))
+
 
             return batches
 
