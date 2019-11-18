@@ -23,15 +23,29 @@ def create_wmb_vertexGroups(wmb_file, data):
                 write_byte(wmb_file, val)
             for val in vertex[2]:                                   # mapping
                 write_float16(wmb_file, val)
-            for val in vertex[3]:                                   # mapping2
-                write_float16(wmb_file, val)
-            for val in vertex[4]:                                   # color
-                write_byte(wmb_file, val)
+            if vertexGroup.vertexFlags == 4:                        
+                for val in vertex[3]:                               
+                    write_float16(wmb_file, val)                    # mapping2
+            else:
+                for val in vertex[3]:                               
+                    write_byte(wmb_file, val)                       # boneIndex
+            for val in vertex[4]:                                   
+                write_byte(wmb_file, val)                           # color/boneWeight
 
         wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # vertexesExData
-            for val in vertexExData:                                # normal
-                write_float16(wmb_file, val)
+            if vertexGroup.vertexExDataSize == 8:
+                for val in vertexExData:                            # normal
+                    write_float16(wmb_file, val)
+            else:
+                for val in vertexExData[0]:                         # mapping2
+                    write_float16(wmb_file, val)
+                for val in vertexExData[1]:                         # color
+                    write_byte(wmb_file, val)
+                for val in vertexExData[2]:                         # normal
+                    write_float16(wmb_file, val)
+                for val in vertexExData[3]:                         # mapping 3
+                    write_float16(wmb_file, val)
 
         for index in vertexGroup.indexes:                           # indexes
             write_uInt32(wmb_file, index)
