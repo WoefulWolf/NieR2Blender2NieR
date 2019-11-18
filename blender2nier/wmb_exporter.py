@@ -18,6 +18,11 @@ def prepare_blend():
     for obj in bpy.data.objects:
         if obj.type == 'MESH':
             #obj.data.flip_normals()
+
+            # Triangulate meshes
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.modifier_add(type='TRIANGULATE')
+            bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Triangulate")
             print(obj)
 
         if obj.type not in ['MESH', 'ARMATURE']:
