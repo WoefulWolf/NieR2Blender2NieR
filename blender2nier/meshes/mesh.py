@@ -18,8 +18,6 @@ class c_mesh(object):
                 material = slot.material
                 for indx, mat in enumerate(bpy.data.materials):
                     if mat == material:
-                        print('Material: ', mat)
-                        print('Index: ', indx)
                         materials.append(indx)
                         return materials
 
@@ -38,15 +36,15 @@ class c_mesh(object):
 
         self.boundingBox = get_BoundingBox(self, obj)
 
-        self.offsetMaterials = self.nameOffset + len(obj.name) + 1 - 4
+        self.name = obj.name.split('-')[1]
+
+        self.offsetMaterials = self.nameOffset + len(self.name) + 1
 
         self.numMaterials = len(get_materials(self, obj))
 
         self.offsetBones = self.offsetMaterials + 2*self.numMaterials
 
         self.numBones = len(self.bones)
-
-        self.name = obj.name[:-4]
 
         self.materials =  get_materials(self, obj)     
 
