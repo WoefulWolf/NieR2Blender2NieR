@@ -1,7 +1,7 @@
 ![Nier2Blender](https://user-images.githubusercontent.com/54476280/64488614-519a7280-d24a-11e9-8627-784cdc5ac3de.png)
 <br>
 
-This fork is being updated by **Woeful_Wolf** in an attempt to update Nier2Blender for Blender 2.8 <br>
+This fork is being updated by **Woeful_Wolf** in an attempt to keep Nier2Blender alive for Blender 2.8 and the future versions <br>
 
 <br>
 
