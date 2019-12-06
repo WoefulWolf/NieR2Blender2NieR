@@ -7,8 +7,12 @@ def create_wmb_header(wmb_file, data):
         write_char(wmb_file, char)                                 
     write_uInt32(wmb_file, 538312982)                           # version
     write_Int32(wmb_file, 0)                                    # unknownA
-    write_Int16(wmb_file, 8)                                    # flags
-    write_Int16(wmb_file, 0)                                    # unknownTerminator
+    if data.vertexGroups.vertexGroups[0].vertexFlags == 4:
+        write_Int16(wmb_file, 8)                                    # flags
+        write_Int16(wmb_file, 0)                                    # referenceBone
+    else:
+        write_Int16(wmb_file, 10)                                    
+        write_Int16(wmb_file, -1)
     write_xyz(wmb_file, [0.5, 0.5, 0.5])                        # boundingBox: x y z    TODO
     write_xyz(wmb_file, [0.5, 0.5, 0.5])                        #              u v w    TODO
 
