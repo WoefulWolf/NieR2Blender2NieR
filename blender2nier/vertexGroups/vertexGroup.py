@@ -32,6 +32,7 @@ class c_vertexGroup(object):
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
                     if int(obj_name[-1]) == vertexGroupIndex:
+                        obj.data.calc_tangents()
                         blenderObjects.append(obj)
 
             return blenderObjects
