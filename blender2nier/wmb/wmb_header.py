@@ -13,8 +13,8 @@ def create_wmb_header(wmb_file, data):
     else:
         write_Int16(wmb_file, 10)                                    
         write_Int16(wmb_file, -1)
-    write_xyz(wmb_file, [0.5, 0.5, 0.5])                        # boundingBox: x y z    TODO
-    write_xyz(wmb_file, [0.5, 0.5, 0.5])                        #              u v w    TODO
+    write_xyz(wmb_file, [0.5, 0.5, 0.5])                        # boundingBox: x y z    TODO but maybe not really needed
+    write_xyz(wmb_file, [0.5, 0.5, 0.5])                        #              u v w    TODO but maybe not really needed
 
     offsetBones = data.bones_Offset
     write_uInt32(wmb_file, offsetBones)                          # offsetBones
@@ -29,7 +29,7 @@ def create_wmb_header(wmb_file, data):
     print(' + offsetBoneIndexTranslateTable: ', offsetBoneIndexTranslateTable)
 
     boneTranslateTableSize = data.bones_Size + 8
-    write_uInt32(wmb_file, boneTranslateTableSize)              # boneTranslateTableSize TODO
+    write_uInt32(wmb_file, boneTranslateTableSize)              # boneTranslateTableSize
     print(' + boneTranslateTableSize: ', boneTranslateTableSize)
 
     offsetVertexGroups = data.vertexGroups_Offset
