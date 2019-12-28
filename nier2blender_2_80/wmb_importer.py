@@ -24,7 +24,7 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber ]
+def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber ]
 	print('[+] importing armature')
 	bpy.ops.object.add(
 		type='ARMATURE', 
@@ -39,6 +39,10 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	amt['firstLevel'] = firstLevel
 	amt['secondLevel'] = secondLevel
 	amt['thirdLevel'] = thirdLevel
+
+	amt['boneMap'] = boneMap
+
+	amt['boneSetArray'] = boneSetArray
 
 	for bone_data in bone_data_array:	
 		bone = amt.edit_bones.new(bone_data[1])
@@ -119,6 +123,8 @@ def construct_mesh(mesh_data):
 				if weight:
 					group.add([i], weight, "REPLACE")
 	obj.rotation_euler = (math.tan(1),0,0)
+	if mesh_data[5] != "None":
+		obj['boneSetIndex'] = mesh_data[5]
 	return obj
 
 def set_partent(parent, child):
@@ -340,7 +346,10 @@ def format_wmb_mesh(wmb):
 						usedVerticeIndexArrays.append(usedVerticeIndexArray)
 						flag = False
 						has_bone = wmb.hasBone
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray])
+						boneSetIndex = wmb.meshArray[meshArrayIndex].bonesetIndex
+						if boneSetIndex == 0xffffffff:
+							boneSetIndex = "None"
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex])
 						meshes.append(obj)
 	return meshes, uvs, usedVerticeIndexArrays
 
@@ -372,7 +381,7 @@ def get_wmb_material(wmb, texture_dir):
 	return materials
 
 def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
-	reset_blend()
+	#reset_blend()
 	wmb = WMB3(wmb_file)
 	wmbname = wmb_file.split('\\')[-1]
 	texture_dir = wmb_file.replace(wmbname, '') 
@@ -381,7 +390,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
-		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel)
+		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray)
 	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
