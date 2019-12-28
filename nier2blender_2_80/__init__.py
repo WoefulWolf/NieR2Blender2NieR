@@ -38,6 +38,8 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
     filename_ext = ".dtt"
     filter_glob: StringProperty(default="*.dtt", options={'HIDDEN'})
 
+    reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
+
     def execute(self, context):
         head = os.path.split(self.filepath)[0]
         tail = os.path.split(self.filepath)[1]
@@ -58,6 +60,8 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
         print(dat_filepath)
         print(wmb_filepath)
         from nier2blender_2_80 import wmb_importer
+        if self.reset_blend:
+            wmb_importer.reset_blend()
         return wmb_importer.main(wmb_filepath)
 
 # Registration
