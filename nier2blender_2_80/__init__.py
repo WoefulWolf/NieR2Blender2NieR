@@ -26,8 +26,12 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
     filename_ext = ".wmb"
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
+    reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
+
     def execute(self, context):
         from nier2blender_2_80 import wmb_importer
+        if self.reset_blend:
+            wmb_importer.reset_blend()
         return wmb_importer.main(self.filepath)
 
 class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
