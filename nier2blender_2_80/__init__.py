@@ -1,5 +1,5 @@
 bl_info = {
-    "name": "Nier: Automata Model Importer",
+    "name": "Nier2Blender (NieR:Automata Model Importer)",
     "author": "Woeful_Wolf (Original by C4nf3ng)",
     "version": (1, 9),
     "blender": (2, 80, 0),
