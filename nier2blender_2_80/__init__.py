@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nier: Automata Model Importer",
-    "author": "C4nf3ng (2.80 by Woeful_Wolf)",
-    "version": (1, 1),
+    "author": "Woeful_Wolf (Original by C4nf3ng)",
+    "version": (1, 9),
     "blender": (2, 80, 0),
     "api": 38019,
     "location": "File > Import-Export",
@@ -10,8 +10,6 @@ bl_info = {
     "wiki_url": "",
     "tracker_url": "",
     "category": "Import-Export"}
-
-#just for Break
 
 import bpy
 import os
