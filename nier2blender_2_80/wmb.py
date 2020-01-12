@@ -1,5 +1,7 @@
 from nier2blender_2_80.util import *
 from nier2blender_2_80.wta import *
+import numpy as np
+
 class WMB_Header(object):
 	""" fucking header	"""
 	def __init__(self, wmb_fp):
@@ -76,13 +78,13 @@ class wmb3_vertex(object):
 		if stride > 0x18:										
 			self.boneWeights = [to_int(wmb_fp.read(1))/255 for i in range(4)]
 
-class wmb3_boneWeight(object):
+class wmb3_boneWeight(object):													# Incorrect, this is actually vertex colours, too lazy to rename
 	"""docstring for wmb3_boneWeight"""
 	def __init__(self, wmb_fp, stride):
 		super(wmb3_boneWeight, self).__init__()
 		self.unknown00 = hex(to_int(wmb_fp.read(4)))				
 		if stride > 0xC:
-			self.unknown04 = hex(to_int(wmb_fp.read(4)))
+			self.unknown04 = [to_int(wmb_fp.read(1)), to_int(wmb_fp.read(1)), to_int(wmb_fp.read(1)), to_int(wmb_fp.read(1))]
 		if stride > 0x8:											
 			self.unknown08 = hex(to_int(wmb_fp.read(4)))
 		self.unknown0C = hex(to_int(wmb_fp.read(4)))
@@ -107,10 +109,10 @@ class wmb3_vertexGroup(object):
 			vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexStride)
 			self.vertexArray.append(vertex)
 
-		self.boneWeightArray = []
+		self.vertexesExDataArray = []
 		wmb_fp.seek(self.vertexGroupHeader.boneWeightArrayOffset)
 		for vertexIndex in range(self.vertexGroupHeader.vertexCount):
-			self.boneWeightArray.append(wmb3_boneWeight(wmb_fp,self.vertexGroupHeader.boneWeightStride))
+			self.vertexesExDataArray.append(wmb3_boneWeight(wmb_fp,self.vertexGroupHeader.boneWeightStride))
 
 		self.faceRawArray = []
 		wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
@@ -144,9 +146,9 @@ class wmb3_bone(object):
 		local_positionY = to_float(wmb_fp.read(4))		
 		local_positionZ = to_float(wmb_fp.read(4))	
 		
-		self.local_rotationX = to_float(wmb_fp.read(4))		 
-		self.local_rotationY = to_float(wmb_fp.read(4))		 
-		self.local_rotationZ = to_float(wmb_fp.read(4))		
+		local_rotationX = to_float(wmb_fp.read(4))		 
+		local_rotationY = to_float(wmb_fp.read(4))		 
+		local_rotationZ = to_float(wmb_fp.read(4))		
 
 		self.local_scaleX = to_float(wmb_fp.read(4))
 		self.local_scaleY = to_float(wmb_fp.read(4))
@@ -163,14 +165,17 @@ class wmb3_bone(object):
 		world_scaleX = to_float(wmb_fp.read(4))
 		world_scaleY = to_float(wmb_fp.read(4))
 		world_scaleZ = to_float(wmb_fp.read(4))
-		self.world_scale = (world_scaleX, world_scaleY, world_scaleZ)
+
 		world_position_tposeX = to_float(wmb_fp.read(4))
 		world_position_tposeY = to_float(wmb_fp.read(4))
 		world_position_tposeZ = to_float(wmb_fp.read(4))
+
 		self.local_position = (local_positionX, local_positionY, local_positionZ)
+		self.local_rotation = (local_rotationX, local_rotationY, local_rotationZ)
 
 		self.world_position = (world_positionX, world_positionY, world_positionZ)
 		self.world_rotation = (world_rotationX, world_rotationY, world_rotationZ)
+		self.world_scale = (world_scaleX, world_scaleY, world_scaleZ)
 
 		self.world_position_tpose = (world_position_tposeX, world_position_tposeY, world_position_tposeZ)
 class wmb3_boneMap(object):
@@ -418,6 +423,26 @@ class WMB3(object):
 		faceRawCount = mesh.faceCount
 		vertexStart = mesh.vertexStart
 		vertexCount = mesh.vertexCount
+
+		vertexesExDataArray = self.vertexGroupArray[vertexGroupIndex].vertexesExDataArray
+		vertexesExData = vertexesExDataArray[vertexStart : vertexStart + vertexCount]
+		colors_mean = None
+		if hasattr(vertexesExData[0], 'unknown04'):
+			colors0 = []
+			colors1 = []
+			colors2 = []
+			colors3 = []
+			for vertexExData in vertexesExData:
+				colors0.append(vertexExData.unknown04[0])
+				colors1.append(vertexExData.unknown04[1])
+				colors2.append(vertexExData.unknown04[2])
+				colors3.append(vertexExData.unknown04[3])
+			colors0_mean = int(sum(colors0)/len(colors0))
+			colors1_mean = int(sum(colors1)/len(colors1))
+			colors2_mean = int(sum(colors2)/len(colors2))
+			colors3_mean = int(sum(colors3)/len(colors3))
+			colors_mean = [colors0_mean, colors1_mean, colors2_mean, colors3_mean]			
+
 		faceRawArray = self.vertexGroupArray[vertexGroupIndex].faceRawArray
 		facesRaw = faceRawArray[faceRawStart : faceRawStart + faceRawCount ]
 		facesRaw = [index - 1 for index in facesRaw]
@@ -452,7 +477,7 @@ class WMB3(object):
 						print(meshVertices[i].boneWeights) 
 				else:
 					self.hasBone = False
-		return usedVertices ,faces, usedVertexIndexArray, boneWeightInfos
+		return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, colors_mean
 
 
 def export_obj(wmb, wta, wtp_fp, obj_file):

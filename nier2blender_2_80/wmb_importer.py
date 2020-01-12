@@ -24,7 +24,7 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos ]
+def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
 	print('[+] importing armature')
 	bpy.ops.object.add(
 		type='ARMATURE', 
@@ -44,20 +44,25 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 
 	amt['boneSetArray'] = boneSetArray
 
-	for bone_data in bone_data_array:	
+	for bone_data in bone_data_array:
 		bone = amt.edit_bones.new(bone_data[1])
 		bone.head = Vector(bone_data[4]) 
 		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))
 		boneNumber = bone_data[6]				
 		bone['ID'] = boneNumber
-		localPos = bone_data[7]
-		bone['localPosition'] = localPos
+
+		bone['localPosition'] = bone_data[7]
+		bone['localRotation'] = bone_data[8]
+		bone['worldRotation'] = bone_data[9]
+		bone['TPOSE_worldPosition'] = bone_data[10]
+
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
 		if bone_data[2] < 0xffff:						#this value need to edit in different games
 			bone = bones[bone_data[1]]
 			bone.parent = bones[bone_data[3]]
-			bones[bone_data[3]].tail = bone.head
+			if bones[bone_data[3]]['ID'] != 0:
+				bones[bone_data[3]].tail = bone.head
 	bpy.ops.object.mode_set(mode='OBJECT')
 	ob.rotation_euler = (math.tan(1),0,0)
 	#split_armature(amt.name)							#current not used
@@ -128,6 +133,7 @@ def construct_mesh(mesh_data):
 	if mesh_data[5] != "None":
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
+	obj['vertexColours_mean'] = mesh_data[7]
 	return obj
 
 def set_partent(parent, child):
@@ -346,13 +352,14 @@ def format_wmb_mesh(wmb):
 						faces =  meshInfo[1]
 						usedVerticeIndexArray = meshInfo[2]
 						boneWeightInfoArray = meshInfo[3]
+						colors_mean = meshInfo[4]
 						usedVerticeIndexArrays.append(usedVerticeIndexArray)
 						flag = False
 						has_bone = wmb.hasBone
 						boneSetIndex = wmb.meshArray[meshArrayIndex].bonesetIndex
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = "None"
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex])
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean])
 						meshes.append(obj)
 	return meshes, uvs, usedVerticeIndexArrays
 
@@ -389,7 +396,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	wmbname = wmb_file.split('\\')[-1]
 	texture_dir = wmb_file.replace(wmbname, '') 
 	if wmb.hasBone:
-		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position] for bone in wmb.boneArray]
+		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
