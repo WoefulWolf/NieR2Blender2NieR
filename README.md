@@ -1,4 +1,4 @@
-# Blender2Nier
+# Blender2NieR
 
 ## VERY IMPORTANT
 My addon Nier2Blender_2.8 is a REQUIREMENT. Without it, nothing will work, you will understand why. <br>
