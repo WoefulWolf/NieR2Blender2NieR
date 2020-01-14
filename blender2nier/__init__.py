@@ -1,7 +1,7 @@
 bl_info = {
-    "name": "Nier: Automata Model Exporter",
+    "name": "Blender2Nier (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
-    "version": (1, 1),
+    "version": (0, 1, 1),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Export Blender model to Nier:Automata wmb model data",
@@ -19,8 +19,14 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
     filename_ext = ".wmb"
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
+    flip_normals: bpy.props.BoolProperty(name="Flip Normals", default=False)
+
     def execute(self, context):
         from blender2nier import wmb_exporter
+        
+        if self.flip_normals:
+            wmb_exporter.flip_all_normals()
+
         return wmb_exporter.main(self.filepath)
 
 

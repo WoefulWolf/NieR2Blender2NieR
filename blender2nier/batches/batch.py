@@ -9,3 +9,4 @@ class c_batch(object):
         self.numVertexes = len(obj.data.vertices) + prev_numVertexes
         self.numIndexes = len(obj.data.loops)
         self.numPrimitives = len(obj.data.polygons)
+        self.blenderObj = obj

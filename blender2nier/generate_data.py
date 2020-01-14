@@ -56,6 +56,7 @@ class c_generate_data(object):
 
         self.vertexGroups_Offset = currentOffset
         self.vertexGroups = c_vertexGroups(self.vertexGroups_Offset)
+        self.vertexGroupsCount = len(self.vertexGroups.vertexGroups)
         self.vertexGroups_Size = self.vertexGroups.vertexGroups_StructSize
         currentOffset += self.vertexGroups_Size
         print('vertexGroups_Size: ', self.vertexGroups_Size)
@@ -70,7 +71,7 @@ class c_generate_data(object):
             self.numBoneMap = 0
 
         self.batches_Offset = currentOffset
-        self.batches = c_batches(self.boneMap)
+        self.batches = c_batches(self.vertexGroupsCount)
         self.batches_Size = self.batches.batches_StructSize
         currentOffset += self.batches_Size
         print('batches_Size: ', self.batches_Size)
@@ -91,14 +92,14 @@ class c_generate_data(object):
         currentOffset += (currentOffset % 16)
 
         if hasArmature:
-            self.boneSet_Offset = currentOffset
+            self.boneSets_Offset = currentOffset
 
             if len(self.boneMap.boneMap) > 1:
-                self.boneSet = c_boneSet(self.boneMap, self.boneSet_Offset)
+                self.boneSet = c_boneSet(self.boneMap, self.boneSets_Offset)
                 self.boneSet_Size = self.boneSet.boneSet_StructSize
                 currentOffset += self.boneSet_Size
             else:
-                self.boneSet_Offset = 0
+                self.boneSets_Offset = 0
 
             currentOffset += (currentOffset % 16)
 
@@ -108,7 +109,7 @@ class c_generate_data(object):
             print('boneMap_Size: ', self.boneMap_Size)
         else:
             self.boneMap_Offset = 0
-            self.boneSet_Offset = 0
+            self.boneSets_Offset = 0
 
         self.meshes_Offset = currentOffset
         self.meshes = c_meshes(self.meshes_Offset)
@@ -127,5 +128,5 @@ class c_generate_data(object):
         currentOffset += self.materials_Size
         print('materials_Size: ', self.materials_Size)
 
-        self.meshMaterials = c_meshMaterials(self.meshes)
+        self.meshMaterials = c_meshMaterials(self.meshes, self.lods)
         self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize

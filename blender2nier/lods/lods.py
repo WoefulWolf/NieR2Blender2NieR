@@ -4,11 +4,17 @@ class c_lods(object):
     def __init__(self, lodsStart, batches):
         def get_batchInfos(self, batches):
             batchesInfos = []
-            meshIndex = -1
             for batch in batches.batches:                                       # Bunch of stuff TODO here
                 vertexGroupIndex = batch.vertexGroupIndex
-                meshIndex += 1 
-                materialIndex = 0
+                meshIndex = batch.blenderObj['meshGroupIndex']
+
+                for slot in batch.blenderObj.material_slots:
+                    material = slot.material
+                for mat_indx, mat in enumerate(bpy.data.materials):
+                    if mat == material:
+                        materialIndex = mat_indx
+                        break
+                
                 colTreeNodeIndex = -1
                 meshMatPairIndex = meshIndex
                 indexToUnknown1 = -1

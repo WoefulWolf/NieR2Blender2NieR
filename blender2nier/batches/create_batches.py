@@ -3,29 +3,39 @@ import bpy, bmesh, math
 from blender2nier.batches.batch import c_batch
 
 class c_batches(object):
-    def __init__(self, boneMap):
+    def __init__(self, vertexGroupsCount):
         
         def get_batches(self):
             batches = []
-            boneSetIndex = -1
+            #boneSetIndex = -1
+            currentVertexGroup = -1
 
+            numOfBatches = 0
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
-                    obj_name = obj.name.split('-')
-                    obj_vertexGroupIndex = int(obj_name[-1])
+                    numOfBatches += 1
 
-                    if boneMap is not None:
-                        for index, bone in enumerate(boneMap.boneMap):
-                            if len(obj.vertex_groups) > 0:
-                                if bone == int(obj.vertex_groups[0].name[-1]):
-                                    boneSetIndex = index
+            curBatch = 0
+            while curBatch <= numOfBatches-1:
+                for obj in bpy.data.objects:
+                    if obj.type == 'MESH':
+                        obj_name = obj.name.split('-')
 
+                        if int(obj_name[0]) == curBatch:
+                            obj_vertexGroupIndex = int(obj_name[-1])
+                            print('Generated batch:', obj.name)
+                            
+                            if obj_vertexGroupIndex != currentVertexGroup:      # Start of new vertex group
+                                currentVertexGroup = obj_vertexGroupIndex
+                                cur_indexStart = 0
+                                cur_numVertexes = 0
 
-                    if len(batches) == 0:
-                        batches.append(c_batch(obj, obj_vertexGroupIndex, 0, 0, boneSetIndex))
-                    else:
-                        batches.append(c_batch(obj, obj_vertexGroupIndex, batches[len(batches)-1].indexStart + batches[len(batches)-1].numIndexes, batches[len(batches)-1].numVertexes, boneSetIndex))
+                            obj_boneSetIndex = obj['boneSetIndex']
 
+                            batches.append(c_batch(obj, obj_vertexGroupIndex, cur_indexStart, cur_numVertexes, obj_boneSetIndex))
+                            cur_indexStart += batches[len(batches)-1].numIndexes
+                            cur_numVertexes = batches[len(batches)-1].numVertexes
+                            curBatch += 1
 
             return batches
 

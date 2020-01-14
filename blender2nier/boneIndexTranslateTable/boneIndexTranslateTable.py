@@ -25,4 +25,4 @@ class c_boneIndexTranslateTable(object):
         self.thirdLevel_Size = len(self.thirdLevel)
 
 
-        self.boneIndexTranslateTable_StructSize = 16*2 + self.secondLevel_Size*2 + self.thirdLevel_Size*2
+        self.boneIndexTranslateTable_StructSize = self.firstLevel_Size*2 + self.secondLevel_Size*2 + self.thirdLevel_Size*2

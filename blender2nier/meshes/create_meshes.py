@@ -8,6 +8,12 @@ class c_meshes(object):
             meshes = []
             meshes_names_added = []
             numMeshes = 0
+
+            groupedMeshOrder = []
+            for obj in bpy.data.objects:
+                if obj.type == 'MESH':
+                    meshGroupIndex = obj["meshGroupIndex"]
+
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
@@ -15,8 +21,18 @@ class c_meshes(object):
                         numMeshes += 1
                         meshes_names_added.append(obj_name[1])
 
+            currentGroupIndex = 0
+            groupedMeshObjOrder = []
+            while len(groupedMeshObjOrder) < numMeshes:
+                for obj in bpy.data.objects:
+                    if obj.type == 'MESH':
+                        meshGroupIndex = obj["meshGroupIndex"]
+                        if meshGroupIndex == currentGroupIndex:
+                            groupedMeshObjOrder.append(obj)
+                            currentGroupIndex += 1
+
             meshes_names_added = []
-            for obj in bpy.data.objects:
+            for obj in groupedMeshObjOrder:
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
                     if obj_name[1] not in meshes_names_added:

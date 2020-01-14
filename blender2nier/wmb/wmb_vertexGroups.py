@@ -17,6 +17,7 @@ def create_wmb_vertexGroups(wmb_file, data):
         write_Int32(wmb_file, vertexGroup.indexBufferOffset)        # indexBufferOffset
         write_Int32(wmb_file, vertexGroup.numIndexes)               # numIndexes
 
+    for vertexGroup in data.vertexGroups.vertexGroups:
         for vertex in vertexGroup.vertexes:                         # [position.xyz, tangents, mapping, mapping2, color]
             write_xyz(wmb_file, vertex[0])                          # position.xyz
             for val in vertex[1]:                                   # tangents
@@ -34,10 +35,26 @@ def create_wmb_vertexGroups(wmb_file, data):
 
         wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # vertexesExData
-            if vertexGroup.vertexExDataSize == 8:
+
+            if vertexGroup.vertexExDataSize == 8:                   
                 for val in vertexExData:                            # normal
                     write_float16(wmb_file, val)
-            else:
+
+            elif vertexGroup.vertexExDataSize == 12:
+                for val in vertexExData[0]:                         # mapping2
+                    write_float16(wmb_file, val)
+                for val in vertexExData[1]:                         # normal
+                    write_float16(wmb_file, val)
+
+            elif vertexGroup.vertexExDataSize == 16:
+                for val in vertexExData[0]:                         # mapping2
+                    write_float16(wmb_file, val)
+                for val in vertexExData[1]:                         # color
+                    write_byte(wmb_file, val)
+                for val in vertexExData[2]:                         # normal
+                    write_float16(wmb_file, val)
+
+            elif vertexGroup.vertexExDataSize == 20:
                 for val in vertexExData[0]:                         # mapping2
                     write_float16(wmb_file, val)
                 for val in vertexExData[1]:                         # color

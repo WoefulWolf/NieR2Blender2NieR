@@ -13,21 +13,24 @@ class c_vertexGroups(object):
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
                     obj_vertexGroupIndex = int(obj_name[-1])
-                    if not obj_vertexGroupIndex in vertexGroupIndex:
+                    if obj_vertexGroupIndex not in vertexGroupIndex:
                         vertexGroupIndex.append(obj_vertexGroupIndex)
+
+            vertexGroupIndex.sort()
+
+            vertexesOffset = offsetVertexGroups + len(vertexGroupIndex) * 48
             
             vertexGroups = []
             for index in vertexGroupIndex:
-                if len(vertexGroups) == 0:
-                    vertexGroups.append(c_vertexGroup(index, offsetVertexGroups))
-                else:
-                    vertexGroups.append(c_vertexGroup(index, vertexGroups[index-1].vertexGroupStart + vertexGroups[index-1].vertexGroupSize))
+                print('[+] Creating Vertex Group', index)
+                vertexGroups.append(c_vertexGroup(index, vertexesOffset))
+                vertexesOffset += vertexGroups[index].vertexGroupSize
             return vertexGroups
 
         self.vertexGroups = get_vertexGroups(self, self.offsetVertexGroups)
 
         def get_vertexGroupsSize(self, vertexGroups):
-            vertexGroupsSize = 0
+            vertexGroupsSize = len(vertexGroups) * 48
 
             for vertexGroup in vertexGroups:
                 vertexGroupsSize += vertexGroup.vertexGroupSize

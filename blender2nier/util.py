@@ -55,7 +55,7 @@ def write_float16(file, val):
 
 def close_wmb(wmb_file):
     write_buffer(wmb_file, 32)
-    write_string(wmb_file, 'WMB created with Blender2Nier v0.0.3 by Woeful_Wolf')
+    write_string(wmb_file, 'WMB created with Blender2Nier v0.1.1 by Woeful_Wolf')
     wmb_file.flush()
     wmb_file.close()
 

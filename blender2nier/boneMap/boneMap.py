@@ -3,12 +3,9 @@ import bpy, bmesh, math
 class c_boneMap(object):
     def __init__(self, bones):
         boneMap = []
-        for index, bone in enumerate(bones.bones):
-            if bone[1] not in [-1, 0]:
-                boneMap.append(index)
-
-        if len(boneMap) == 0:
-            boneMap.append(0)
+        for obj in bpy.data.objects:
+            if obj.type == 'ARMATURE':
+                boneMap = obj.data['boneMap']
         
         self.boneMap = boneMap
 
