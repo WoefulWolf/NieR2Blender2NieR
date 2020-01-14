@@ -5,7 +5,7 @@ My addon Nier2Blender_2.8 is a REQUIREMENT. Without it, nothing will work, you w
 https://github.com/WoefulWolf/Nier2Blender_2.8 <br>
 THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If any updates break something that worked in the past, please let me know immediately. Every update is intended to be fully functional, the next just better than the prior.
 
-## Tutorials and a Proper Readme will come, eventually.
+## Tutorials and a Proper Readme will come, eventually...
 #### For now you should just understand these basic rules:
 * Any model you wish to edit or replace must first be imported using my above-mentioned addon WITH materials/shaders. Thus DTT import is recommended to have it do everything automatically for you. <br>
 * THINGS YOU SHOULD NOT CHANGE (unless you know what you are doing) include object names, material names, armatures, vertex groups or any custom properties on objects, materials, bones, armatures, etc. <br>
