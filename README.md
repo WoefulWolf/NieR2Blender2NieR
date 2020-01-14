@@ -2,7 +2,8 @@
 
 ## VERY IMPORTANT
 My addon Nier2Blender_2.8 is a REQUIREMENT. Without it, nothing will work, you will understand why. <br>
-https://github.com/WoefulWolf/Nier2Blender_2.8
+https://github.com/WoefulWolf/Nier2Blender_2.8 <br>
+THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If any updates break something that worked in the past, please let me know immediately. Every update is intended to be fully functional, the next just better than the prior.
 
 ## Tutorials and a Proper Readme will come, eventually.
 #### For now you should just understand these basic rules:
@@ -14,3 +15,19 @@ https://github.com/WoefulWolf/Nier2Blender_2.8
 * All meshes must be triangulated. (This gets done automatically, but you can do it yourself to ensure no unexpected results.) <br>
 * After exporting, in-game the model might sometimes have flipped normals - you will have to flip them in Blender and re-export, sorry. <br>
 * Open the Blender Console Window when exporting, this allows you to see its progress and any export errors. <br>
+
+## Bug Reports and Contact
+* Please leave bug reports. You can leave them here on the GitHub under issues. Remember to post as much info as you can. <br>
+* Feel free to contact me for any questions or issues you might be having. You can contact me, and some other members of the NieR:Modding community at our Discord server: https://discord.gg/7F76ZVv
+
+# GL HF!
+
+## THANKS:
+* The wonderful people from Bayonetta Tools, namely Elediane.
+* Kekoulis, literal months of support and help with testing.
+* The BONE boi Ameii.
+* Comrade Petrarca. o7
+* Martino.
+* delle the texture man.
+* Platinum Games.
+* **Yoko Taro.**
