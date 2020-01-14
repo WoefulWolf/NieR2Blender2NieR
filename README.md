@@ -15,6 +15,7 @@ THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If an
 * All meshes must be triangulated. (This gets done automatically, but you can do it yourself to ensure no unexpected results.) <br>
 * After exporting, in-game the model might sometimes have flipped normals - you will have to flip them in Blender and re-export, sorry. <br>
 * Open the Blender Console Window when exporting, this allows you to see its progress and any export errors. <br>
+* A lot of my code is put together with duct-tape and instant ramen, thus it is unoptimized, ugly and straight up fucked at places. :)
 
 ## Bug Reports and Contact
 * Please leave bug reports. You can leave them here on the GitHub under issues. Remember to post as much info as you can. <br>
