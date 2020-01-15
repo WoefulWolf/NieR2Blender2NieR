@@ -2,7 +2,6 @@ import bpy, bmesh, math, mathutils
 import numpy as np
 import math
 from blender2nier.util import Vector3
-from blender2nier.structs import vertex
 
 class c_vertexGroup(object):
     def __init__(self, vertexGroupIndex, vertexesStart):

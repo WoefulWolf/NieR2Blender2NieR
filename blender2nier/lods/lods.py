@@ -4,7 +4,7 @@ class c_lods(object):
     def __init__(self, lodsStart, batches):
         def get_batchInfos(self, batches):
             batchesInfos = []
-            for batch in batches.batches:                                       # Bunch of stuff TODO here
+            for batch in batches.batches:                                     
                 vertexGroupIndex = batch.vertexGroupIndex
                 meshIndex = batch.blenderObj['meshGroupIndex']
 
