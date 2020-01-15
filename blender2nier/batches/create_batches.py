@@ -30,7 +30,10 @@ class c_batches(object):
                                 cur_indexStart = 0
                                 cur_numVertexes = 0
 
-                            obj_boneSetIndex = obj['boneSetIndex']
+                            if 'boneSetIndex' in obj:
+                                obj_boneSetIndex = obj['boneSetIndex']
+                            else:
+                                obj_boneSetIndex = -1
 
                             batches.append(c_batch(obj, obj_vertexGroupIndex, cur_indexStart, cur_numVertexes, obj_boneSetIndex))
                             cur_indexStart += batches[len(batches)-1].numIndexes

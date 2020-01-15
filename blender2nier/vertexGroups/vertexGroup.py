@@ -59,8 +59,10 @@ class c_vertexGroup(object):
             uv_coords = objOwner.data.uv_layers.active.data[loopIndex].uv
             return uv_coords
 
-        if blenderVertices[0][1]['vertexColours_mean'] == None:
-            self.vertexFlags = 7                                             # 4, 7, 10, 11
+        if 'boneSetIndex' not in self.blenderObjects[0]:         # 4, 7, 10, 11
+            self.vertexFlags = 4                                             
+        elif self.blenderObjects[0]['vertexColours_mean'] == None:
+            self.vertexFlags = 7
         else:    
             self.vertexFlags = 10
 
@@ -99,7 +101,8 @@ class c_vertexGroup(object):
                 print('   [>] Generating vertexes for object', bvertex_obj[1].name)
                 loops = get_blenderLoops(self, bvertex_obj[1])
 
-                boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
+                if self.vertexFlags != 4:
+                    boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
 
                 for bvertex in bvertex_obj[0]:
                     # XYZ Position
@@ -119,7 +122,10 @@ class c_vertexGroup(object):
                             # Bone Indexes
                             if self.vertexFlags == 4:
                                 mapping2 = mapping
-                                color = [0, 0, 0, 255]  
+                                color = [0, 0, 0, 255] 
+                            elif self.vertexFlags == 7:
+                                mapping2 = [0, 0, 0, 0]
+                                color = [255, 0, 0, 0]  
                             else:
                                 boneIndexes = []
                                 for groupRef in bvertex.groups:
@@ -177,7 +183,6 @@ class c_vertexGroup(object):
 
                     tangents = [tx, ty, tz, sign] 
 
-                    #print([position.xyz, tangents, mapping, mapping2, color])
                     vertexes.append([position.xyz, tangents, mapping, mapping2, color])
             return vertexes
 

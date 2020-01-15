@@ -33,7 +33,6 @@ def prepare_blend():
             bpy.ops.object.modifier_add(type='TRIANGULATE')
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Triangulate")
 
-            # Add object to pool to have tangents calculated in parallel
         if obj.type not in ['MESH', 'ARMATURE']:
             print('[-] Removed ', obj)
             bpy.data.objects.remove(obj)
