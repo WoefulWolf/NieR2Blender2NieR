@@ -19,6 +19,10 @@ class c_generate_data(object):
                 print('Armature found, exporting bones structures.')
                 hasArmature = True
 
+        # Generate custom boneSets from Blender vertex groups
+        if hasArmature:
+            self.b_boneSets = c_b_boneSets()
+
         currentOffset = 0
 
         self.header_Offset = currentOffset
