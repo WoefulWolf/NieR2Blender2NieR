@@ -59,14 +59,14 @@ class c_vertexGroup(object):
             uv_coords = objOwner.data.uv_layers.active.data[loopIndex].uv
             return uv_coords
 
-        if 'boneSetIndex' not in self.blenderObjects[0]:         # 4, 7, 10, 11
+        if self.blenderObjects[0]['boneSetIndex'] == -1:         # 4, 7, 10, 11
             self.vertexFlags = 4                                             
         elif self.blenderObjects[0]['vertexColours_mean'] == None:
             self.vertexFlags = 7
         else:    
             self.vertexFlags = 10
 
-        if self.vertexFlags == 4:                                            # SIZE OF ONE 'vertexesExData' 8, 16, 20
+        if self.vertexFlags == 4:                                            # SIZE OF ONE 'vertexesExData' 8. 12, 16, 20
             self.vertexExDataSize = 8       
         elif self.vertexFlags == 7:                                          
             self.vertexExDataSize = 12                                    

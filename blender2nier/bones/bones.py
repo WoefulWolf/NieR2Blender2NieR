@@ -7,30 +7,12 @@ class c_bones(object):
         def get_bones(self):
             _bones = []
             numBones = 0
-            character_amt = False
-            add_temp = False
             for obj in bpy.data.objects:
                 if obj.type == 'ARMATURE':
                     numBones = len(obj.data.bones)
                     first_bone = obj.data.bones[0]
-                    if first_bone['ID'] == 4095:
-                        character_amt = True
 
             if numBones > 1:
-                if character_amt == False:      # Add root bone of non-character armatures.
-                    ID = 0
-                    parentIndex = -1
-                    localPosition = Vector3(0, 0, 0)
-                    localRotation = Vector3(0, 0, 0)  
-                    localScale = Vector3(1, 1, 1)  
-                    position = localPosition
-                    rotation = localRotation
-                    scale = localScale
-                    tPosition = localPosition
-                    blenderName = '_0'
-                    bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
-                    _bones.append(bone)
-
                 for obj in bpy.data.objects:
                     if obj.type == 'ARMATURE':
                         for indx, bone in enumerate(obj.data.bones):
@@ -39,10 +21,8 @@ class c_bones(object):
                             if bone.parent:
                                 parent_name = bone.parent.name.replace('bone', '')
                                 parentIndex = int(parent_name)                                                      
-                            elif character_amt == True:
-                                parentIndex = -1
                             else:
-                                parentIndex = 0
+                                parentIndex = -1
 
                             
 
