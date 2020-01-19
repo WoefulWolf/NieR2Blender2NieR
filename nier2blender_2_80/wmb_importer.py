@@ -357,8 +357,9 @@ def format_wmb_mesh(wmb):
 						flag = False
 						has_bone = wmb.hasBone
 						boneSetIndex = wmb.meshArray[meshArrayIndex].bonesetIndex
+						print('BONESETINDEX:', boneSetIndex)
 						if boneSetIndex == 0xffffffff:
-							boneSetIndex = "None"
+							boneSetIndex = -1
 						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean])
 						meshes.append(obj)
 	return meshes, uvs, usedVerticeIndexArrays
