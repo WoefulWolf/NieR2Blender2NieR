@@ -2,6 +2,7 @@ import os
 import sys
 import struct
 import numpy as np
+import bpy
 
 def create_wmb(filepath):
     print('Creating wmb file: ', filepath)
@@ -68,3 +69,9 @@ class Vector3(object):
         self.y = y
         self.z = z
         self.xyz = [x, y, z]
+
+def show_message(message = "", title = "Message Box", icon = 'INFO'):
+	def draw(self, context):
+		self.layout.label(text = message)
+		self.layout.alignment = 'CENTER'
+	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)

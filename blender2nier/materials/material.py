@@ -1,4 +1,5 @@
 import bpy, bmesh, math, mathutils
+from blender2nier.util import show_message
 
 class c_material(object):
     def __init__(self, offsetMaterialName, material):
@@ -110,6 +111,12 @@ class c_material(object):
         self.offsetName = self.offsetMaterial
 
         self.offsetShaderName = self.offsetName + len(self.b_material.name) + 1
+
+        if not 'Shader_Name' in self.b_material:
+            show_message('Shader_Name not found. The exporter just tried converting a material that does not have all the required data. Check system console for details.', 'Invalid Material', 'ERROR')
+            print('[ERROR] Invalid Material: Shader_Name not found.')
+            print(' - If you know all materials used are valid, try ticking "Purge Materials" at export, this will clear all unused materials from your Blender file that might still be lingering.')
+            print(' - WARNING: THIS WILL PERMANENTLY REMOVE ALL UNUSED MATERIALS.')
 
         self.offsetTechniqueName = self.offsetShaderName + len(self.b_material['Shader_Name']) + 1
 

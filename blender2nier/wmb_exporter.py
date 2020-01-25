@@ -22,8 +22,15 @@ def flip_all_normals():
             obj.data.flip_normals()
     print('Flipped normals of all meshes.')
 
+def purge_unused_materials():
+    for material in bpy.data.materials:
+        if not material.users:
+            print('Purging unused material:', material)
+            bpy.data.materials.remove(material)
+
 def prepare_blend():
     print('Preparing .blend File:')
+    bpy.ops.object.mode_set(mode='OBJECT')
     print('Triangulating meshes.')
     for obj in bpy.data.objects:
         if obj.type == 'MESH':

@@ -20,12 +20,16 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
     flip_normals: bpy.props.BoolProperty(name="Flip Normals", default=False)
+    purge_materials: bpy.props.BoolProperty(name="Purge Materials", default=False)
 
     def execute(self, context):
         from blender2nier import wmb_exporter
         
         if self.flip_normals:
             wmb_exporter.flip_all_normals()
+
+        if self.purge_materials:
+            wmb_exporter.purge_unused_materials()
 
         return wmb_exporter.main(self.filepath)
 
