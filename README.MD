@@ -11,7 +11,9 @@ This means it now has **Eevee/Cycles material import support for the Principled 
 <br>
 
 This is still a bit WIP so reporting any bugs would be appreciated, I could not test with every model in the game but if you find any that are problematic, be sure to include what model it was (helps with debugging). <br>
-
+<br>
+If looking for the exporter, here it is: <br>
+https://github.com/WoefulWolf/Blender2NieR
 <br>
 (And thanks for helping with testing; Kekoulis)
 
