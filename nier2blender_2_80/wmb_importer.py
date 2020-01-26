@@ -357,7 +357,6 @@ def format_wmb_mesh(wmb):
 						flag = False
 						has_bone = wmb.hasBone
 						boneSetIndex = wmb.meshArray[meshArrayIndex].bonesetIndex
-						print('BONESETINDEX:', boneSetIndex)
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean])
@@ -426,6 +425,8 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	if wmb.hasBone:
 		for mesh in meshes:
 			set_partent(amt,mesh)
+
+	print('Importing finished. ;)')
 	return {'FINISHED'}
 
 if __name__ == '__main__':
