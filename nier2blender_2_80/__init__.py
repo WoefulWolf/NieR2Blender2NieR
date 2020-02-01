@@ -56,11 +56,7 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
 
         wtp_filename = dat_unpacker.main(self.filepath, extract_dir + '\\' + tailless_tail + '.dtt', self.filepath)       # dtt
 
-        print(wtp_filename)
         wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + wtp_filename[:-4] + '.wmb'
-        print(self.filepath)
-        print(dat_filepath)
-        print(wmb_filepath)
         from nier2blender_2_80 import wmb_importer
         if self.reset_blend:
             wmb_importer.reset_blend()
