@@ -394,7 +394,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	#reset_blend()
 	wmb = WMB3(wmb_file)
 	wmbname = wmb_file.split('\\')[-1]
-	texture_dir = wmb_file.replace(wmbname, '') 
+	texture_dir = wmb_file.replace(wmbname, '\\textures\\') 
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
