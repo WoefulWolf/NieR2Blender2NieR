@@ -72,7 +72,7 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 	print("extracting file %s to %s/%s"%(filename,extract_dir,filename))
 	outfile.write(FileContent)
 	outfile.close()
-	if filename.find('wtp') > -1 :
+	if filename.find('wtp') > -1 and False:  # Removed due to not needed anymore when using Blender DTT import.
 		wtp_fp = open(extract_dir + '/'+filename,"rb")
 		content = wtp_fp.read(Size)
 		dds_group = content.split(b'DDS ')
