@@ -30,6 +30,8 @@ https://github.com/WoefulWolf/Blender2NieR
 
 <br>
 
+![2B](https://i.imgur.com/WObGcDP.png)
+
 ## What is nier2blender?
 
 * A blender plugin for import "Nier:Automata" .wmb (or now .dtt) file to blender with official rig<br>
