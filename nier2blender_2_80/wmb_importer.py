@@ -64,7 +64,7 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 			if bones[bone_data[3]]['ID'] != 0:
 				bones[bone_data[3]].tail = bone.head
 	bpy.ops.object.mode_set(mode='OBJECT')
-	ob.rotation_euler = (math.tan(1),0,0)
+	ob.rotation_euler = (math.radians(90),0,0)
 	#split_armature(amt.name)							#current not used
 	return ob
 
@@ -85,7 +85,7 @@ def split_armature(name):
 		amt_new.name = '%s_%d_Amt' % (name, i)
 		copy_bone_tree(root_bones[i] ,amt_new)
 		bpy.ops.object.mode_set(mode="OBJECT")
-		ob_new.rotation_euler = (math.tan(1),0,0)
+		ob_new.rotation_euler = (math.radians(90),0,0)
 	bpy.ops.object.select_all(action="DESELECT")
 	obj = bpy.data.objects[name]
 	scene = bpy.context.scene
