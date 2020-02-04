@@ -129,7 +129,7 @@ def construct_mesh(mesh_data):
 				group = obj.vertex_groups[group_name]
 				if weight:
 					group.add([i], weight, "REPLACE")
-	obj.rotation_euler = (math.tan(1),0,0)
+	obj.rotation_euler = (math.radians(90),0,0)
 	if mesh_data[5] != "None":
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
