@@ -16,6 +16,10 @@ If looking for the exporter, here it is: <br>
 https://github.com/WoefulWolf/Blender2NieR
 <br>
 (And thanks for helping with testing; Kekoulis)
+<br>
+<br>
+If you use my tool and release something, please give appropriate credit and info. I would really love for my tools to become more 
+widely known so that others can start modding too. :)
 
 ## What have I added exactly?
 
