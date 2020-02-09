@@ -3,7 +3,10 @@
 ## VERY IMPORTANT
 My addon Nier2Blender_2.8 is a REQUIREMENT. Without it, nothing will work, you will understand why. <br>
 https://github.com/WoefulWolf/Nier2Blender_2.8 <br>
-THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If any updates break something that worked in the past, please let me know immediately. Every update is intended to be fully functional, the next just better than the prior.
+THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If any updates break something that worked in the past, please let me know immediately. Every update is intended to be fully functional, the next just better than the prior. <br>
+<br>
+If you use my tool and release something, please give appropriate credit and info. I would really love for my tools to become more 
+widely known so that others can start modding too. :)
 
 ## Tutorials and a Proper Readme will come, eventually...
 #### For now you should just understand these basic rules:
