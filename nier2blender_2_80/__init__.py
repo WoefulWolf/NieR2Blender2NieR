@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nier2Blender (NieR:Automata Model Importer)",
     "author": "Woeful_Wolf (Original by C4nf3ng)",
-    "version": (1, 9),
+    "version": (2, 1),
     "blender": (2, 80, 0),
     "api": 38019,
     "location": "File > Import-Export",
@@ -57,6 +57,9 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
         wtp_filename = dat_unpacker.main(self.filepath, extract_dir + '\\' + tailless_tail + '.dtt', self.filepath)       # dtt
 
         wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + wtp_filename[:-4] + '.wmb'
+        if not os.path.exists(wmb_filepath):
+            wmb_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + wtp_filename[:-4] + '.wmb'                     # if not in dtt, then must be in dat
+
         from nier2blender_2_80 import wmb_importer
         if self.reset_blend:
             wmb_importer.reset_blend()

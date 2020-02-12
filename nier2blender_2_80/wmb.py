@@ -428,19 +428,10 @@ class WMB3(object):
 		vertexesExData = vertexesExDataArray[vertexStart : vertexStart + vertexCount]
 		colors_mean = None
 		if hasattr(vertexesExData[0], 'unknown04'):
-			colors0 = []
-			colors1 = []
-			colors2 = []
-			colors3 = []
-			for vertexExData in vertexesExData:
-				colors0.append(vertexExData.unknown04[0])
-				colors1.append(vertexExData.unknown04[1])
-				colors2.append(vertexExData.unknown04[2])
-				colors3.append(vertexExData.unknown04[3])
-			colors0_mean = int(sum(colors0)/len(colors0))
-			colors1_mean = int(sum(colors1)/len(colors1))
-			colors2_mean = int(sum(colors2)/len(colors2))
-			colors3_mean = int(sum(colors3)/len(colors3))
+			colors0_mean = int(vertexesExData[0].unknown04[0])
+			colors1_mean = int(vertexesExData[0].unknown04[1])
+			colors2_mean = int(vertexesExData[0].unknown04[2])
+			colors3_mean = int(vertexesExData[0].unknown04[3])
 			colors_mean = [colors0_mean, colors1_mean, colors2_mean, colors3_mean]			
 
 		faceRawArray = self.vertexGroupArray[vertexGroupIndex].faceRawArray

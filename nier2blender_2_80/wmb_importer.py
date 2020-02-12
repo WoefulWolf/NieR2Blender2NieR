@@ -134,6 +134,7 @@ def construct_mesh(mesh_data):
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
 	obj['vertexColours_mean'] = mesh_data[7]
+	obj.data.flip_normals()
 	return obj
 
 def set_partent(parent, child):
@@ -251,14 +252,15 @@ def consturct_materials(texture_dir, material):
 							g_channel_invert.location = 200,-325
 							g_channel_link = links.new(seperate_rgb.outputs['G'], g_channel_invert.inputs['Color'])				# G -> Invert
 							g_inverted_link = links.new(g_channel_invert.outputs['Color'], principled.inputs['Roughness'])		# Invert -> Roughness
-							""" DISABLED AO FOR NOW
-							b_channel_multiply = nodes.new(type="ShaderNodeMath")
-							b_channel_multiply.location = 350,0
-							b_channel_multiply.operation = 'MULTIPLY'
-							b_channel_link = links.new(seperate_rgb.outputs['B'], b_channel_multiply.inputs[1])					# AO
-							albedo_multiply_link = links.new(diffuse_image.outputs['Color'], b_channel_multiply.inputs[0])
-							multiply_link = links.new(b_channel_multiply.outputs['Value'], principled.inputs['Base Color'])
-							"""
+							if False:																							# DISABLED BAKED AO (just set this to true if you want it, but Blender's AO is better)
+								b_channel_multiply = nodes.new(type="ShaderNodeMixRGB")
+								b_channel_multiply.location = 350,0
+								b_channel_multiply.blend_type = 'MULTIPLY'
+								b_channel_link = links.new(seperate_rgb.outputs['B'], b_channel_multiply.inputs[2])					# AO
+								albedo_multiply_link = links.new(diffuse_image.outputs['Color'], b_channel_multiply.inputs[1])
+								b_channel_multiply.inputs["Fac"].default_value = 1
+								multiply_link = links.new(b_channel_multiply.outputs['Color'], principled.inputs['Base Color'])
+							
 						else:
 							mask_link = links.new(mask_image.outputs['Color'], principled.inputs['Specular'])
 
