@@ -13,6 +13,7 @@ def reset_blend():
 	for collection in bpy.data.collections:
 		for obj in collection.objects:
 			collection.objects.unlink(obj)
+		bpy.data.collections.remove(collection)
 	for bpy_data_iter in (bpy.data.objects,bpy.data.meshes,bpy.data.lights,bpy.data.cameras):
 		for id_data in bpy_data_iter:
 			bpy_data_iter.remove(id_data)
@@ -101,8 +102,11 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data):
+def construct_mesh(mesh_data, collection_name):
 	name = mesh_data[0]
+	for obj in bpy.data.objects:
+		if obj.name == name:
+			name = name + '-' + collection_name
 	vertices = mesh_data[1]
 	faces = mesh_data[2]
 	has_bone = mesh_data[3]
@@ -326,7 +330,7 @@ def add_material_to_mesh(mesh, materials , uvs):
 	#mesh.hide = True
 	mesh.select_set(False)
 	
-def format_wmb_mesh(wmb):
+def format_wmb_mesh(wmb, collection_name):
 	meshes = []
 	uvs = []
 	usedVerticeIndexArrays = []
@@ -361,7 +365,7 @@ def format_wmb_mesh(wmb):
 						boneSetIndex = wmb.meshArray[meshArrayIndex].bonesetIndex
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean])
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean], collection_name)
 						meshes.append(obj)
 	return meshes, uvs, usedVerticeIndexArrays
 
@@ -396,6 +400,11 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	#reset_blend()
 	wmb = WMB3(wmb_file)
 	wmbname = wmb_file.split('\\')[-1]
+	collection_name = wmbname[:-4]
+
+	col = bpy.data.collections.new(collection_name)
+	bpy.context.scene.collection.children.link(col)
+	bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	texture_dir = wmb_file.replace(wmbname, '\\textures\\') 
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
@@ -403,7 +412,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
 		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray)
-	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb)
+	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
 	for materialIndex in range(len(wmb_materials)):
@@ -415,7 +424,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 			mesh_start = meshGroupInfo.meshStart
 			meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
 			materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
-			groupIndex = int(meshes[Index + mesh_start].name.split('-')[-1])
+			groupIndex = int(meshes[Index + mesh_start].name.split('-')[2])
 			uv = []
 			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
 				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
