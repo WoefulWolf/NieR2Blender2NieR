@@ -36,6 +36,7 @@ class c_meshes(object):
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
                     if obj_name[1] not in meshes_names_added:
+                        print('[+] Generating Mesh', obj.name)
                         mesh = c_mesh(offsetMeshes, numMeshes, obj)
                         meshes.append(mesh)
                         meshes_names_added.append(mesh.name)

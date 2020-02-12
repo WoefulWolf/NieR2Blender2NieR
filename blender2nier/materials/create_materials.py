@@ -12,6 +12,7 @@ class c_materials(object):
                 offsetMaterialName += 48                        # Material Headers
 
             for mat in bpy.data.materials:
+                print('[+] Generating Material', mat.name)
                 material = c_material(offsetMaterialName, mat)
                 materials.append(material)
 

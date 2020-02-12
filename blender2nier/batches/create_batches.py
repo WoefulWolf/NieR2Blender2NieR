@@ -23,7 +23,7 @@ class c_batches(object):
 
                         if int(obj_name[0]) == curBatch:
                             obj_vertexGroupIndex = int(obj_name[-1])
-                            print('Generated batch:', obj.name)
+                            print('[+] Generating Batch', obj.name)
                             
                             if obj_vertexGroupIndex != currentVertexGroup:      # Start of new vertex group
                                 currentVertexGroup = obj_vertexGroupIndex

@@ -24,14 +24,9 @@ class c_bones(object):
                             else:
                                 parentIndex = -1
 
-                            
-
-                            #localPosition = Vector3(round(bone.tail_local[0], 6), round(bone.tail_local[1]-0.01, 6), round(bone.tail_local[2], 6))
-                            #if ID != "4095":
-                            #    localPosition = Vector3(round(bone.tail_local[0]/10, 6), round(bone.tail_local[1]/10-0.01, 6), round(bone.tail_local[2]/10, 6))
                             localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
 
-                            localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2]) # I haven't seen anything here besides 0, 0, 0.
+                            localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
                             localScale = Vector3(1, 1, 1)                                                                       # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
 
                             position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])

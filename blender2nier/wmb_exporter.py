@@ -31,7 +31,7 @@ def purge_unused_materials():
 def prepare_blend():
     print('Preparing .blend File:')
     bpy.ops.object.mode_set(mode='OBJECT')
-    print('Triangulating meshes.')
+    print('Triangulating meshes:')
     for obj in bpy.data.objects:
         if obj.type == 'MESH':
 
@@ -57,6 +57,8 @@ def main(filepath):
     wmb_file = create_wmb(filepath)
 
     generated_data = c_generate_data()
+
+    print('-=# All Data Generated. Writing WMB... #=-')
 
     create_wmb_header(wmb_file, generated_data)
 
