@@ -12,6 +12,8 @@ from blender2nier.wmb.wmb_boneMap import *
 from blender2nier.wmb.wmb_meshes import *
 from blender2nier.wmb.wmb_materials import *
 from blender2nier.wmb.wmb_boneSet import *
+from blender2nier.wmb.wmb_colTreeNodes import *
+from blender2nier.wmb.wmb_unknownWorldData import *
 
 normals_flipped = False
 
@@ -44,12 +46,15 @@ def prepare_blend():
             print('[-] Removed ', obj)
             bpy.data.objects.remove(obj)
 
-def restore_blend():
+def restore_blend(normals_flipped):
     print('Restoring .blend File:')
     if normals_flipped:
+        print(' - Flipping back normals.')
         for obj in bpy.data.objects:
             if obj.type == 'MESH':
                 obj.data.flip_normals()
+    print('EXPORT COMPLETE. :D')
+    return {'FINISHED'}
 
 def main(filepath):
     prepare_blend()
@@ -82,12 +87,16 @@ def main(filepath):
     print('Writing meshMaterials.')
     create_wmb_meshMaterials(wmb_file, generated_data)
 
+    if generated_data.colTreeNodes is not None:
+        print('Writing colTreeNodes.')
+        create_wmb_colTreeNodes(wmb_file, generated_data)
+
     print('Writing boneSets.')
     if hasattr(generated_data, 'boneSet'):
         create_wmb_boneSet(wmb_file, generated_data)
 
-    print('Writing boneMap.')
     if generated_data.boneMap is not None:
+        print('Writing boneMap.')
         create_wmb_boneMap(wmb_file, generated_data)
 
     print('Writing meshes.')
@@ -96,10 +105,11 @@ def main(filepath):
     print('Writing materials.')
     create_wmb_materials(wmb_file, generated_data)
 
+    if generated_data.unknownWorldData is not None:
+        print('Writing unknownWorldData.')
+        create_wmb_unknownWorldData(wmb_file, generated_data)
+
     print('Finished writing. Closing file..')
     close_wmb(wmb_file)
-
-    restore_blend()
     
-    print('EXPORT COMPLETE. :D')
     return {'FINISHED'}

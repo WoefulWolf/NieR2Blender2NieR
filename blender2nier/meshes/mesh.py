@@ -4,12 +4,13 @@ class c_mesh(object):
     def __init__(self, offsetMeshes, numMeshes, obj):
 
         def get_BoundingBox(self, obj):
-            x = obj.dimensions[0]
-            y = obj.dimensions[1]/2
-            z = obj.dimensions[2]/2
-            u = x/2
-            v = y
-            w = z
+            x = obj['boundingBoxXYZ'][0]
+            y = obj['boundingBoxXYZ'][1]
+            z = obj['boundingBoxXYZ'][2]
+            
+            u = obj['boundingBoxUVW'][0]
+            v = obj['boundingBoxUVW'][1]
+            w = obj['boundingBoxUVW'][2]
             return [x, y, z, u, v, w]
 
         def get_materials(self, obj):

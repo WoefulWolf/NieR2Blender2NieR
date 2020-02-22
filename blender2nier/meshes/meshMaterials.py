@@ -22,8 +22,9 @@ class c_meshMaterials(object):
         self.meshMaterials_StructSize = len(self.meshMaterials) * 8
         
         # Update LODS meshMatPairs
-        for batchInfo in lods.batchInfos:
-            for meshMat_indx, meshMaterial in enumerate(self.meshMaterials):
-                if meshMaterial[0] == batchInfo[1] and meshMaterial[1] == batchInfo[2]:
-                    batchInfo[4] = meshMat_indx
-                    break
+        for lod in lods.lods:
+            for batchInfo in lod.batchInfos:
+                for meshMat_indx, meshMaterial in enumerate(self.meshMaterials):
+                    if meshMaterial[0] == batchInfo[1] and meshMaterial[1] == batchInfo[2]:
+                        batchInfo[4] = meshMat_indx
+                        break

@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender2Nier (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
-    "version": (0, 1, 1),
+    "version": (0, 1, 7),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Export Blender model to Nier:Automata wmb model data",
@@ -14,7 +14,7 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
     '''Export a Nier: Automata WMB File.'''
     bl_idname = "export.wmb_data"
-    bl_label = "Export WMB Data"
+    bl_label = "Export WMB File"
     bl_options = {'PRESET'}
     filename_ext = ".wmb"
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
@@ -31,7 +31,9 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
         if self.purge_materials:
             wmb_exporter.purge_unused_materials()
 
-        return wmb_exporter.main(self.filepath)
+        wmb_exporter.main(self.filepath)
+
+        return wmb_exporter.restore_blend(self.flip_normals)
 
 
 

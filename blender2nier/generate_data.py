@@ -3,21 +3,31 @@ from blender2nier.bones.bones import *
 from blender2nier.boneIndexTranslateTable.boneIndexTranslateTable import *
 from blender2nier.vertexGroups.create_vertexGroups import *
 from blender2nier.batches.create_batches import *
-from blender2nier.lods.lods import *
+from blender2nier.lods.create_lods import *
 from blender2nier.boneMap.boneMap import *
 from blender2nier.materials.create_materials import *
 from blender2nier.meshes.create_meshes import *
 from blender2nier.meshes.meshMaterials import *
 from blender2nier.boneSet.boneSet import *
+from blender2nier.colTreeNodes.colTreeNodes import *
+from blender2nier.unknownWorldData.unknownWorldData import *
 
 class c_generate_data(object):
     def __init__(self):
         hasArmature = False
+        hasColTreeNodes = False
+        hasUnknownWorldData = False
 
         for obj in bpy.data.objects:
             if obj.type == 'ARMATURE':
                 print('Armature found, exporting bones structures.')
                 hasArmature = True
+
+        if 'colTreeNodes' in bpy.context.scene:
+            hasColTreeNodes = True
+
+        if 'unknownWorldData' in bpy.context.scene:
+            hasUnknownWorldData = True
 
         # Generate custom boneSets from Blender vertex groups
         if hasArmature:
@@ -83,6 +93,7 @@ class c_generate_data(object):
         self.lods_Offset = currentOffset
         self.lods = c_lods(self.lods_Offset, self.batches)
         self.lods_Size = self.lods.lods_StructSize
+        self.lodsCount = len(self.lods.lods)
         currentOffset += self.lods_Size
         print('lods_Size: ', self.lods_Size)
 
@@ -92,6 +103,19 @@ class c_generate_data(object):
         self.meshMaterials_Size = len(self.batches.batches) * 8
         currentOffset += self.meshMaterials_Size
         print('meshMaterials_Size: ', self.meshMaterials_Size)
+
+        currentOffset += (currentOffset % 16)
+
+        if hasColTreeNodes:
+            self.colTreeNodes_Offset = currentOffset
+            self.colTreeNodes = c_colTreeNodes()
+            self.colTreeNodesSize = self.colTreeNodes.colTreeNodesSize
+            self.colTreeNodesCount = self.colTreeNodes.colTreeNodesCount
+            currentOffset += self.colTreeNodesSize
+        else:
+            self.colTreeNodes = None
+            self.colTreeNodes_Offset = 0
+            self.colTreeNodesCount = 0
 
         currentOffset += (currentOffset % 16)
 
@@ -131,6 +155,18 @@ class c_generate_data(object):
         self.materials_Size = self.materials.materials_StructSize
         currentOffset += self.materials_Size
         print('materials_Size: ', self.materials_Size)
+
+        if hasUnknownWorldData:
+            self.unknownWorldData_Offset = currentOffset
+            self.unknownWorldData = c_unknownWorldData()
+            self.unknownWorldDataSize = self.unknownWorldData.unknownWorldDataSize
+            self.unknownWorldDataCount = self.unknownWorldData.unknownWorldDataCount
+            currentOffset += self.unknownWorldDataSize
+        else:
+            self.unknownWorldData = None
+            self.unknownWorldData_Offset = 0
+            self.unknownWorldDataCount = 0
+
 
         self.meshMaterials = c_meshMaterials(self.meshes, self.lods)
         self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize

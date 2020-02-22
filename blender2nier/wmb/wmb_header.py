@@ -1,4 +1,5 @@
 from blender2nier.util import *
+import bpy
 
 def create_wmb_header(wmb_file, data):
 
@@ -10,11 +11,17 @@ def create_wmb_header(wmb_file, data):
     if data.vertexGroups.vertexGroups[0].vertexFlags == 4:
         write_Int16(wmb_file, 8)                                    # flags
         write_Int16(wmb_file, 0)                                    # referenceBone
+    elif data.vertexGroups.vertexGroups[0].vertexFlags == 14:
+        write_Int16(wmb_file, 8)                                    
+        write_Int16(wmb_file, -1) 
     else:
         write_Int16(wmb_file, 10)                                    
         write_Int16(wmb_file, -1)
-    write_xyz(wmb_file, [0.5, 0.5, 0.5])                        # boundingBox: x y z    TODO but maybe not really needed
-    write_xyz(wmb_file, [0.5, 0.5, 0.5])                        #              u v w    TODO but maybe not really needed
+        
+    boundingBoxXYZ = bpy.context.scene['boundingBoxXYZ']
+    boundingBoxUVW = bpy.context.scene['boundingBoxUVW']
+    write_xyz(wmb_file, boundingBoxXYZ)                        # boundingBox: x y z 
+    write_xyz(wmb_file, boundingBoxUVW)                        #              u v w
 
     offsetBones = data.bones_Offset
     write_uInt32(wmb_file, offsetBones)                          # offsetBones
@@ -28,7 +35,10 @@ def create_wmb_header(wmb_file, data):
     write_uInt32(wmb_file, offsetBoneIndexTranslateTable)       # offsetBoneIndexTranslateTable
     print(' + offsetBoneIndexTranslateTable: ', hex(offsetBoneIndexTranslateTable))
 
-    boneTranslateTableSize = data.boneIndexTranslateTable.boneIndexTranslateTable_StructSize
+    if hasattr(data, 'boneIndexTranslateTable'):
+        boneTranslateTableSize = data.boneIndexTranslateTable.boneIndexTranslateTable_StructSize
+    else:
+        boneTranslateTableSize = 0
     write_uInt32(wmb_file, boneTranslateTableSize)              # boneTranslateTableSize
     print(' + boneTranslateTableSize: ', boneTranslateTableSize)
 
@@ -52,15 +62,15 @@ def create_wmb_header(wmb_file, data):
     write_uInt32(wmb_file, offsetLods)                          # offsetLods
     print(' + offsetLods: ', hex(offsetLods))
 
-    numLods = 1                                                 # TODO
+    numLods = data.lodsCount                                    
     write_uInt32(wmb_file, numLods)                             # numLods
     print(' + numLods: ', numLods)
 
-    offsetColTreeNodes = 0                                      # TODO
+    offsetColTreeNodes = data.colTreeNodes_Offset                                      
     write_uInt32(wmb_file, offsetColTreeNodes)                  # offsetColTreeNodes
     print(' + offsetColTreeNodes: ', hex(offsetColTreeNodes))
 
-    numColTreeNodes = 0                                         # TODO
+    numColTreeNodes = data.colTreeNodesCount    
     write_uInt32(wmb_file, numColTreeNodes)                     # numColTreeNodes
     print(' + numColTreeNodes: ', numColTreeNodes)
 
@@ -71,7 +81,6 @@ def create_wmb_header(wmb_file, data):
     numBoneMap = data.numBoneMap
     write_uInt32(wmb_file, numBoneMap)                          # numBoneMap/boneMapSize
     print(' + numBoneMap: ', numBoneMap)
-
 
     offsetBoneSets = data.boneSets_Offset                
     write_uInt32(wmb_file, offsetBoneSets)                      # offsetBoneSets
@@ -108,10 +117,10 @@ def create_wmb_header(wmb_file, data):
     write_uInt32(wmb_file, numMeshMaterials)                    # numMeshMaterials
     print(' + numMeshMaterials: ', numMeshMaterials)
 
-    offsetUnknown0 = 0
+    offsetUnknown0 = data.unknownWorldData_Offset
     write_uInt32(wmb_file, offsetUnknown0)                      # offsetUnknown0
     print(' + offsetUnknown0: ', hex(offsetUnknown0))
 
-    numUnknown0 = 0
+    numUnknown0 = data.unknownWorldDataCount
     write_uInt32(wmb_file, numUnknown0)                          # numUnknown0
     print(' + numUnknown0: ', numUnknown0)

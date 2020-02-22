@@ -59,21 +59,24 @@ class c_vertexGroup(object):
             uv_coords = objOwner.data.uv_layers.active.data[loopIndex].uv
             return uv_coords
 
-        if self.blenderObjects[0]['boneSetIndex'] == -1:         # 4, 7, 10, 11
+        if self.blenderObjects[0]['boneSetIndex'] == -1:         # 4, 7, 10, 11, 14
             self.vertexFlags = 4                                             
         elif self.blenderObjects[0]['vertexColours_mean'] == None:
             self.vertexFlags = 7
         else:    
             self.vertexFlags = 10
+        if self.blenderObjects[0]['boneSetIndex'] == -1 and self.blenderObjects[0]['vertexColours_mean'] != None:
+            self.vertexFlags = 14
 
-        if self.vertexFlags == 4:                                            # SIZE OF ONE 'vertexesExData' 8. 12, 16, 20
+        if self.vertexFlags == 4:                                            # SIZE OF ONE 'vertexesExData' 8, 12, 16, 20
             self.vertexExDataSize = 8       
         elif self.vertexFlags == 7:                                          
             self.vertexExDataSize = 12                                    
-        elif self.vertexFlags == 10:
+        elif self.vertexFlags in [10, 14]:
             self.vertexExDataSize = 16
         elif self.vertexFlags == 11:
             self.vertexExDataSize = 20
+        
 
         def get_boneMap(self):
             boneMap = []
@@ -125,7 +128,10 @@ class c_vertexGroup(object):
                                 color = [0, 0, 0, 255] 
                             elif self.vertexFlags == 7:
                                 mapping2 = [0, 0, 0, 0]
-                                color = [255, 0, 0, 0]  
+                                color = [255, 0, 0, 0]
+                            elif self.vertexFlags == 14:
+                                mapping2 = mapping
+                                color = [255, 0, 0, 255]  
                             else:
                                 boneIndexes = []
                                 for groupRef in bvertex.groups:
@@ -214,12 +220,28 @@ class c_vertexGroup(object):
                         vertexExData = [mapping2, normal]
                         vertexesExData.append(vertexExData)
 
+                    elif self.vertexExDataSize == 16 and self.vertexFlags == 14:
+
+                        mapping3 = self.vertexes[idx][2]
+                        mapping4 = self.vertexes[idx][2]                            
+
+                        vertexNormal = bvertex.normal
+                        nx = vertexNormal[0]*-1
+                        ny = vertexNormal[1]*-1
+                        nz = vertexNormal[2]*-1
+                        dummy = 0
+
+                        normal = [nx, ny, nz, dummy] # Normal xyz + dummy
+
+                        vertexExData = [normal, mapping3, mapping4]
+                        vertexesExData.append(vertexExData)
+
                     elif self.vertexExDataSize == 16:
                         mapping2 = self.vertexes[idx][2]
                         if bvertex_obj[1]['vertexColours_mean'] == None:
                             color = [255, 255, 255, 255]
                         else:
-                            color = bvertex_obj[1]['vertexColours_mean']                            # TODO Shader Influence Colour thingy
+                            color = bvertex_obj[1]['vertexColours_mean']                            
 
                         vertexNormal = bvertex.normal
                         nx = vertexNormal[0]*-1
@@ -238,7 +260,7 @@ class c_vertexGroup(object):
                         if bvertex_obj[1]['vertexColours_mean'] == None:
                             color = [255, 255, 255, 255]
                         else:
-                            color = bvertex_obj[1]['vertexColours_mean']                            # TODO Shader Influence Colour thingy
+                            color = bvertex_obj[1]['vertexColours_mean']                            
 
                         vertexNormal = bvertex.normal
                         nx = vertexNormal[0]*-1
@@ -261,24 +283,13 @@ class c_vertexGroup(object):
             for obj in self.blenderObjects:
                 for loop in obj.data.loops:
                     indexes.append(loop.vertex_index + indexesOffset)
-                indexesOffset += len(obj.data.vertices)
-            
-            
-            # Index Re-ordering
-            #i = 1
-            #while i < len(indexes)-1:
-            #    temp = indexes[i]
-            #    indexes[i] = indexes[i+1]
-            #    indexes[i+1] = temp
-            #    i += 3
-            
+                indexesOffset += len(obj.data.vertices)          
 
             return indexes
 
         self.vertexSize = 28                                            # 28
 
-        self.vertexOffset = self.vertexGroupStart                       # 48 cus it's 30h duhhh
-
+        self.vertexOffset = self.vertexGroupStart                       
         self.vertexExDataOffset = self.vertexOffset + numVertices * self.vertexSize
 
         self.unknownOffset = [0, 0]                                      # Don't question it, it's unknown okay?
