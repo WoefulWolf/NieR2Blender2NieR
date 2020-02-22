@@ -102,7 +102,7 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):
+def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
@@ -138,6 +138,13 @@ def construct_mesh(mesh_data, collection_name):
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
 	obj['vertexColours_mean'] = mesh_data[7]
+	obj['LOD_Name'] = mesh_data[8]
+	obj['LOD_Level'] = mesh_data[9]
+	obj['colTreeNodeIndex'] = mesh_data[10]
+	obj['unknownWorldDataIndex'] = mesh_data[11]
+	obj['boundingBoxXYZ'] = [mesh_data[12][0], mesh_data[12][1], mesh_data[12][2]]
+	obj['boundingBoxUVW'] = [mesh_data[12][3], mesh_data[12][4], mesh_data[12][5]]
+
 	obj.data.flip_normals()
 	return obj
 
@@ -343,13 +350,18 @@ def format_wmb_mesh(wmb, collection_name):
 			meshGroupInfo =  wmb.meshGroupInfoArray[meshGroupInfoArrayIndex]
 			groupedMeshArray = meshGroupInfo.groupedMeshArray
 			mesh_start = meshGroupInfo.meshStart
+			LOD_name = meshGroupInfo.meshGroupInfoname
+			LOD_level = meshGroupInfo.lodLevel
 			for meshGroupIndex in range(wmb.wmb3_header.meshGroupCount):
 				meshIndexArray = []
 				for groupedMeshIndex in range(len(groupedMeshArray)):
 					if groupedMeshArray[groupedMeshIndex].meshGroupIndex == meshGroupIndex:
-						meshIndexArray.append(mesh_start + groupedMeshIndex)
+						meshIndexArray.append([mesh_start + groupedMeshIndex, groupedMeshArray[groupedMeshIndex].colTreeNodeIndex, groupedMeshArray[groupedMeshIndex].unknownWorldDataIndex])
 				meshGroup = wmb.meshGroupArray[meshGroupIndex]
-				for meshArrayIndex in (meshIndexArray):
+				for meshArrayData in (meshIndexArray):
+					meshArrayIndex = meshArrayData[0]
+					colTreeNodeIndex = meshArrayData[1]
+					unknownWorldDataIndex = meshArrayData[2]
 					meshVertexGroupIndex = wmb.meshArray[meshArrayIndex].vertexGroupIndex
 					if meshVertexGroupIndex == vertexGroupIndex:
 						meshName = "%d-%s-%d"%(meshArrayIndex, meshGroup.meshGroupname, vertexGroupIndex)
@@ -365,7 +377,8 @@ def format_wmb_mesh(wmb, collection_name):
 						boneSetIndex = wmb.meshArray[meshArrayIndex].bonesetIndex
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean], collection_name)
+						boundingBox = meshGroup.boundingBox
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name)
 						meshes.append(obj)
 	return meshes, uvs, usedVerticeIndexArrays
 
@@ -396,6 +409,27 @@ def get_wmb_material(wmb, texture_dir):
 		show_message("Error: Could not open .wta file, materials not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
 	return materials
 
+def import_colTreeNodes(wmb):
+	colTreeNodesDict = {}
+	for index, node in enumerate(wmb.colTreeNodes):
+		colTreeNodeName = 'colTreeNode' + str(index)
+		colTreeNode = [node.p1[0], node.p1[1], node.p1[2], node.p2[0], node.p2[1], node.p2[2], node.left, node.right]
+		colTreeNodesDict[colTreeNodeName] = colTreeNode
+	bpy.context.scene['colTreeNodes'] = colTreeNodesDict
+
+def import_unknowWorldDataArray(wmb):
+	unknownWorldDataDict = {}
+	for index, unknownWorldData in enumerate(wmb.unknownWorldDataArray):
+		unknownWorldDataName = 'unknownWorldData' + str(index)
+		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
+	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
+
+def import_wmb_boundingbox(wmb):
+	boundingBoxXYZ = [wmb.wmb3_header.bounding_box1, wmb.wmb3_header.bounding_box2, wmb.wmb3_header.bounding_box3]
+	boundingBoxUVW = [wmb.wmb3_header.bounding_box4, wmb.wmb3_header.bounding_box5, wmb.wmb3_header.bounding_box6]
+	bpy.context.scene['boundingBoxXYZ'] = boundingBoxXYZ
+	bpy.context.scene['boundingBoxUVW'] = boundingBoxUVW
+
 def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
 	wmb = WMB3(wmb_file)
@@ -405,7 +439,8 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	col = bpy.data.collections.new(collection_name)
 	bpy.context.scene.collection.children.link(col)
 	bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
-	texture_dir = wmb_file.replace(wmbname, '\\textures\\') 
+	texture_dir = wmb_file.replace(wmbname, '\\textures\\')
+	import_wmb_boundingbox(wmb)
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
@@ -436,6 +471,10 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	if wmb.hasBone:
 		for mesh in meshes:
 			set_partent(amt,mesh)
+	if wmb.hasColTreeNodes:
+		import_colTreeNodes(wmb)
+	if wmb.hasUnknownWorldData:
+		import_unknowWorldDataArray(wmb)
 
 	print('Importing finished. ;)')
 	return {'FINISHED'}

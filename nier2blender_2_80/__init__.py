@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nier2Blender (NieR:Automata Model Importer)",
     "author": "Woeful_Wolf (Original by C4nf3ng)",
-    "version": (2, 1),
+    "version": (2, 2),
     "blender": (2, 80, 0),
     "api": 38019,
     "location": "File > Import-Export",

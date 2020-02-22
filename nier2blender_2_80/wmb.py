@@ -6,41 +6,41 @@ class WMB_Header(object):
 	""" fucking header	"""
 	def __init__(self, wmb_fp):
 		super(WMB_Header, self).__init__()
-		self.magicNumber = wmb_fp.read(4)
+		self.magicNumber = wmb_fp.read(4)										# ID
 		if self.magicNumber == b'WMB3':
-			self.version = "%08x" % (to_int(wmb_fp.read(4)))
-			self.unknown08 = to_int(wmb_fp.read(4))
-			self.flags = to_int(wmb_fp.read(4))
-			self.bounding_box1 = to_float(wmb_fp.read(4))
+			self.version = "%08x" % (to_int(wmb_fp.read(4)))					# Version
+			self.unknown08 = to_int(wmb_fp.read(4))								# UnknownA
+			self.flags = to_int(wmb_fp.read(4))									# flags & referenceBone
+			self.bounding_box1 = to_float(wmb_fp.read(4))						# bounding_box
 			self.bounding_box2 = to_float(wmb_fp.read(4))
 			self.bounding_box3 = to_float(wmb_fp.read(4))
 			self.bounding_box4 = to_float(wmb_fp.read(4))
 			self.bounding_box5 = to_float(wmb_fp.read(4))
 			self.bounding_box6 = to_float(wmb_fp.read(4))
-			self.boneArrayOffset = to_int(wmb_fp.read(4))
-			self.boneCount = to_int(wmb_fp.read(4))
-			self.unknownChunk1Offset = to_int(wmb_fp.read(4))
-			self.unknownChunk1DataCount = to_int(wmb_fp.read(4)) 
-			self.vertexGroupArrayOffset = to_int(wmb_fp.read(4))
-			self.vertexGroupCount = to_int(wmb_fp.read(4))
-			self.meshArrayOffset = to_int(wmb_fp.read(4))
-			self.meshCount = to_int(wmb_fp.read(4))
-			self.meshGroupInfoArrayHeaderOffset = to_int(wmb_fp.read(4))
-			self.meshGroupInfoArrayCount = to_int(wmb_fp.read(4))
-			self.unknownChunk2Offset = to_int(wmb_fp.read(4))
-			self.unknownChunk2DataCount = to_int(wmb_fp.read(4))
-			self.boneMapOffset = to_int(wmb_fp.read(4))
-			self.boneMapCount = to_int(wmb_fp.read(4))
-			self.bonesetOffset = to_int(wmb_fp.read(4))
-			self.bonesetCount = to_int(wmb_fp.read(4))
-			self.materialArrayOffset = to_int(wmb_fp.read(4))
-			self.materialCount = to_int(wmb_fp.read(4))
-			self.meshGroupOffset = to_int(wmb_fp.read(4))
-			self.meshGroupCount = to_int(wmb_fp.read(4))
-			self.unknownChunk3Offset = to_int(wmb_fp.read(4))
-			self.unknownChunk3DataCount = to_int(wmb_fp.read(4))
-			self.unknown84 = to_int(wmb_fp.read(4))
-			self.unknown88 = to_int(wmb_fp.read(4))
+			self.boneArrayOffset = to_int(wmb_fp.read(4))						# offsetBones
+			self.boneCount = to_int(wmb_fp.read(4))								# numBones
+			self.offsetBoneIndexTranslateTable = to_int(wmb_fp.read(4))			# offsetBoneIndexTranslateTable		
+			self.boneIndexTranslateTableSize = to_int(wmb_fp.read(4)) 			# boneIndexTranslateTableSize
+			self.vertexGroupArrayOffset = to_int(wmb_fp.read(4))				# offsetVertexGroups
+			self.vertexGroupCount = to_int(wmb_fp.read(4))						# numVertexGroups
+			self.meshArrayOffset = to_int(wmb_fp.read(4))						# offsetBatches
+			self.meshCount = to_int(wmb_fp.read(4))								# numBatches
+			self.meshGroupInfoArrayHeaderOffset = to_int(wmb_fp.read(4))		# offsetLODS
+			self.meshGroupInfoArrayCount = to_int(wmb_fp.read(4))				# numLODS
+			self.colTreeNodesOffset = to_int(wmb_fp.read(4))					# offsetColTreeNodes
+			self.colTreeNodesCount = to_int(wmb_fp.read(4))						# numColTreeNodes
+			self.boneMapOffset = to_int(wmb_fp.read(4))							# offsetBoneMap
+			self.boneMapCount = to_int(wmb_fp.read(4))							# numBoneMap
+			self.bonesetOffset = to_int(wmb_fp.read(4))							# offsetBoneSets
+			self.bonesetCount = to_int(wmb_fp.read(4))							# numBoneSets
+			self.materialArrayOffset = to_int(wmb_fp.read(4))					# offsetMaterials
+			self.materialCount = to_int(wmb_fp.read(4))							# numMaterials
+			self.meshGroupOffset = to_int(wmb_fp.read(4))						# offsetMeshes
+			self.meshGroupCount = to_int(wmb_fp.read(4))						# numMeshes
+			self.offsetMeshMaterials = to_int(wmb_fp.read(4))					# offsetMeshMaterials
+			self.numMeshMaterials = to_int(wmb_fp.read(4))						# numMeshMaterials
+			self.unknownWorldDataArrayOffset = to_int(wmb_fp.read(4))			# offsetUnknown0				World Model Stuff
+			self.unknownWorldDataArrayCount = to_int(wmb_fp.read(4))			# numUnknown0					World Model Stuff
 			self.unknown8C = to_int(wmb_fp.read(4))
 
 class wmb3_vertexHeader(object):
@@ -264,7 +264,9 @@ class wmb3_meshGroup(object):
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroup, self).__init__()
 		nameOffset = to_int(wmb_fp.read(4))
-		bounding_box = wmb_fp.read(24)								
+		self.boundingBox = []
+		for i in range(6):
+			self.boundingBox.append(to_float(wmb_fp.read(4)))								
 		materialIndexArrayOffset = to_int(wmb_fp.read(4))
 		materialIndexArrayCount =  to_int(wmb_fp.read(4))
 		boneIndexArrayOffset =to_int(wmb_fp.read(4))
@@ -288,16 +290,23 @@ class wmb3_groupedMesh(object):
 		self.vertexGroupIndex = to_int(wmb_fp.read(4))
 		self.meshGroupIndex = to_int(wmb_fp.read(4))
 		self.materialIndex = to_int(wmb_fp.read(4))
-		self.unknown0C = to_int(wmb_fp.read(4)) 					
+		self.colTreeNodeIndex = to_int(wmb_fp.read(4)) 
+		if self.colTreeNodeIndex == 4294967295:	
+			self.colTreeNodeIndex = -1					
 		self.meshGroupInfoMaterialPair = to_int(wmb_fp.read(4))
-		self.unknown14 = to_int(wmb_fp.read(4))
+		self.unknownWorldDataIndex = to_int(wmb_fp.read(4))
+		if self.unknownWorldDataIndex == 4294967295:	
+			self.unknownWorldDataIndex = -1
+		
 		
 class wmb3_meshGroupInfo(object):
 	"""docstring for wmb3_meshGroupInfo"""
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroupInfo, self).__init__()
 		self.nameOffset = to_int(wmb_fp.read(4))					
-		self.unknown04 = to_int(wmb_fp.read(4))						
+		self.lodLevel = to_int(wmb_fp.read(4))
+		if self.lodLevel == 4294967295:	
+			self.lodLevel = -1				
 		self.meshStart = to_int(wmb_fp.read(4))						
 		meshGroupInfoOffset = to_int(wmb_fp.read(4))			
 		self.meshCount = to_int(wmb_fp.read(4))						
@@ -308,8 +317,35 @@ class wmb3_meshGroupInfo(object):
 		for i in range(self.meshCount):
 			groupedMesh = wmb3_groupedMesh(wmb_fp)
 			self.groupedMeshArray.append(groupedMesh)
+
+class wmb3_colTreeNode(object):
+	"""docstring for colTreeNode"""
+	def __init__(self, wmb_fp):
+		p1_x = to_float(wmb_fp.read(4))
+		p1_y = to_float(wmb_fp.read(4))
+		p1_z = to_float(wmb_fp.read(4))
+		self.p1 = (p1_x, p1_y, p1_z)
+
+		p2_x = to_float(wmb_fp.read(4))
+		p2_y = to_float(wmb_fp.read(4))
+		p2_z = to_float(wmb_fp.read(4))
+		self.p2 = (p2_x, p2_y, p2_z)
+
+		self.left = to_int(wmb_fp.read(4))
+		if self.left == 4294967295:
+			self.left = -1
+
+		self.right = to_int(wmb_fp.read(4))
+		if self.right == 4294967295:
+			self.right = -1
+
 		
-			
+class wmb3_worldData(object):
+	"""docstring for wmb3_unknownWorldData"""
+	def __init__(self, wmb_fp):
+		self.unknownWorldData = []
+		for entry in range(6):
+			self.unknownWorldData.append(wmb_fp.read(4))
 		
 class WMB3(object):
 	"""docstring for WMB3"""
@@ -319,6 +355,7 @@ class WMB3(object):
 		wta_fp = 0
 		wtp_fp = 0
 		self.wta = 0
+
 		if os.path.exists(wmb_file):
 			wmb_fp = open(wmb_file, "rb")
 		if os.path.exists(wmb_file.replace('.dtt','.dat').replace('.wmb','.wta')):
@@ -342,7 +379,7 @@ class WMB3(object):
 			self.boneArray.append(wmb3_bone(wmb_fp,boneIndex))
 		
 		# indexBoneTranslateTable
-		wmb_fp.seek(self.wmb3_header.unknownChunk1Offset)
+		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
 		self.firstLevel = []
 		for entry in range(16):
 			self.firstLevel.append(to_int(wmb_fp.read(2)))
@@ -372,9 +409,9 @@ class WMB3(object):
 				self.thirdLevel[-1] = -1
 
 
-		wmb_fp.seek(self.wmb3_header.unknownChunk1Offset)
+		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
 		unknownData1Array = []
-		for i in range(self.wmb3_header.unknownChunk1DataCount):
+		for i in range(self.wmb3_header.boneIndexTranslateTableSize):
 			unknownData1Array.append(to_int(wmb_fp.read(1)))
 
 		self.vertexGroupArray = []
@@ -415,7 +452,26 @@ class WMB3(object):
 			self.boneMap.append(to_int(wmb_fp.read(4)))
 		wmb_fp.seek(self.wmb3_header.bonesetOffset)
 		self.boneSetArray = wmb3_boneSet(wmb_fp, self.wmb3_header.bonesetCount).boneSetArray
-		#print_class(self.boneSets)
+
+		# colTreeNode
+		self.hasColTreeNodes = False
+		if self.wmb3_header.colTreeNodesOffset > 0:
+			self.hasColTreeNodes = True
+			self.colTreeNodes = []
+			wmb_fp.seek(self.wmb3_header.colTreeNodesOffset)
+			for index in range(self.wmb3_header.colTreeNodesCount):
+				self.colTreeNodes.append(wmb3_colTreeNode(wmb_fp))
+		
+		# World Model Data
+		self.hasUnknownWorldData = False
+		if self.wmb3_header.unknownWorldDataArrayOffset > 0:
+			self.hasUnknownWorldData = True
+			self.unknownWorldDataArray = []
+			wmb_fp.seek(self.wmb3_header.unknownWorldDataArrayOffset)
+			for index in range(self.wmb3_header.unknownWorldDataArrayCount):
+				self.unknownWorldDataArray.append(wmb3_worldData(wmb_fp))
+				
+
 		
 	def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex):
 		mesh = self.meshArray[meshArrayIndex]
