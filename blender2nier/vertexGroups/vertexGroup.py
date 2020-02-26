@@ -110,6 +110,11 @@ class c_vertexGroup(object):
                 for bvertex in bvertex_obj[0]:
                     # XYZ Position
                     position = Vector3(round(bvertex.co.x, 6), round(bvertex.co.y, 6), round(bvertex.co.z, 6))
+
+                    #loop_index = next(i for i, loop in enumerate(loops) if loop.vertex_index == bvertex.index)
+                    #loop = loops[loop_index]
+                    # Another way to handle the loop below. Both same speed.
+
                     for loop in loops:
                         if loop.vertex_index == bvertex.index:
                             # Tangents
@@ -184,7 +189,8 @@ class c_vertexGroup(object):
 
                                 if sum(color) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
                                     print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.")
-                                 
+                            
+                            loops.remove(loop)
                             break                                       # WITHOUT THIS BREAK, EXPORTING COULD TAKE HOURS :DDDDD
 
                     tangents = [tx, ty, tz, sign] 

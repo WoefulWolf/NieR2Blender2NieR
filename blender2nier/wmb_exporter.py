@@ -15,6 +15,8 @@ from blender2nier.wmb.wmb_boneSet import *
 from blender2nier.wmb.wmb_colTreeNodes import *
 from blender2nier.wmb.wmb_unknownWorldData import *
 
+import time
+
 normals_flipped = False
 
 def flip_all_normals():
@@ -57,6 +59,7 @@ def restore_blend(normals_flipped):
     return {'FINISHED'}
 
 def main(filepath):
+    start_time = int(time.time())
     prepare_blend()
     
     wmb_file = create_wmb(filepath)
@@ -111,5 +114,13 @@ def main(filepath):
 
     print('Finished writing. Closing file..')
     close_wmb(wmb_file)
+
+    end_time = int(time.time())
+    export_duration = end_time - start_time
+    export_min, export_sec = divmod(export_duration, 60)
+    export_min = str(export_min).zfill(2)
+    export_sec = str(export_sec).zfill(2)
+    formatted_export = export_min + ':' + export_sec
+    print(' - WMB generation took:', formatted_export, 'minutes.')
     
     return {'FINISHED'}

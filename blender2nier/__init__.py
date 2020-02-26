@@ -35,8 +35,6 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
 
         return wmb_exporter.restore_blend(self.flip_normals)
 
-
-
 def menu_func_export(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
     self.layout.operator(ExportBlender2Nier.bl_idname, text="WMB File for Nier: Automata (.wmb)")
@@ -45,6 +43,7 @@ def menu_func_export(self, context):
 def register():
     bpy.utils.register_class(ExportBlender2Nier)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+
 
 def unregister():
     bpy.utils.unregister_class(ExportBlender2Nier)
