@@ -21,6 +21,13 @@ widely known so that others can start modding too. :)
 * Open the Blender Console Window when exporting, this allows you to see its progress and any export errors. <br>
 * A lot of my code is put together with duct-tape and instant ramen, thus it is unoptimized, ugly and straight up fucked at places. :)
 
+## WTP & WTA Exporting
+* The WTP/WTA Exporter can be found under the "Output" tab of the "Properties" window.
+* I recommended to "Purge Materials" before Fetching N:A Materials.
+* I recommend loading the original textures before adding/replacing with custom ones. To do this, use the "Select Textures Directory" option and load the "textures" folder created by NieR2Blender_2.8 when importing a model (*/nier2blender_extracted/######.dtt/textures/*)
+* After adding or changing a unique texture identifier, make sure to "Sync Identifiers in Materials" before exporting a WMB.
+* Leave texture paths set to "None" if not using the texture map.
+ 
 ## Bug Reports and Contact
 * Please leave bug reports. You can leave them here on the GitHub under issues. Remember to post as much info as you can. <br>
 * Feel free to contact me for any questions or issues you might be having. You can contact me, and some other members of the NieR:Modding community at our Discord server: https://discord.gg/7F76ZVv
