@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender2Nier (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
-    "version": (0, 1, 7),
+    "version": (0, 1, 8),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Export Blender model to Nier:Automata wmb model data",
@@ -11,8 +11,10 @@ import bpy
 from bpy_extras.io_utils import ExportHelper,ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 
+
+
 class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
-    '''Export a Nier: Automata WMB File.'''
+    '''Export a NieR:Automata WMB File'''
     bl_idname = "export.wmb_data"
     bl_label = "Export WMB File"
     bl_options = {'PRESET'}
@@ -41,8 +43,11 @@ def menu_func_export(self, context):
 
 
 def register():
+    from blender2nier.wta_wtp_exporter import wta_wtp_ui_manager
+
     bpy.utils.register_class(ExportBlender2Nier)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    wta_wtp_ui_manager.register()
 
 
 def unregister():
