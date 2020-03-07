@@ -23,7 +23,7 @@ widely known so that others can start modding too. :)
 
 ## WTP & WTA Exporting
 * The WTP/WTA Exporter can be found under the "Output" tab of the "Properties" window.
-* I recommended to "Purge Materials" before Fetching N:A Materials.
+* I recommend to "Purge Materials" before Fetching N:A Materials.
 * I recommend loading the original textures before adding/replacing with custom ones. To do this, use the "Select Textures Directory" option and load the "textures" folder created by NieR2Blender_2.8 when importing a model (*/nier2blender_extracted/######.dtt/textures/*)
 * After adding or changing a unique texture identifier, make sure to "Sync Identifiers in Materials" before exporting a WMB.
 * Leave texture paths set to "None" if not using the texture map.
