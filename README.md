@@ -17,7 +17,7 @@ widely known so that others can start modding too. :)
 * All unused materials should be purged before export (something I might fix in the future, but not a priority). <br>
 * When working with bone weights, one vertex cannot belong to more than 4 groups (in other words have weights belonging to more than 4 bones) <br>
 * All meshes must be triangulated. (This gets done automatically, but you can do it yourself to ensure no unexpected results.) <br>
-* After exporting, in-game the model might sometimes have flipped normals - you will have to flip them in Blender and re-export, sorry. <br>
+* After exporting, if the in-game model has flipped normals - you will have to flip them in Blender and re-export, sorry. <br>
 * Open the Blender Console Window when exporting, this allows you to see its progress and any export errors. <br>
 * A lot of my code is put together with duct-tape and instant ramen, thus it is unoptimized, ugly and straight up fucked at places. :)
 
