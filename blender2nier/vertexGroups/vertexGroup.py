@@ -131,6 +131,9 @@ class c_vertexGroup(object):
                             if self.vertexFlags == 4:
                                 mapping2 = mapping
                                 color = [0, 0, 0, 255] 
+                            elif self.vertexFlags == 5:
+                                mapping2 = mapping
+                                color = [255, 255, 255, 255] 
                             elif self.vertexFlags == 7:
                                 mapping2 = [0, 0, 0, 0]
                                 color = [255, 0, 0, 0]

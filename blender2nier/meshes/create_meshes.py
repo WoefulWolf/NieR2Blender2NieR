@@ -40,10 +40,7 @@ class c_meshes(object):
                         mesh = c_mesh(offsetMeshes, numMeshes, obj)
                         meshes.append(mesh)
                         meshes_names_added.append(mesh.name)
-                        if mesh.bones[0] != 0:
-                            offsetMeshes += len(mesh.name) + 1 + mesh.numMaterials * 2 + mesh.numBones * 2
-                        else:
-                            offsetMeshes += len(mesh.name) + 1 + mesh.numMaterials * 2
+                        offsetMeshes += len(mesh.name) + 1 + mesh.numMaterials * 2 + mesh.numBones * 2
 
             return meshes
 
