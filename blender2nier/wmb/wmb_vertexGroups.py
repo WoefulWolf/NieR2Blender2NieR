@@ -24,7 +24,7 @@ def create_wmb_vertexGroups(wmb_file, data):
                 write_byte(wmb_file, val)
             for val in vertex[2]:                                   # mapping
                 write_float16(wmb_file, val)
-            if vertexGroup.vertexFlags in [4, 14]:                        
+            if vertexGroup.vertexFlags in [4, 5, 14]:                        
                 for val in vertex[3]:                               
                     write_float16(wmb_file, val)                    # mapping2
             else:

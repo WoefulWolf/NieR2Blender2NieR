@@ -70,7 +70,7 @@ class c_vertexGroup(object):
 
         if self.vertexFlags == 4:                                            # SIZE OF ONE 'vertexesExData' 8, 12, 16, 20
             self.vertexExDataSize = 8       
-        elif self.vertexFlags == 7:                                          
+        elif self.vertexFlags in [5, 7]:                                          
             self.vertexExDataSize = 12                                    
         elif self.vertexFlags in [10, 14]:
             self.vertexExDataSize = 16
@@ -104,7 +104,7 @@ class c_vertexGroup(object):
                 print('   [>] Generating vertexes for object', bvertex_obj[1].name)
                 loops = get_blenderLoops(self, bvertex_obj[1])
 
-                if self.vertexFlags != 4:
+                if self.vertexFlags not in [4, 5]:
                     boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
 
                 for bvertex in bvertex_obj[0]:

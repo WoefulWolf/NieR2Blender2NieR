@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender2Nier (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
-    "version": (0, 1, 8),
+    "version": (0, 1, 9),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Export Blender model to Nier:Automata wmb model data",
@@ -44,15 +44,22 @@ def menu_func_export(self, context):
 
 def register():
     from blender2nier.wta_wtp_exporter import wta_wtp_ui_manager
+    from blender2nier.dat_dtt_exporter import dat_dtt_ui_manager
 
     bpy.utils.register_class(ExportBlender2Nier)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     wta_wtp_ui_manager.register()
+    dat_dtt_ui_manager.register()
 
 
 def unregister():
+    from blender2nier.wta_wtp_exporter import wta_wtp_ui_manager
+    from blender2nier.dat_dtt_exporter import dat_dtt_ui_manager
+
     bpy.utils.unregister_class(ExportBlender2Nier)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    wta_wtp_ui_manager.unregister()
+    dat_dtt_ui_manager.unregister()
 
 
 if __name__ == '__main__':
