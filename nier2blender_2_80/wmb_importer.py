@@ -274,7 +274,7 @@ def consturct_materials(texture_dir, material):
 								multiply_link = links.new(b_channel_multiply.outputs['Color'], principled.inputs['Base Color'])
 							
 						else:
-							mask_link = links.new(mask_image.outputs['Color'], principled.inputs['Specular'])
+							mask_link = links.new(mask_image.outputs['Color'], principled.inputs['Metallic'])
 
 						mask_map_count += 1
 				elif textures_type.find("light") > -1:

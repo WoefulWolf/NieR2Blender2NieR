@@ -2,6 +2,7 @@
 import os
 import sys
 import struct
+from nier2blender_2_80.util import to_int
 
 def little_endian_to_float(bs):
     return struct.unpack("<f", bs)[0]
@@ -21,20 +22,18 @@ def read_header(fp):
 		ExtensionTableOffset = little_endian_to_int(fp.read(4))
 		NameTableOffset = little_endian_to_int(fp.read(4))
 		SizeTableOffset = little_endian_to_int(fp.read(4))
-		UnknownOffset1C = little_endian_to_int(fp.read(4))
-		Unknown20 = little_endian_to_int(fp.read(4))
+		hashMapOffset = little_endian_to_int(fp.read(4))
 		print(
 '''FileCount: %08x
 FileTableOffset: %08x
 ExtensionTableOffset:%08x
 NameTableOffset:%08x
 SizeTableOffset:%08x
-UnknownOffset1C:%08x
-Unknown20:%08x
+hashMapOffset:%08x
 '''%
-			(FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,UnknownOffset1C,Unknown20)
+			(FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset)
 		)
-		return (FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,UnknownOffset1C,Unknown20)
+		return (FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset)
 	else:
 		print('[-] error magic number detected')
 		return False
@@ -90,11 +89,64 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 def get_all_files(path):
 	pass
 
+def extract_hashes(fp, extract_dir, FileCount, hashMapOffset):
+	# Header
+	fp.seek(hashMapOffset)
+	preHashShift = to_int(fp.read(4))
+	bucketOffsetsOffset = to_int(fp.read(4))
+	hashesOffset = to_int(fp.read(4))
+	fileIndicesOffset = to_int(fp.read(4))
+
+	# Bucket Offsets
+	bucketOffsets = []
+	for i in range(FileCount):
+		bucketOffsets.append(to_int(fp.read(2)))
+
+	# Hashes
+	hashes = []
+	for i in range(FileCount):
+		hashes.append(fp.read(4))
+
+	# File Indices
+	fileIndices = []
+	for i in range(FileCount):
+		fileIndices.append(to_int(fp.read(2)))
+ 
+	# Extraction
+	filename = 'hash_data.metadata'
+	extract_dir_sub = extract_dir + '\\' + filename
+	outfile = open(extract_dir_sub,'wb')
+
+		# Header
+	outfile.write(struct.pack('<i', preHashShift))
+	outfile.write(struct.pack('<i', bucketOffsetsOffset))
+	outfile.write(struct.pack('<i', hashesOffset))
+	outfile.write(struct.pack('<i', fileIndicesOffset))
+
+		# Bucket Offsets
+	for i in bucketOffsets:
+		print(bucketOffsets)
+		outfile.write(struct.pack('<H', i))
+
+		# Hashes
+	for i in hashes:
+		outfile.write(i)
+
+		# File Indices
+	for i in fileIndices:
+		outfile.write(struct.pack('<H', i))
+
+	outfile.close()
+
+
 def main(filename, extract_dir, ROOT_DIR):
 	fp = open(filename,"rb")
 	headers = read_header(fp)
 	if headers:
-		FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,UnknownOffset1C,Unknown20 = headers
+		FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset = headers
+
+		extract_hashes(fp, extract_dir, FileCount, hashMapOffset)
+
 		for i in range(FileCount):
 			extract_dir_sub = ''
 			index,Filename,FileOffset,Size,Extension = get_fileinfo(fp, i, FileTableOffset,ExtensionTableOffset, NameTableOffset,SizeTableOffset)
