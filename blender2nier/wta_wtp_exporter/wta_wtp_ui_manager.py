@@ -85,7 +85,6 @@ class ExportWTPOperator(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         from blender2nier.wta_wtp_exporter import export_wtp
         export_wtp.main(context, self.filepath)
-        print('WTP Export Complete. :}')
         return{'FINISHED'}
 
 class ExportWTAOperator(bpy.types.Operator, ExportHelper):
@@ -99,7 +98,6 @@ class ExportWTAOperator(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         from blender2nier.wta_wtp_exporter import export_wta
         export_wta.main(context, self.filepath)
-        print('WTA Export Complete. :]')
         return{'FINISHED'}
 
 class FilepathSelector(bpy.types.Operator, ExportHelper):
@@ -203,3 +201,14 @@ def register():
     bpy.utils.register_class(SyncMaterialIdentifiers)
 
     bpy.types.Scene.WTAMaterials = bpy.props.CollectionProperty(type=WTAItems)
+
+def unregister():
+    bpy.utils.unregister_class(WTAItems)
+    bpy.utils.unregister_class(GetMaterialsOperator)
+    bpy.utils.unregister_class(WTA_WTP_PT_Export)
+    bpy.utils.unregister_class(FilepathSelector)
+    bpy.utils.unregister_class(ExportWTAOperator)
+    bpy.utils.unregister_class(ExportWTPOperator)
+    bpy.utils.unregister_class(PurgeUnusedMaterials)
+    bpy.utils.unregister_class(AssignBulkTextures)
+    bpy.utils.unregister_class(SyncMaterialIdentifiers)

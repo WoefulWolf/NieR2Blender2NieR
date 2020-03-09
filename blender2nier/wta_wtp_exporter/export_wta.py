@@ -137,3 +137,4 @@ def main(context, export_filepath):
     wta_fp.write(padding)
 
     wta_fp.close()
+    print('WTA Export Complete. :]')

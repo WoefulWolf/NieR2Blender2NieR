@@ -19,3 +19,4 @@ def main(context, export_filepath):
         dds_fp.close()
         
     wtp_fp.close()
+    print('WTP Export Complete. :}')
