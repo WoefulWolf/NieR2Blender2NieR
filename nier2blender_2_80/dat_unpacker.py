@@ -145,14 +145,15 @@ def main(filename, extract_dir, ROOT_DIR):
 	if headers:
 		FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset = headers
 
-		extract_hashes(fp, extract_dir, FileCount, hashMapOffset)
-
 		for i in range(FileCount):
 			extract_dir_sub = ''
 			index,Filename,FileOffset,Size,Extension = get_fileinfo(fp, i, FileTableOffset,ExtensionTableOffset, NameTableOffset,SizeTableOffset)
 			if extract_dir != '':
 				extract_dir_sub = extract_dir + '\\' + filename.replace(ROOT_DIR ,'') 
 				extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
+        
+		extract_hashes(fp, extract_dir, FileCount, hashMapOffset)
+
 	return Filename
 
 
