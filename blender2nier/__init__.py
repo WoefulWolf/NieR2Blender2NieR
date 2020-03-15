@@ -7,9 +7,12 @@ bl_info = {
     "description": "Export Blender model to Nier:Automata wmb model data",
     "category": "Import-Export"}
 
+import traceback
+import sys
 import bpy
 from bpy_extras.io_utils import ExportHelper,ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
+
 
 
 
@@ -26,6 +29,7 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
         from blender2nier import wmb_exporter
+        from blender2nier import util
         
         if self.flip_normals:
             wmb_exporter.flip_all_normals()
@@ -33,9 +37,14 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
         if self.purge_materials:
             wmb_exporter.purge_unused_materials()
 
-        wmb_exporter.main(self.filepath)
-
-        return wmb_exporter.restore_blend(self.flip_normals)
+        try:
+            wmb_exporter.main(self.filepath)
+            return wmb_exporter.restore_blend(self.flip_normals)
+        except:
+            wmb_exporter.flip_all_normals()
+            print(traceback.format_exc())
+            util.show_message('Error: An unexpected error has occurred during export. Please check the console for more info.', 'WMB Export Error', 'ERROR')
+            return {'CANCELLED'}
 
 def menu_func_export(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
