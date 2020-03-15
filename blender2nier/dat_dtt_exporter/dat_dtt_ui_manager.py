@@ -20,14 +20,15 @@ class CreateDATDTTData(bpy.types.Operator):
     bl_label = "Initialize DAT & DTT"
 
     def execute(self, context):
-        context.scene.DATData.clear()
-        dat = context.scene.DATData.add()
-        dat.index = 0
-        dat.path = 'None'
+        if len(context.scene.DATData) != 2:
+            context.scene.DATData.clear()
+            dat = context.scene.DATData.add()
+            dat.index = 0
+            dat.path = 'None'
 
-        dtt = context.scene.DATData.add()
-        dtt.index = 1
-        dtt.path = 'None'
+            dtt = context.scene.DATData.add()
+            dtt.index = 1
+            dtt.path = 'None'
 
         return {'FINISHED'}
 
