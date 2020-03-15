@@ -89,7 +89,35 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 def get_all_files(path):
 	pass
 
-def extract_hashes(fp, extract_dir, FileCount, hashMapOffset):
+def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
+	create_dir(extract_dir)
+
+	# file_order.metadata
+	# Filename Size
+	fp.seek(fileNamesOffset)
+	fileNameSize = little_endian_to_int(fp.read(4))
+
+	# Filenames
+	fileNames = []
+	for i in range(FileCount):
+		fileNames.append(fp.read(fileNameSize))
+
+	# Extraction
+	filename = 'file_order.metadata'
+	extract_dir_sub = extract_dir + '\\' + filename
+	outfile = open(extract_dir_sub,'wb')
+
+	# Header
+	outfile.write(struct.pack('<i', FileCount))
+	outfile.write(struct.pack('<i', fileNameSize))
+
+	#Filenames
+	for fileName in fileNames:
+		outfile.write(fileName)
+
+	outfile.close()
+
+	# hash_data.metadata
 	# Header
 	fp.seek(hashMapOffset)
 	preHashShift = to_int(fp.read(4))
@@ -152,7 +180,7 @@ def main(filename, extract_dir, ROOT_DIR):
 				extract_dir_sub = extract_dir + '\\' + filename.replace(ROOT_DIR ,'') 
 				extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
         
-		extract_hashes(fp, extract_dir, FileCount, hashMapOffset)
+		extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset)
 
 	return Filename
 

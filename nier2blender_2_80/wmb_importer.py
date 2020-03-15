@@ -191,7 +191,7 @@ def consturct_materials(texture_dir, material):
 	# Shader Parameters
 	for key in uniforms.keys():
 		material[key] = uniforms.get(key)
-		print(key, material[key])
+		#print(key, material[key])
 		if key.lower().find("g_glossiness") > -1:
 			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
 
@@ -207,7 +207,7 @@ def consturct_materials(texture_dir, material):
 		textures_type = texturesType.lower() 
 		flag = False
 		material[texturesType] = textures.get(texturesType)					# Add textures as custom properties
-		for type_key in ['albedo', "normal", "mask", "light"]:				# TO_DO:, 'env','parallax','irradiance','curvature']:
+		for type_key in ['albedo', "normal", "mask"]:				# TO_DO:, 'env','parallax','irradiance','curvature']:
 			if textures_type.find(type_key) > -1:
 				flag = True
 		if flag:
@@ -278,12 +278,7 @@ def consturct_materials(texture_dir, material):
 
 						mask_map_count += 1
 				elif textures_type.find("light") > -1:
-					#Light Image Texture (Roughness in Blender)
-					light_image = nodes.new(type='ShaderNodeTexImage')
-					light_image.location = 0,-400
-					light_image.image = bpy.data.images.load(texture_file)
-					light_image.image.colorspace_settings.name = 'Non-Color'
-					light_map_link = links.new(light_image.outputs['Color'], principled.inputs['Roughness'])
+					print("light not implemented yet in Nier2Blender_2_80")
 				elif textures_type.find("env") > -1:
 					print("env not implemented yet in Nier2Blender_2_80")
 					#material_textureslot.use_map_ambient = True
@@ -407,7 +402,17 @@ def get_wmb_material(wmb, texture_dir):
 			materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
 	else:
 		print('Missing .wta')
-		show_message("Error: Could not open .wta file, materials not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
+		show_message("Error: Could not open .wta file, textures not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
+		for materialIndex in range(len(wmb.materialArray)):
+			material = wmb.materialArray[materialIndex]
+			material_name = material.materialName
+			shader_name = material.effectName
+			technique_name = material.techniqueName
+			uniforms = material.uniformArray
+			textures = material.textureArray
+			parameterGroups = material.parameterGroups
+			materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
+		
 	return materials
 
 def import_colTreeNodes(wmb):
