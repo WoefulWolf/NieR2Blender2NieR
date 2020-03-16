@@ -126,16 +126,19 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	fileIndicesOffset = to_int(fp.read(4))
 
 	# Bucket Offsets
+	fp.seek(hashMapOffset + bucketOffsetsOffset)
 	bucketOffsets = []
-	for i in range(FileCount):
+	while fp.tell() < (hashMapOffset + hashesOffset):
 		bucketOffsets.append(to_int(fp.read(2)))
 
 	# Hashes
+	fp.seek(hashMapOffset + hashesOffset)
 	hashes = []
 	for i in range(FileCount):
 		hashes.append(fp.read(4))
 
 	# File Indices
+	fp.seek(hashMapOffset + fileIndicesOffset)
 	fileIndices = []
 	for i in range(FileCount):
 		fileIndices.append(to_int(fp.read(2)))
@@ -162,6 +165,7 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 
 		# File Indices
 	for i in fileIndices:
+		print(i)
 		outfile.write(struct.pack('<H', i))
 
 	outfile.close()
