@@ -391,14 +391,17 @@ def get_wmb_material(wmb, texture_dir):
 			parameterGroups = material.parameterGroups
 			for key in textures.keys():
 				identifier = textures[key]
-				texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
-				if texture_stream:
-					if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
-						create_dir(texture_dir)
-						texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
-						print('[+] dumping %s.dds'% identifier)
-						texture_fp.write(texture_stream)
-						texture_fp.close()
+				try:
+					texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
+					if texture_stream:
+						if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
+							create_dir(texture_dir)
+							texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
+							print('[+] dumping %s.dds'% identifier)
+							texture_fp.write(texture_stream)
+							texture_fp.close()
+				except:
+					continue
 			materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
 	else:
 		print('Missing .wta')
