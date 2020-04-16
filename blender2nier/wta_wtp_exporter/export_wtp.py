@@ -7,7 +7,7 @@ def main(context, export_filepath):
     identifiers_array, texture_paths_array, albedo_indexes = generate_wta_wtp_data.generate(context)
 
     # Make sure DDS are padded
-    pad_dds_files(texture_paths_array)
+    #pad_dds_files(texture_paths_array)
 
     wtp_fp = open(export_filepath,'wb')
 

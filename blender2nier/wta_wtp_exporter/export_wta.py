@@ -28,7 +28,9 @@ def main(context, export_filepath):
     paddingAmountArray = []
 
     # Pad the DDS files
-    pad_dds_files(texture_paths_array)
+    #pad_dds_files(texture_paths_array)
+
+    current_wtaTextureOffset = 0
 
     # Open every DDS texture
     for i in range(textureCount):
@@ -50,6 +52,7 @@ def main(context, export_filepath):
 
         #wtaTextureOffset
         if i+1 in range(len(wtaTextureSize)):
+            """
             if dds_paddedSize < 12289:
                 wtaTextureOffset[i+1] = wtaTextureOffset[i] + 12288
             elif dds_paddedSize < 176129:
@@ -64,8 +67,11 @@ def main(context, export_filepath):
                 wtaTextureOffset[i+1] = wtaTextureOffset[i] + 2797568
             else:
                 wtaTextureOffset[i+1] = dds_paddedSize
+            """
+            wtaTextureOffset[i+1] = current_wtaTextureOffset + dds_paddedSize
+        current_wtaTextureOffset += dds_paddedSize
         #wtaTextureSize
-        wtaTextureSize[i] = dds_paddedSize - dds_padding
+        wtaTextureSize[i] = dds_paddedSize# - dds_padding
         #wtaTextureIdentifier
         wtaTextureIdentifier[i] = identifiers_array[i]
         #unknownArray1
