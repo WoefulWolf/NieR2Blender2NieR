@@ -12,7 +12,7 @@ widely known so that others can start modding too. :)
 #### For now you should just understand these basic rules:
 * Watch https://youtu.be/Mr-zmXAwM5g for a very basic example video.
 * Any model you wish to edit or replace must first be imported using my above-mentioned addon WITH materials/shaders. Thus DTT import is recommended to have it do everything automatically for you. <br>
-* THINGS YOU SHOULD NOT CHANGE (unless you know what you are doing) include object names, material names, armatures or any custom properties on objects, materials, bones, armatures, etc. <br>
+* THINGS YOU SHOULD NOT CHANGE (unless you know what you are doing) include object names, armatures or any custom properties on objects, materials, bones, armatures, etc. <br>
 * An object cannot have more than one material. (Thus using the original from import is recommended, textures are separate). <br>
 * All unused materials should be purged before export (something I might fix in the future, but not a priority). <br>
 * When working with bone weights, one vertex cannot belong to more than 4 groups (in other words have weights belonging to more than 4 bones) <br>
