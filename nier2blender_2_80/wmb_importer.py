@@ -180,12 +180,14 @@ def consturct_materials(texture_dir, material):
 	output = nodes.new(type='ShaderNodeOutputMaterial')
 	output.location = 1200,0
 	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
-	principled.location = 600,-100
+	principled.location = 900,0
 	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
 	# Normal Map Amount Counter
 	normal_map_count = 0
 	# Mask Map Count
 	mask_map_count = 0
+	# Alpha Channel
+	material.blend_method = 'CLIP'
 
 	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
 	# Shader Parameters
@@ -199,10 +201,133 @@ def consturct_materials(texture_dir, material):
 	for gindx, parameterGroup in enumerate(parameterGroups):
 		for pindx, parameter in enumerate(parameterGroup):
 			if pindx == 5:
-				material[str(gindx) + '_Alpha_' + str(pindx)] = parameter
+				material[str(gindx) + '_UseAlpha_' + str(pindx)] = parameter
 			else:
 				material[str(gindx) + '_' + str(pindx)] = parameter
 
+	albedo_maps = {}
+	normal_maps = {}
+	mask_maps = {}
+
+	for texturesType in textures.keys():
+		textures_type = texturesType.lower()
+		material[texturesType] = textures.get(texturesType)
+		texture_file = "%s/%s.dds" % (texture_dir, textures[texturesType])
+		if os.path.exists(texture_file):
+			if textures_type.find('albedo') > -1:
+				albedo_maps[textures_type] = textures.get(texturesType)
+			elif textures_type.find('normal') > -1:
+				normal_maps[textures_type] = textures.get(texturesType)
+			elif textures_type.find('mask') > -1:
+				mask_maps[textures_type] = textures.get(texturesType)
+
+	
+
+	# Albedo Nodes
+	albedo_nodes = []
+	albedo_mixRGB_nodes = []
+	for i, textureID in enumerate(albedo_maps.values()):
+		texture_file = "%s/%s.dds" % (texture_dir, textureID)
+		if os.path.exists(texture_file):
+			albedo_image = nodes.new(type='ShaderNodeTexImage')
+			albedo_nodes.append(albedo_image)
+			albedo_image.location = 0,i*-60
+			albedo_image.image = bpy.data.images.load(texture_file)
+			albedo_image.hide = True
+
+			if i > 0:
+				mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+				albedo_mixRGB_nodes.append(mixRGB_shader)
+				mixRGB_shader.location = 300,(i-1)*-60
+				mixRGB_shader.hide = True
+	# Albedo Links
+	if len(albedo_nodes) == 1:
+		albedo_principled = links.new(albedo_nodes[0].outputs['Color'], principled.inputs['Base Color'])
+		alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
+	else:
+		if len(albedo_mixRGB_nodes) > 0:
+			albedo_link = links.new(albedo_nodes[0].outputs['Color'], albedo_mixRGB_nodes[0].inputs['Color2'])
+			for i in range(len(albedo_mixRGB_nodes)):
+				albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color1'])
+				alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], albedo_mixRGB_nodes[i].inputs['Fac'])
+				if i > 0:
+					mixRGB_link = links.new(albedo_mixRGB_nodes[i-1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color2'])
+			mixRGB_link = links.new(albedo_mixRGB_nodes[-1].outputs['Color'], principled.inputs['Base Color'])
+
+	# Mask Nodes
+	# Mask Image Texture (R = Metallic, G = Glossines (Inverted Roughness), B = AO)
+	mask_nodes = []
+	mask_sepRGB_nodes = []
+	mask_invert_nodes = []
+	for i, textureID in enumerate(mask_maps.values()):
+		texture_file = "%s/%s.dds" % (texture_dir, textureID)
+		if os.path.exists(texture_file):
+			mask_image = nodes.new(type='ShaderNodeTexImage')
+			mask_nodes.append(mask_image)
+			mask_image.location = 0, ((len(albedo_maps)+1)*-60)-i*60
+			mask_image.image = bpy.data.images.load(texture_file)
+			mask_image.image.colorspace_settings.name = 'Non-Color'
+			mask_image.hide = True
+			if 'Hair' not in material['Shader_Name']:
+				sepRGB_shader = nodes.new(type="ShaderNodeSeparateRGB")
+				mask_sepRGB_nodes.append(sepRGB_shader)
+				sepRGB_shader.location = 300, ((len(albedo_maps)+1)*-60)-i*60
+				sepRGB_shader.hide = True
+				
+				invert_shader = nodes.new(type="ShaderNodeInvert")
+				mask_invert_nodes.append(invert_shader)
+				invert_shader.location = 600, ((len(albedo_maps)+1)*-60)-i*60
+				invert_shader.hide = True
+	#Mask Links
+	if len(mask_nodes) > 0:
+		if 'Hair' not in material['Shader_Name']:
+			mask_link = links.new(mask_nodes[0].outputs['Color'], mask_sepRGB_nodes[0].inputs['Image'])
+			r_link = links.new(mask_sepRGB_nodes[0].outputs['R'], principled.inputs['Metallic'])
+			g_link = links.new(mask_sepRGB_nodes[0].outputs['G'], mask_invert_nodes[0].inputs['Color'])
+			invert_link = links.new(mask_invert_nodes[0].outputs['Color'], principled.inputs['Roughness'])
+		else:
+			mask_link = links.new(mask_nodes[0].outputs['Color'], principled.inputs['Metallic'])
+
+	# Normal Nodes
+	normal_nodes = []
+	normal_mixRGB_nodes = []
+	for i, textureID in enumerate(normal_maps.values()):
+		texture_file = "%s/%s.dds" % (texture_dir, textureID)
+		if os.path.exists(texture_file):
+			normal_image = nodes.new(type='ShaderNodeTexImage')
+			normal_nodes.append(normal_image)
+			normal_image.location = 0, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
+			normal_image.image = bpy.data.images.load(texture_file)
+			normal_image.image.colorspace_settings.name = 'Non-Color'
+			normal_image.hide = True
+
+			if i > 0:
+				n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+				normal_mixRGB_nodes.append(n_mixRGB_shader)
+				n_mixRGB_shader.location = 300, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-(i-1)*60
+				n_mixRGB_shader.hide = True
+	if len(normal_nodes) > 0:
+		normalmap_shader = nodes.new(type='ShaderNodeNormalMap')
+		normalmap_shader.location = 600, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-(i-1)*60
+		normalmap_link = links.new(normalmap_shader.outputs['Normal'], principled.inputs['Normal'])
+		normalmap_shader.hide = True
+	# Normal Links
+	if len(normal_nodes) == 1:
+		normal_link = links.new(normal_nodes[0].outputs['Color'], normalmap_shader.inputs['Color'])
+	else:
+		if len(normal_mixRGB_nodes) > 0:
+			normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
+			for i in range(len(normal_mixRGB_nodes)):
+				normal_link = links.new(normal_nodes[i+1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color1'])
+				if i < len(albedo_nodes):
+					n_alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], normal_mixRGB_nodes[i].inputs['Fac'])
+				if i > 0:
+					n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color2'])
+			mixRGB_link = links.new(normal_mixRGB_nodes[-1].outputs['Color'], normalmap_shader.inputs['Color'])
+				
+
+
+	"""
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower() 
 		flag = False
@@ -310,11 +435,12 @@ def consturct_materials(texture_dir, material):
 			print("[!] not supported texture %s_%s" % (textures[texturesType], texturesType))
 	#if not material.texture_slots[0]:
 		#print("[!] no textute found for material %s" % material_name)
+	"""
 	return material
 
 def add_material_to_mesh(mesh, materials , uvs):
 	for material in materials:
-		print('linking material %s to mesh object %s' % (material.name, mesh.name))
+		#print('linking material %s to mesh object %s' % (material.name, mesh.name))
 		mesh.data.materials.append(material)
 	bpy.context.view_layer.objects.active = mesh
 	bpy.ops.object.mode_set(mode="EDIT")
@@ -463,6 +589,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 		material = wmb_materials[materialIndex]
 		print(material)
 		materials.append(consturct_materials(texture_dir, material))
+	print('Linking materials to objects...')
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
 			mesh_start = meshGroupInfo.meshStart
