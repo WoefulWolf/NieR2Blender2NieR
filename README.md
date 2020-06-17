@@ -10,6 +10,7 @@ widely known so that others can start modding too. :)
 
 ## Tutorials and a Proper Readme will come, eventually...
 #### For now you should just understand these basic rules:
+* You can find info at the wiki (near top of this page).
 * Watch https://youtu.be/Mr-zmXAwM5g for a very basic example video.
 * Any model you wish to edit or replace must first be imported using my above-mentioned addon WITH materials/shaders. Thus DTT import is recommended to have it do everything automatically for you. <br>
 * THINGS YOU SHOULD NOT CHANGE (unless you know what you are doing) include object names, armatures or any custom properties on objects, materials, bones, armatures, etc. <br>
