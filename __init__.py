@@ -1,5 +1,5 @@
 bl_info = {
-    "name": "Nier2Blender (NieR:Automata Model Importer)",
+    "name": "NieR2Blender (NieR:Automata Model Importer)",
     "author": "Woeful_Wolf (Original by C4nf3ng)",
     "version": (2, 2),
     "blender": (2, 80, 0),
@@ -44,7 +44,7 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
     bulk_import: bpy.props.BoolProperty(name="Bulk Import All DTT/DATs In Folder (Experimental)", default=False)
 
     def execute(self, context):
-        from nier2blender_2_80 import wmb_importer
+        from . import wmb_importer
         if self.reset_blend:
             wmb_importer.reset_blend()
         if self.bulk_import:
@@ -58,7 +58,7 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
                         tailless_tail = tail[:-4]
                         dat_filepath = head + '\\' + tailless_tail + '.dat'
                         extract_dir = head + '\\nier2blender_extracted'
-                        from nier2blender_2_80 import dat_unpacker
+                        from . import dat_unpacker
                         if os.path.isfile(dat_filepath):
                             dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
                         else:
@@ -81,7 +81,7 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
             tailless_tail = tail[:-4]
             dat_filepath = head + '\\' + tailless_tail + '.dat'
             extract_dir = head + '\\nier2blender_extracted'
-            from nier2blender_2_80 import dat_unpacker
+            from . import dat_unpacker
             if os.path.isfile(dat_filepath):
                 dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
             else:
@@ -93,7 +93,7 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
             if not os.path.exists(wmb_filepath):
                 wmb_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + wtp_filename[:-4] + '.wmb'                     # if not in dtt, then must be in dat
 
-            from nier2blender_2_80 import wmb_importer
+            from . import wmb_importer
             return wmb_importer.main(wmb_filepath)
 
 # Registration

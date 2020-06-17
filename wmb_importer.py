@@ -1,6 +1,6 @@
 import bpy, bmesh, math
 from mathutils import Vector, Matrix
-from nier2blender_2_80.wmb import *
+from .wmb import *
 
 def show_message(message = "", title = "Message Box", icon = 'INFO'):
 	def draw(self, context):

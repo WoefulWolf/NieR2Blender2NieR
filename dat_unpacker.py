@@ -2,7 +2,7 @@
 import os
 import sys
 import struct
-from nier2blender_2_80.util import to_int
+from .util import to_int
 
 def little_endian_to_float(bs):
     return struct.unpack("<f", bs)[0]

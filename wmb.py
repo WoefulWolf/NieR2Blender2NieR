@@ -1,5 +1,5 @@
-from nier2blender_2_80.util import *
-from nier2blender_2_80.wta import *
+from .util import *
+from .wta import *
 import numpy as np
 
 class WMB_Header(object):
