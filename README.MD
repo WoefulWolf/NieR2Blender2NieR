@@ -38,10 +38,7 @@ widely known so that others can start modding too. :)
 
 ## What is nier2blender?
 
-* A blender plugin for import "Nier:Automata" .wmb (or now .dtt) file to blender with official rig<br>
-* codes can only run with python3
-
-<br>
+* A Blender plugin for importing NieR:Automata's .wmb (or now .dtt) files to with official rigging.<br>
 
 ## PS:
 
