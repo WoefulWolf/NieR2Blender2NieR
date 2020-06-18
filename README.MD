@@ -41,23 +41,6 @@ widely known so that others can start modding too. :)
 * A blender plugin for import "Nier:Automata" .wmb (or now .dtt) file to blender with official rig<br>
 * codes can only run with python3
 
-
-<br>
-
-## Usage
-
-<br> 
-
-#### dat_unpacker.py
-
-* python dat_unpacker.py cpk_unpacked_folder your_extract_folder
-
-* if you do not have python3 then execute it with blender in command line<br>
-blender --background --python dat_unpacker.py cpk_unpacked_folder your_extract_folder
-
-#### blender addons
-* copy the whole repo foleder to blender addons folder and active it in blender preferences
-
 <br>
 
 ## PS:
