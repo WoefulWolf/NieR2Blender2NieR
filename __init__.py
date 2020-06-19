@@ -27,7 +27,7 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
 
     def execute(self, context):
-        from nier2blender_2_80 import wmb_importer
+        from . import wmb_importer
         if self.reset_blend:
             wmb_importer.reset_blend()
         return wmb_importer.main(self.filepath)
