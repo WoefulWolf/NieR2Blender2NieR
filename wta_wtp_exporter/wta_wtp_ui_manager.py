@@ -118,6 +118,27 @@ class FilepathSelector(bpy.types.Operator, ExportHelper):
 
         return{'FINISHED'}
 
+class SyncBlenderMaterials(bpy.types.Operator):
+    '''Sync the texture of Blender's materials to these'''
+    bl_idname = "na.sync_blender_materials"
+    bl_label = "Sync Blender Materials"
+
+    def execute(self, context):
+        for item in context.scene.WTAMaterials:
+            if item.texture_path == "None":
+                continue
+            for mat in bpy.data.materials:
+                if mat.name == item.parent_mat:
+                    nodes = mat.node_tree.nodes
+                    for node in nodes:
+                        if node.label == item.texture_map_type:
+                            node.image = bpy.data.images.load(item.texture_path)
+                            if "MaskMap" in node.label or "NormalMap" in node.label:
+                                node.image.colorspace_settings.name = 'Non-Color'
+                            break
+                    break
+        return{'FINISHED'}
+
 class SyncMaterialIdentifiers(bpy.types.Operator):
     '''Sync the texture identifiers of materials to these'''
     bl_idname = "na.sync_material_identifiers"
@@ -161,6 +182,8 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         pad = layout.row()
         row = layout.row()
         row.label(text="Materials:")
+        row = layout.row()
+        row.operator("na.sync_blender_materials")
         row.operator("na.sync_material_identifiers")
 
         loaded_mats = []
@@ -198,6 +221,7 @@ def register():
     bpy.utils.register_class(ExportWTPOperator)
     bpy.utils.register_class(PurgeUnusedMaterials)
     bpy.utils.register_class(AssignBulkTextures)
+    bpy.utils.register_class(SyncBlenderMaterials)
     bpy.utils.register_class(SyncMaterialIdentifiers)
 
     bpy.types.Scene.WTAMaterials = bpy.props.CollectionProperty(type=WTAItems)
@@ -211,4 +235,5 @@ def unregister():
     bpy.utils.unregister_class(ExportWTPOperator)
     bpy.utils.unregister_class(PurgeUnusedMaterials)
     bpy.utils.unregister_class(AssignBulkTextures)
+    bpy.utils.unregister_class(SyncBlenderMaterials)
     bpy.utils.unregister_class(SyncMaterialIdentifiers)
