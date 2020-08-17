@@ -234,6 +234,10 @@ def consturct_materials(texture_dir, material):
 			albedo_image.location = 0,i*-60
 			albedo_image.image = bpy.data.images.load(texture_file)
 			albedo_image.hide = True
+			if i > 0:
+				albedo_image.label = "g_AlbedoMap" + str(i-1)
+			else:
+				albedo_image.label = "g_AlbedoMap"
 
 			if i > 0:
 				mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
@@ -268,6 +272,11 @@ def consturct_materials(texture_dir, material):
 			mask_image.image = bpy.data.images.load(texture_file)
 			mask_image.image.colorspace_settings.name = 'Non-Color'
 			mask_image.hide = True
+			if i > 0:
+				mask_image.label = "g_MaskMap" + str(i-1)
+			else:
+				mask_image.label = "g_MaskMap"
+
 			if 'Hair' not in material['Shader_Name']:
 				sepRGB_shader = nodes.new(type="ShaderNodeSeparateRGB")
 				mask_sepRGB_nodes.append(sepRGB_shader)
@@ -300,6 +309,10 @@ def consturct_materials(texture_dir, material):
 			normal_image.image = bpy.data.images.load(texture_file)
 			normal_image.image.colorspace_settings.name = 'Non-Color'
 			normal_image.hide = True
+			if i > 0:
+				normal_image.label = "g_NormalMap" + str(i-1)
+			else:
+				normal_image.label = "g_NormalMap"
 
 			if i > 0:
 				n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
@@ -544,12 +557,26 @@ def get_wmb_material(wmb, texture_dir):
 		
 	return materials
 
-def import_colTreeNodes(wmb):
+def import_colTreeNodes(wmb, collection):
 	colTreeNodesDict = {}
+	#collision_col = bpy.data.collections.new("CollisionNodes")
+	#collection.children.link(collision_col)
 	for index, node in enumerate(wmb.colTreeNodes):
 		colTreeNodeName = 'colTreeNode' + str(index)
 		colTreeNode = [node.p1[0], node.p1[1], node.p1[2], node.p2[0], node.p2[1], node.p2[2], node.left, node.right]
 		colTreeNodesDict[colTreeNodeName] = colTreeNode
+
+		"""
+		bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=(node.p1[0], node.p1[1], node.p1[2]))
+		col_Bound = bpy.context.active_object
+		col_Bound.name =  str(index) + "-" + str(node.left) + "-" + str(node.right)
+		bpy.ops.transform.resize(value=(node.p2[0], node.p2[1], node.p2[2]))
+		bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X', center_override=(0, 0, 0))
+		bpy.context.object.display_type = 'BOUNDS'
+		collision_col.objects.link(col_Bound)
+		collection.objects.unlink(col_Bound)
+		"""
+
 	bpy.context.scene['colTreeNodes'] = colTreeNodesDict
 
 def import_unknowWorldDataArray(wmb):
@@ -608,7 +635,7 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 		for mesh in meshes:
 			set_partent(amt,mesh)
 	if wmb.hasColTreeNodes:
-		import_colTreeNodes(wmb)
+		import_colTreeNodes(wmb, col)
 	if wmb.hasUnknownWorldData:
 		import_unknowWorldDataArray(wmb)
 
