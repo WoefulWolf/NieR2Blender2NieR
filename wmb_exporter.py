@@ -42,7 +42,10 @@ def prepare_blend():
             # Triangulate meshes
             bpy.context.view_layer.objects.active = obj
             bpy.ops.object.modifier_add(type='TRIANGULATE')
-            bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Triangulate")
+            if bpy.app.version >= (2, 90, 0):
+                bpy.ops.object.modifier_apply(modifier="Triangulate")
+            else:    
+                bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Triangulate")
 
         if obj.type not in ['MESH', 'ARMATURE']:
             print('[-] Removed ', obj)
