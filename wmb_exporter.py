@@ -51,13 +51,9 @@ def prepare_blend():
             print('[-] Removed ', obj)
             bpy.data.objects.remove(obj)
 
-def restore_blend(normals_flipped):
+def restore_blend():
     print('Restoring .blend File:')
-    if normals_flipped:
-        print(' - Flipping back normals.')
-        for obj in bpy.data.objects:
-            if obj.type == 'MESH':
-                obj.data.flip_normals()
+    # Do shit here if needed
     print('EXPORT COMPLETE. :D')
     return {'FINISHED'}
 

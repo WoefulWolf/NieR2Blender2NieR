@@ -21,24 +21,20 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
     filename_ext = ".wmb"
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
-    flip_normals: bpy.props.BoolProperty(name="Flip All Normals", description="NieR:Automata has inverted normals compared to Blender, thus leave enabled if using regular Blender normals.",  default=True)
     purge_materials: bpy.props.BoolProperty(name="Purge Materials", description="This permanently removes all unused materials from the .blend file before exporting. Enable if you have invalid materials remaining in your project.", default=False)
 
     def execute(self, context):
         from . import wmb_exporter
         from . import util
         
-        if self.flip_normals:
-            wmb_exporter.flip_all_normals()
 
         if self.purge_materials:
             wmb_exporter.purge_unused_materials()
 
         try:
             wmb_exporter.main(self.filepath)
-            return wmb_exporter.restore_blend(self.flip_normals)
+            return wmb_exporter.restore_blend()
         except:
-            wmb_exporter.flip_all_normals()
             print(traceback.format_exc())
             util.show_message('Error: An unexpected error has occurred during export. Please check the console for more info.', 'WMB Export Error', 'ERROR')
             return {'CANCELLED'}

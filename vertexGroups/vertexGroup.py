@@ -123,7 +123,9 @@ class c_vertexGroup(object):
                     tx = np.clip(round(loop.tangent[0]*127.0+127.0), 0, 255)
                     ty = np.clip(round(loop.tangent[1]*127.0+127.0), 0, 255)
                     tz = np.clip(round(loop.tangent[2]*127.0+127.0), 0, 255)
-                    sign = np.clip(round(loop.bitangent_sign*127.0+128.0), 0, 255)
+                    sign = np.clip(round(-loop.bitangent_sign*127.0+128.0), 0, 255)
+
+                    tangents = [tx, ty, tz, sign]
 
                     # UVs
                     uv_coords = get_blenderUVCoords(self, bvertex_obj[1], loop.index)
@@ -193,32 +195,24 @@ class c_vertexGroup(object):
                             color[0] -= 1
 
                         if sum(color) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
-                            print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.")
-                    
-
-                    tangents = [tx, ty, tz, sign] 
+                            print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
                     vertexes.append([position.xyz, tangents, mapping, mapping2, color])
 
                     ###### Now lets do the extra data shit ###########
-                    if self.vertexExDataSize == 8:
-                        vertexNormal = loop.normal
 
-                        nx = vertexNormal[0]*-1
-                        ny = vertexNormal[1]*-1
-                        nz = vertexNormal[2]*-1
-                        dummy = 0
+                    vertexNormal = loop.normal
+                    nx = vertexNormal[0]
+                    ny = vertexNormal[1]
+                    nz = vertexNormal[2]
+                    dummy = 0
+
+                    if self.vertexExDataSize == 8:
                         vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
                         vertexesExData.append(vertexExData)
 
                     elif self.vertexExDataSize == 12:
                         mapping2 = vertexes[-1][2]
-
-                        vertexNormal = loop.normal
-                        nx = vertexNormal[0]*-1
-                        ny = vertexNormal[1]*-1
-                        nz = vertexNormal[2]*-1
-                        dummy = 0
 
                         normal = [nx, ny, nz, dummy] # Normal xyz + dummy
 
@@ -229,12 +223,6 @@ class c_vertexGroup(object):
 
                         mapping3 = vertexes[-1][2]
                         mapping4 = vertexes[-1][2]                            
-
-                        vertexNormal = loop.normal
-                        nx = vertexNormal[0]*-1
-                        ny = vertexNormal[1]*-1
-                        nz = vertexNormal[2]*-1
-                        dummy = 0
 
                         normal = [nx, ny, nz, dummy] # Normal xyz + dummy
 
@@ -248,12 +236,6 @@ class c_vertexGroup(object):
                         else:
                             color = bvertex_obj[1]['vertexColours_mean']                            
 
-                        vertexNormal = loop.normal
-                        nx = vertexNormal[0]*-1
-                        ny = vertexNormal[1]*-1
-                        nz = vertexNormal[2]*-1
-                        dummy = 0
-
                         normal = [nx, ny, nz, dummy] # Normal xyz + dummy
 
                         vertexExData = [mapping2, color, normal]
@@ -266,12 +248,6 @@ class c_vertexGroup(object):
                             color = [255, 255, 255, 255]
                         else:
                             color = bvertex_obj[1]['vertexColours_mean']                            
-
-                        vertexNormal = loop.normal
-                        nx = vertexNormal[0]*-1
-                        ny = vertexNormal[1]*-1
-                        nz = vertexNormal[2]*-1
-                        dummy = 0
 
                         normal = [nx, ny, nz, dummy] # Normal xyz + dummy
 
@@ -289,6 +265,15 @@ class c_vertexGroup(object):
                 for loop in obj.data.loops:
                     indexes.append(loop.vertex_index + indexesOffset)
                 indexesOffset += len(obj.data.vertices)          
+
+            # Reverse this loop order
+            flip_counter = 0
+            for i in range(len(indexes)):
+                if flip_counter == 2:
+                    indexes[i], indexes[i-1] = indexes[i-1], indexes[i]
+                    flip_counter = 0
+                    continue
+                flip_counter += 1
 
             return indexes
 
