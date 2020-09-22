@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender2Nier (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
-    "version": (0, 1, 9),
+    "version": (0, 1, 10),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Export Blender model to Nier:Automata wmb model data",

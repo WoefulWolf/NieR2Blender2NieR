@@ -98,115 +98,111 @@ class c_vertexGroup(object):
                         boneSet.append(val)
                     return boneSet
 
-        def get_vertexes(self):
+        def get_vertexesData(self):
             vertexes = []
+            vertexesExData = []
             for bvertex_obj in blenderVertices:
-                print('   [>] Generating vertexes for object', bvertex_obj[1].name)
+                print('   [>] Generating vertex data for object', bvertex_obj[1].name)
                 loops = get_blenderLoops(self, bvertex_obj[1])
+                sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
 
                 if self.vertexFlags not in [4, 5]:
                     boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
 
-                for bvertex in bvertex_obj[0]:
+                added_indices = []
+                for loop in sorted_loops:
+                    if loop.vertex_index in added_indices:
+                        continue
+                    added_indices.append(loop.vertex_index)
+
+                    bvertex = bvertex_obj[0][loop.vertex_index]
                     # XYZ Position
                     position = Vector3(round(bvertex.co.x, 6), round(bvertex.co.y, 6), round(bvertex.co.z, 6))
+            
+                    # Tangents
+                    tx = np.clip(round(loop.tangent[0]*127.0+127.0), 0, 255)
+                    ty = np.clip(round(loop.tangent[1]*127.0+127.0), 0, 255)
+                    tz = np.clip(round(loop.tangent[2]*127.0+127.0), 0, 255)
+                    sign = np.clip(round(loop.bitangent_sign*127.0+128.0), 0, 255)
 
-                    #loop_index = next(i for i, loop in enumerate(loops) if loop.vertex_index == bvertex.index)
-                    #loop = loops[loop_index]
-                    # Another way to handle the loop below. Both same speed.
+                    # UVs
+                    uv_coords = get_blenderUVCoords(self, bvertex_obj[1], loop.index)
+                    mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
 
-                    for loop in loops:
-                        if loop.vertex_index == bvertex.index:
-                            # Tangents
-                            tx = np.clip(round(loop.tangent[0]*127.0+127.0), 0, 255)
-                            ty = np.clip(round(loop.tangent[1]*127.0+127.0), 0, 255)
-                            tz = np.clip(round(loop.tangent[2]*127.0+127.0), 0, 255)
-                            sign = np.clip(round(loop.bitangent_sign*127.0+128.0), 0, 255)
+                    # Bone Indexes
+                    if self.vertexFlags == 4:
+                        mapping2 = mapping
+                        color = [0, 0, 0, 255] 
+                    elif self.vertexFlags == 5:
+                        mapping2 = mapping
+                        color = [255, 255, 255, 255] 
+                    elif self.vertexFlags == 7:
+                        mapping2 = [0, 0, 0, 0]
+                        color = [255, 0, 0, 0]
+                    elif self.vertexFlags == 14:
+                        mapping2 = mapping
+                        color = [255, 0, 0, 255]  
+                    else:
+                        boneIndexes = []
+                        for groupRef in bvertex.groups:
+                            if len(boneIndexes) < 4:
+                                boneGroupName = bvertex_obj[1].vertex_groups[groupRef.group].name
+                                boneID = int(boneGroupName.replace("bone", ""))
 
-                            # UVs
-                            uv_coords = get_blenderUVCoords(self, bvertex_obj[1], loop.index)
-                            mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
+                                boneMapIndx = self.boneMap.index(boneID)
+                                boneSetIndx = boneSet.index(boneMapIndx)
+                                
+                                boneIndexes.append(boneSetIndx)
+                        
+                        if len(boneIndexes) == 0:
+                            print(len(vertexes) ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
 
-                            # Bone Indexes
-                            if self.vertexFlags == 4:
-                                mapping2 = mapping
-                                color = [0, 0, 0, 255] 
-                            elif self.vertexFlags == 5:
-                                mapping2 = mapping
-                                color = [255, 255, 255, 255] 
-                            elif self.vertexFlags == 7:
-                                mapping2 = [0, 0, 0, 0]
-                                color = [255, 0, 0, 0]
-                            elif self.vertexFlags == 14:
-                                mapping2 = mapping
-                                color = [255, 0, 0, 255]  
+                        while len(boneIndexes) < 4:
+                            boneIndexes.append(0)
+
+                        mapping2 = boneIndexes
+
+                        # Bone Weights
+                        weights = [group.weight for group in bvertex.groups]
+
+                        if len(weights) >  4:
+                            print(len(vertexes), "- Vertex Weights Error: Vertex has weights assigned to more than 4 groups. Try using Blender's [Weights -> Limit Total] function.")
+
+                        normalized_weights = []                                             # Force normalize the weights as Blender's normalization sometimes get some rounding issues.
+                        for val in weights:
+                            if val > 0:
+                                normalized_weights.append(float(val)/sum(weights))
                             else:
-                                boneIndexes = []
-                                for groupRef in bvertex.groups:
-                                    if len(boneIndexes) < 4:
-                                        boneGroupName = bvertex_obj[1].vertex_groups[groupRef.group].name
-                                        boneID = int(boneGroupName.replace("bone", ""))
+                                normalized_weights.append(0)
 
-                                        boneMapIndx = self.boneMap.index(boneID)
-                                        boneSetIndx = boneSet.index(boneMapIndx)
-                                        
-                                        boneIndexes.append(boneSetIndx)
-                                
-                                if len(boneIndexes) == 0:
-                                    print(len(vertexes) ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
+                        color = []
+                        for val in normalized_weights:
+                            if len(color) < 4:
+                                weight = math.floor(val * 256.0)
+                                if val == 1.0:
+                                    weight = 255
+                                color.append(weight)
+                        
+                        while len(color) < 4:
+                            color.append(0)
 
-                                while len(boneIndexes) < 4:
-                                    boneIndexes.append(0)
+                        while sum(color) < 255:                     # MOAR checks to make sure weights are normalized but in bytes. (A bit cheating but these values should make such a minor impact.)
+                            color[0] += 1
 
-                                mapping2 = boneIndexes
+                        while sum(color) > 255:                     
+                            color[0] -= 1
 
-                                # Bone Weights
-                                weights = [group.weight for group in bvertex.groups]
-
-                                if len(weights) >  4:
-                                    print(len(vertexes), "- Vertex Weights Error: Vertex has weights assigned to more than 4 groups. Try using Blender's [Weights -> Limit Total] function.")
-
-                                normalized_weights = []                                             # Force normalize the weights as Blender's normalization sometimes get some rounding issues.
-                                for val in weights:
-                                    if val > 0:
-                                        normalized_weights.append(float(val)/sum(weights))
-                                    else:
-                                        normalized_weights.append(0)
-
-                                color = []
-                                for val in normalized_weights:
-                                    if len(color) < 4:
-                                        weight = math.floor(val * 256.0)
-                                        if val == 1.0:
-                                            weight = 255
-                                        color.append(weight)
-                                
-                                while len(color) < 4:
-                                    color.append(0)
-
-                                while sum(color) < 255:                     # MOAR checks to make sure weights are normalized but in bytes. (A bit cheating but these values should make such a minor impact.)
-                                    color[0] += 1
-
-                                while sum(color) > 255:                     
-                                    color[0] -= 1
-
-                                if sum(color) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
-                                    print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.")
-                            
-                            loops.remove(loop)
-                            break                                       # WITHOUT THIS BREAK, EXPORTING COULD TAKE HOURS :DDDDD
+                        if sum(color) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
+                            print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.")
+                    
 
                     tangents = [tx, ty, tz, sign] 
 
                     vertexes.append([position.xyz, tangents, mapping, mapping2, color])
-            return vertexes
 
-        def get_vertexesExData(self):
-            vertexesExData = []
-            for bvertex_obj in blenderVertices:
-                for idx, bvertex in enumerate(bvertex_obj[0]):
+                    ###### Now lets do the extra data shit ###########
                     if self.vertexExDataSize == 8:
-                        vertexNormal = bvertex.normal
+                        vertexNormal = loop.normal
 
                         nx = vertexNormal[0]*-1
                         ny = vertexNormal[1]*-1
@@ -216,9 +212,9 @@ class c_vertexGroup(object):
                         vertexesExData.append(vertexExData)
 
                     elif self.vertexExDataSize == 12:
-                        mapping2 = self.vertexes[idx][2]
+                        mapping2 = vertexes[-1][2]
 
-                        vertexNormal = bvertex.normal
+                        vertexNormal = loop.normal
                         nx = vertexNormal[0]*-1
                         ny = vertexNormal[1]*-1
                         nz = vertexNormal[2]*-1
@@ -231,10 +227,10 @@ class c_vertexGroup(object):
 
                     elif self.vertexExDataSize == 16 and self.vertexFlags == 14:
 
-                        mapping3 = self.vertexes[idx][2]
-                        mapping4 = self.vertexes[idx][2]                            
+                        mapping3 = vertexes[-1][2]
+                        mapping4 = vertexes[-1][2]                            
 
-                        vertexNormal = bvertex.normal
+                        vertexNormal = loop.normal
                         nx = vertexNormal[0]*-1
                         ny = vertexNormal[1]*-1
                         nz = vertexNormal[2]*-1
@@ -246,13 +242,13 @@ class c_vertexGroup(object):
                         vertexesExData.append(vertexExData)
 
                     elif self.vertexExDataSize == 16:
-                        mapping2 = self.vertexes[idx][2]
+                        mapping2 = vertexes[-1][2]
                         if bvertex_obj[1]['vertexColours_mean'] == None:
                             color = [255, 255, 255, 255]
                         else:
                             color = bvertex_obj[1]['vertexColours_mean']                            
 
-                        vertexNormal = bvertex.normal
+                        vertexNormal = loop.normal
                         nx = vertexNormal[0]*-1
                         ny = vertexNormal[1]*-1
                         nz = vertexNormal[2]*-1
@@ -264,14 +260,14 @@ class c_vertexGroup(object):
                         vertexesExData.append(vertexExData)
 
                     elif self.vertexExDataSize == 20:
-                        mapping2 = self.vertexes[idx][2]
+                        mapping2 = vertexes[-1][2]
                         
                         if bvertex_obj[1]['vertexColours_mean'] == None:
                             color = [255, 255, 255, 255]
                         else:
                             color = bvertex_obj[1]['vertexColours_mean']                            
 
-                        vertexNormal = bvertex.normal
+                        vertexNormal = loop.normal
                         nx = vertexNormal[0]*-1
                         ny = vertexNormal[1]*-1
                         nz = vertexNormal[2]*-1
@@ -284,7 +280,7 @@ class c_vertexGroup(object):
                         vertexExData = [mapping2, color, normal, mapping3]
                         vertexesExData.append(vertexExData)
 
-            return vertexesExData
+            return vertexes, vertexesExData
 
         def get_indexes(self):
             indexesOffset = 0
@@ -311,9 +307,7 @@ class c_vertexGroup(object):
 
         self.numIndexes = get_numIndexes(self)
 
-        self.vertexes = get_vertexes(self)
-
-        self.vertexesExData = get_vertexesExData(self)
+        self.vertexes, self.vertexesExData = get_vertexesData(self)
 
         self.indexes = get_indexes(self)
 
