@@ -7,10 +7,11 @@ THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If an
 If you use my tool and release something, please give appropriate credit and info. I would really love for my tools to become more 
 widely known so that others can start modding too. :)
 
-## Tutorials and a Proper Readme will come, eventually...
+## Some Tips:
 #### For now you should just understand these basic rules:
-* You can find info at the wiki (near top of this page).
+* You can find info/tutorials at the wiki (near top of this page).
 * Watch https://youtu.be/Mr-zmXAwM5g for a very basic example video.
+* Visit our [NieR:Modding](https://discord.gg/7F76ZVv) community Discord server for help.
 * Any model you wish to edit or replace must first be imported using my above-mentioned addon WITH materials/shaders. Thus DTT import is recommended to have it do everything automatically for you. <br>
 * THINGS YOU SHOULD NOT CHANGE (unless you know what you are doing) include object names, armatures or any custom properties on objects, materials, bones, armatures, etc. <br>
 * An object cannot have more than one material. (Thus using the original from import is recommended, textures are separate). <br>
