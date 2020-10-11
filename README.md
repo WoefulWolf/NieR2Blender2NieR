@@ -1,5 +1,4 @@
-# Blender2NieR
-
+![Blender2NieR](https://i.imgur.com/WhfOZ90.png)
 ## VERY IMPORTANT
 My addon Nier2Blender_2.8 is a REQUIREMENT. Without it, nothing will work, you will understand why. <br>
 https://github.com/WoefulWolf/Nier2Blender_2.8 <br>
