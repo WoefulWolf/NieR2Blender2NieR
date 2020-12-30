@@ -9,11 +9,6 @@ class c_meshes(object):
             meshes_names_added = []
             numMeshes = 0
 
-            groupedMeshOrder = []
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH':
-                    meshGroupIndex = obj["meshGroupIndex"]
-
             for obj in bpy.data.objects:
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
