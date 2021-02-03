@@ -48,21 +48,21 @@ class wmb3_vertexHeader(object):
 	def __init__(self, wmb_fp):
 		super(wmb3_vertexHeader, self).__init__()
 		self.vertexArrayOffset = to_int(wmb_fp.read(4))		
-		self.boneWeightArrayOffset = to_int(wmb_fp.read(4))	
+		self.vertexExDataArrayOffset = to_int(wmb_fp.read(4))	
 		self.unknown08 = to_int(wmb_fp.read(4))				
 		self.unknown0C = to_int(wmb_fp.read(4))				
 		self.vertexStride = to_int(wmb_fp.read(4))			
-		self.boneWeightStride = to_int(wmb_fp.read(4))		
+		self.vertexExDataStride = to_int(wmb_fp.read(4))		
 		self.unknown18 = to_int(wmb_fp.read(4))				
 		self.unknown1C = to_int(wmb_fp.read(4))				
 		self.vertexCount = to_int(wmb_fp.read(4))			
-		self.unknown24 = to_int(wmb_fp.read(4))
+		self.vertexFlags = to_int(wmb_fp.read(4))
 		self.faceArrayOffset = to_int(wmb_fp.read(4))		
 		self.faceCount = to_int(wmb_fp.read(4))				
 
 class wmb3_vertex(object):
 	"""docstring for wmb3_vertex"""
-	def __init__(self, wmb_fp , stride):
+	def __init__(self, wmb_fp, vertex_flags):
 		super(wmb3_vertex, self).__init__()
 		self.positionX = to_float(wmb_fp.read(4))
 		self.positionY = to_float(wmb_fp.read(4))
@@ -72,28 +72,67 @@ class wmb3_vertex(object):
 		self.normalZ = to_int(wmb_fp.read(1)) * 2 / 255	
 		wmb_fp.read(1)											
 		self.textureU = to_float16(wmb_fp.read(2))				
-		self.textureV = to_float16(wmb_fp.read(2))				
-		if stride > 0x14:										
-			self.boneIndices = [to_int(wmb_fp.read(1)) for i in range(4)]
-		if stride > 0x18:										
+		self.textureV = to_float16(wmb_fp.read(2))
+		if vertex_flags in [0]:
+			self.normal = hex(to_int(wmb_fp.read(8)))
+		if vertex_flags in [1, 4, 5, 12, 14]:
+			self.textureU2 = to_float16(wmb_fp.read(2))				
+			self.textureV2 = to_float16(wmb_fp.read(2))
+		if vertex_flags in [7, 10, 11]:										
+			self.boneIndices = [to_int(wmb_fp.read(1)) for i in range(4)]									
 			self.boneWeights = [to_int(wmb_fp.read(1))/255 for i in range(4)]
+		if vertex_flags in [4, 5, 12, 14]:
+			self.color = [to_int(wmb_fp.read(1)) for i in range(4)]
 
-class wmb3_boneWeight(object):													# Incorrect, this is actually vertex colours, too lazy to rename
-	"""docstring for wmb3_boneWeight"""
-	def __init__(self, wmb_fp, stride):
-		super(wmb3_boneWeight, self).__init__()
-		self.unknown00 = hex(to_int(wmb_fp.read(4)))				
-		if stride > 0xC:
-			self.unknown04 = [to_int(wmb_fp.read(1)), to_int(wmb_fp.read(1)), to_int(wmb_fp.read(1)), to_int(wmb_fp.read(1))]
-		if stride > 0x8:											
-			self.unknown08 = hex(to_int(wmb_fp.read(4)))
-		self.unknown0C = hex(to_int(wmb_fp.read(4)))
-		if stride > 0x10:	
-			self.unknown10 = hex(to_int(wmb_fp.read(4)))
-		if stride > 0x14:	
-			self.unknown14 = hex(to_int(wmb_fp.read(4)))
-		if stride > 0x18:
-			self.unknown18 = hex(to_int(wmb_fp.read(4))) 
+class wmb3_vertexExData(object):
+	"""docstring for wmb3_vertexExData"""
+	def __init__(self, wmb_fp, vertex_flags):
+		super(wmb3_vertexExData, self).__init__()
+		
+		#0x0 has no ExVertexData
+
+		if vertex_flags in [1, 4]: #0x1, 0x4
+			self.normal = hex(to_int(wmb_fp.read(8)))
+
+		elif vertex_flags in [5]: #0x5
+			self.normal = hex(to_int(wmb_fp.read(8)))
+			self.textureU3 = to_float16(wmb_fp.read(2))				
+			self.textureV3 = to_float16(wmb_fp.read(2))
+
+		elif vertex_flags in [7]: #0x7
+			self.textureU2 = to_float16(wmb_fp.read(2))				
+			self.textureV2 = to_float16(wmb_fp.read(2))
+			self.normal = hex(to_int(wmb_fp.read(8)))
+
+		elif vertex_flags in [10]: #0xa
+			self.textureU2 = to_float16(wmb_fp.read(2))				
+			self.textureV2 = to_float16(wmb_fp.read(2))
+			self.color = [to_int(wmb_fp.read(1)) for i in range(4)]
+			self.normal = hex(to_int(wmb_fp.read(8)))
+
+		elif vertex_flags in [11]: #0xb
+			self.textureU2 = to_float16(wmb_fp.read(2))				
+			self.textureV2 = to_float16(wmb_fp.read(2))
+			self.color = [to_int(wmb_fp.read(1)) for i in range(4)]
+			self.normal = hex(to_int(wmb_fp.read(8)))
+			self.textureU3 = to_float16(wmb_fp.read(2))				
+			self.textureV3 = to_float16(wmb_fp.read(2))
+		
+		elif vertex_flags in [12]: #0xc
+			self.normal = hex(to_int(wmb_fp.read(8)))
+			self.textureU3 = to_float16(wmb_fp.read(2))				
+			self.textureV3 = to_float16(wmb_fp.read(2))
+			self.textureU4 = to_float16(wmb_fp.read(2))				
+			self.textureV4 = to_float16(wmb_fp.read(2))
+			self.textureU5 = to_float16(wmb_fp.read(2))				
+			self.textureV5 = to_float16(wmb_fp.read(2))
+
+		elif vertex_flags in [14]: #0xe
+			self.normal = hex(to_int(wmb_fp.read(8)))
+			self.textureU3 = to_float16(wmb_fp.read(2))				
+			self.textureV3 = to_float16(wmb_fp.read(2))
+			self.textureU4 = to_float16(wmb_fp.read(2))				
+			self.textureV4 = to_float16(wmb_fp.read(2))
 		
 class wmb3_vertexGroup(object):
 	"""docstring for wmb3_vertexGroup"""
@@ -101,18 +140,19 @@ class wmb3_vertexGroup(object):
 		super(wmb3_vertexGroup, self).__init__()
 		self.faceSize = faceSize
 		self.vertexGroupHeader = wmb3_vertexHeader(wmb_fp)
-		
+
+		self.vertexFlags = self.vertexGroupHeader.vertexFlags	
 		
 		self.vertexArray = []
 		wmb_fp.seek(self.vertexGroupHeader.vertexArrayOffset)
 		for vertex_index in range(self.vertexGroupHeader.vertexCount):
-			vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexStride)
+			vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexFlags)
 			self.vertexArray.append(vertex)
 
 		self.vertexesExDataArray = []
-		wmb_fp.seek(self.vertexGroupHeader.boneWeightArrayOffset)
+		wmb_fp.seek(self.vertexGroupHeader.vertexExDataArrayOffset)
 		for vertexIndex in range(self.vertexGroupHeader.vertexCount):
-			self.vertexesExDataArray.append(wmb3_boneWeight(wmb_fp,self.vertexGroupHeader.boneWeightStride))
+			self.vertexesExDataArray.append(wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags))
 
 		self.faceRawArray = []
 		wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
@@ -482,13 +522,8 @@ class WMB3(object):
 
 		vertexesExDataArray = self.vertexGroupArray[vertexGroupIndex].vertexesExDataArray
 		vertexesExData = vertexesExDataArray[vertexStart : vertexStart + vertexCount]
-		colors_mean = None
-		if hasattr(vertexesExData[0], 'unknown04'):
-			colors0_mean = int(vertexesExData[0].unknown04[0])
-			colors1_mean = int(vertexesExData[0].unknown04[1])
-			colors2_mean = int(vertexesExData[0].unknown04[2])
-			colors3_mean = int(vertexesExData[0].unknown04[3])
-			colors_mean = [colors0_mean, colors1_mean, colors2_mean, colors3_mean]			
+
+		vertex_colors = []
 
 		faceRawArray = self.vertexGroupArray[vertexGroupIndex].faceRawArray
 		facesRaw = faceRawArray[faceRawStart : faceRawStart + faceRawCount ]
@@ -505,11 +540,20 @@ class WMB3(object):
 		for i in range(0, faceRawCount, 3):
 			faces[int(i/3)] = (facesRaw[i]  , facesRaw[i + 1]  , facesRaw[i + 2] )
 		meshVertices = self.vertexGroupArray[vertexGroupIndex].vertexArray
+
 		if self.hasBone:
 			boneWeightInfos = [0] * len(usedVertexIndexArray)
 		for newIndex in range(len(usedVertexIndexArray)):
 			i = usedVertexIndexArray[newIndex]
 			usedVertices[newIndex] = (meshVertices[i].positionX, meshVertices[i].positionY, meshVertices[i].positionZ)
+
+			# Vertex_Colors are stored in VertexData
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in [4, 5, 12, 14]:
+				vertex_colors.append(meshVertices[i].color)
+			# Vertex_Colors are stored in VertexExData
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in [10, 11]:
+				vertex_colors.append(vertexesExData[i].color)
+
 			if self.hasBone:
 				bonesetIndex = mesh.bonesetIndex
 				boneSetArray = self.boneSetArray
@@ -524,7 +568,7 @@ class WMB3(object):
 						print(meshVertices[i].boneWeights) 
 				else:
 					self.hasBone = False
-		return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, colors_mean
+		return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors
 
 
 def export_obj(wmb, wta, wtp_fp, obj_file):

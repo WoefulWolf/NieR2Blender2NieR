@@ -103,7 +103,7 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
+def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
@@ -122,6 +122,19 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	bpy.context.collection.objects.link(obj)
 	objmesh.from_pydata(vertices, [], faces)
 	objmesh.update(calc_edges=True)
+
+	if len(mesh_data[7]) != 0:
+		if objmesh.vertex_colors:
+			vcol_layer = objmesh.vertex_colors.active
+		else:
+			vcol_layer = objmesh.vertex_colors.new()
+
+		for loop_idx, loop in enumerate(objmesh.loops):	
+			vcol_layer.data[loop_idx].color[0] = mesh_data[7][loop.vertex_index][0]/255
+			vcol_layer.data[loop_idx].color[1] = mesh_data[7][loop.vertex_index][1]/255
+			vcol_layer.data[loop_idx].color[2] = mesh_data[7][loop.vertex_index][2]/255
+			vcol_layer.data[loop_idx].color[3] = mesh_data[7][loop.vertex_index][3]/255
+
 	if has_bone:
 		weight_infos = mesh_data[4]
 		group_names = sorted(list(set(["bone%d" % i  for weight_info in weight_infos for i in weight_info[0]])))
@@ -138,7 +151,6 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	if mesh_data[5] != "None":
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
-	obj['vertexColours_mean'] = mesh_data[7]
 	obj['LOD_Name'] = mesh_data[8]
 	obj['LOD_Level'] = mesh_data[9]
 	obj['colTreeNodeIndex'] = mesh_data[10]
@@ -337,118 +349,7 @@ def consturct_materials(texture_dir, material):
 				if i > 0:
 					n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color2'])
 			mixRGB_link = links.new(normal_mixRGB_nodes[-1].outputs['Color'], normalmap_shader.inputs['Color'])
-				
 
-
-	"""
-	for texturesType in textures.keys():
-		textures_type = texturesType.lower() 
-		flag = False
-		material[texturesType] = textures.get(texturesType)					# Add textures as custom properties
-		for type_key in ['albedo', "normal", "mask"]:				# TO_DO:, 'env','parallax','irradiance','curvature']:
-			if textures_type.find(type_key) > -1:
-				flag = True
-		if flag:
-			texture_name = "%s_%s"%(textures[texturesType],texturesType)
-			texture_file = "%s/%s.dds" % (texture_dir, textures[texturesType])
-			if os.path.exists(texture_file):
-				if not texture_name in bpy.data.textures.keys():
-					print('[+] importing texture %s' % texture_name)
-					texture = bpy.data.textures.new('%s' % (texture_name), type = 'IMAGE')
-					texture.image = bpy.data.images.load(texture_file)
-				else:
-					texture = bpy.data.textures[texture_name]
-				#material_textureslot = material.texture_slots.add()
-				#material_textureslot.use_map_color_diffuse = False
-				if textures_type.find("normal") > -1:
-					#Normal Map
-					if normal_map_count == 0: # Only 1 Normal Map
-						normal_map = nodes.new(type='ShaderNodeNormalMap')
-						normal_map.location = 420,-500
-						normal_map_link = links.new(normal_map.outputs['Normal'], principled.inputs['Normal'])
-						#Normal Image Texture
-						normal_image = nodes.new(type='ShaderNodeTexImage')
-						normal_image.location = 0,-600
-						normal_image.image = bpy.data.images.load(texture_file)
-						normal_image.image.colorspace_settings.name = 'Non-Color'
-						normal_image_link = links.new(normal_image.outputs['Color'], normal_map.inputs['Color'])
-						normal_map_count += 1
-					else: # 2 Normal Maps
-						links.remove(normal_image_link)
-
-						mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
-						mixRGB_shader.location = 260,-500
-						mixRGB_shader_link = links.new(mixRGB_shader.outputs['Color'], normal_map.inputs['Color'])
-						normal_image_link = links.new(normal_image.outputs['Color'], mixRGB_shader.inputs['Color1'])
-
-						normal_image2 = nodes.new(type='ShaderNodeTexImage')
-						normal_image2.location = 0,-800
-						normal_image2.image = bpy.data.images.load(texture_file)
-						normal_image2.image.colorspace_settings.name = 'Non-Color'
-						normal_image_link2 = links.new(normal_image2.outputs['Color'], mixRGB_shader.inputs['Color2'])
-				elif textures_type.find("mask") > -1:	#Only add first MaskMap
-					#Mask Image Texture (R = Metallic, G = Glossines (Inverted Roughness), B = AO)
-					mask_image = nodes.new(type='ShaderNodeTexImage')
-					mask_image.location = -250,-250
-					mask_image.image = bpy.data.images.load(texture_file)
-					mask_image.image.colorspace_settings.name = 'Non-Color'
-					if mask_map_count == 0:
-						if not 'Hair' in material['Shader_Name']:
-							seperate_rgb = nodes.new(type="ShaderNodeSeparateRGB")
-							seperate_rgb.location = 25,-250
-							mask_map_link = links.new(mask_image.outputs['Color'], seperate_rgb.inputs['Image'])
-							r_channel_link = links.new(seperate_rgb.outputs['R'], principled.inputs['Metallic'])				# R -> Mettalic
-							g_channel_invert = nodes.new(type="ShaderNodeInvert")
-							g_channel_invert.location = 200,-325
-							g_channel_link = links.new(seperate_rgb.outputs['G'], g_channel_invert.inputs['Color'])				# G -> Invert
-							g_inverted_link = links.new(g_channel_invert.outputs['Color'], principled.inputs['Roughness'])		# Invert -> Roughness
-							if False:																							# DISABLED BAKED AO (just set this to true if you want it, but Blender's AO is better)
-								b_channel_multiply = nodes.new(type="ShaderNodeMixRGB")
-								b_channel_multiply.location = 350,0
-								b_channel_multiply.blend_type = 'MULTIPLY'
-								b_channel_link = links.new(seperate_rgb.outputs['B'], b_channel_multiply.inputs[2])					# AO
-								albedo_multiply_link = links.new(diffuse_image.outputs['Color'], b_channel_multiply.inputs[1])
-								b_channel_multiply.inputs["Fac"].default_value = 1
-								multiply_link = links.new(b_channel_multiply.outputs['Color'], principled.inputs['Base Color'])
-							
-						else:
-							mask_link = links.new(mask_image.outputs['Color'], principled.inputs['Metallic'])
-
-						mask_map_count += 1
-				elif textures_type.find("light") > -1:
-					print("light not implemented yet in Nier2Blender_2_80")
-				elif textures_type.find("env") > -1:
-					print("env not implemented yet in Nier2Blender_2_80")
-					#material_textureslot.use_map_ambient = True
-				elif textures_type.find("parallax") > -1:
-					print("parralax not implemented yet in Nier2Blender_2_80")
-					#material_textureslot.use_map_displacement
-				elif textures_type.find("irradiance") > -1:
-					print("irradiance not implemented yet in Nier2Blender_2_80")
-					#material_textureslot.use_map_emit = True
-				elif textures_type.find("curvature") > -1:
-					print("curvature not implemented yet in Nier2Blender_2_80")
-					#material_textureslot.use_map_warp = True
-				else:
-					# Diffuse Image Texture (Albedo)
-					diffuse_image = nodes.new(type='ShaderNodeTexImage')
-					diffuse_image.location = 0,0
-					diffuse_image.image = bpy.data.images.load(texture_file)
-					diffuse_image_link = links.new(diffuse_image.outputs['Color'], principled.inputs['Base Color'])
-
-					# Alpha Channel
-					material.blend_method = 'CLIP'
-
-					alpha_link = links.new(diffuse_image.outputs['Alpha'], principled.inputs['Alpha'])
-					
-				print('[+] adding texture %s to material %s' % (texture_name, material_name))
-				#material_textureslot.texture = texture
-				#material_textureslot.texture_coords = 'UV'
-		else:
-			print("[!] not supported texture %s_%s" % (textures[texturesType], texturesType))
-	#if not material.texture_slots[0]:
-		#print("[!] no textute found for material %s" % material_name)
-	"""
 	return material
 
 def add_material_to_mesh(mesh, materials , uvs):
@@ -465,7 +366,18 @@ def add_material_to_mesh(mesh, materials , uvs):
 		for l in face.loops:
 			luv = l[uv_layer]
 			ind = l.vert.index
-			luv.uv = Vector(uvs[ind])
+			luv.uv = Vector(uvs[0][ind])
+	
+	for i in range (1, 5):
+		if len(uvs[i]) > 0:
+			new_uv_layer = bm.loops.layers.uv.new("UVMap" + str(i + 1))
+			for face in bm.faces:
+				face.material_index = 0
+				for l in face.loops:
+					luv = l[new_uv_layer]
+					ind = l.vert.index
+					luv.uv = Vector(uvs[i][ind])
+
 	bpy.ops.object.mode_set(mode='OBJECT')
 	mesh.select_set(True)
 	bpy.ops.object.shade_smooth()
@@ -474,13 +386,83 @@ def add_material_to_mesh(mesh, materials , uvs):
 	
 def format_wmb_mesh(wmb, collection_name):
 	meshes = []
-	uvs = []
+	uvMaps = [[], [], [], [], []]
 	usedVerticeIndexArrays = []
 	mesh_array = wmb.meshArray
 	#each vertexgroup -> each lod -> each group -> mesh
 	for vertexGroupIndex in range(wmb.wmb3_header.vertexGroupCount):
-		uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-		uvs.append(uv)
+		vertex_flags = wmb.vertexGroupArray[vertexGroupIndex].vertexFlags
+
+		if vertex_flags in [0]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[1].append(uv)
+			uvMaps[2].append(None)
+			uvMaps[3].append(None)
+			uvMaps[4].append(None)
+
+		if vertex_flags in [1, 4]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[1].append(uv)
+			uvMaps[2].append(None)
+			uvMaps[3].append(None)
+			uvMaps[4].append(None)
+
+		if vertex_flags in [5]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[1].append(uv)
+			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[2].append(uv)
+			uvMaps[3].append(None)
+			uvMaps[4].append(None)
+
+		if vertex_flags in [7, 10]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[1].append(uv)
+			uvMaps[2].append(None)
+			uvMaps[3].append(None)
+			uvMaps[4].append(None)
+
+		if vertex_flags in [11]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[1].append(uv)
+			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[2].append(uv)
+			uvMaps[3].append(None)
+			uvMaps[4].append(None)
+
+		if vertex_flags in [12]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[1].append(uv)
+			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[2].append(uv)
+			uv = [(vertexExData.textureU4, 1 - vertexExData.textureV4) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[3].append(uv)
+			uv = [(vertexExData.textureU5, 1 - vertexExData.textureV5) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[4].append(uv)
+
+		if vertex_flags in [14]:
+			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[0].append(uv)
+			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
+			uvMaps[1].append(uv)
+			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[2].append(uv)
+			uv = [(vertexExData.textureU4, 1 - vertexExData.textureV4) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
+			uvMaps[3].append(uv)
+			uvMaps[4].append(None)
+
 		for meshGroupInfoArrayIndex in range(len(wmb.meshGroupInfoArray)):
 			meshGroupInfo =  wmb.meshGroupInfoArray[meshGroupInfoArrayIndex]
 			groupedMeshArray = meshGroupInfo.groupedMeshArray
@@ -505,7 +487,7 @@ def format_wmb_mesh(wmb, collection_name):
 						faces =  meshInfo[1]
 						usedVerticeIndexArray = meshInfo[2]
 						boneWeightInfoArray = meshInfo[3]
-						colors_mean = meshInfo[4]
+						vertex_colors = meshInfo[4]
 						usedVerticeIndexArrays.append(usedVerticeIndexArray)
 						flag = False
 						has_bone = wmb.hasBone
@@ -513,9 +495,9 @@ def format_wmb_mesh(wmb, collection_name):
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, colors_mean, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name)
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name)
 						meshes.append(obj)
-	return meshes, uvs, usedVerticeIndexArrays
+	return meshes, uvMaps, usedVerticeIndexArrays
 
 def get_wmb_material(wmb, texture_dir):
 	materials = []
@@ -614,7 +596,6 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 	materials = []
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
-		print(material)
 		materials.append(consturct_materials(texture_dir, material))
 	print('Linking materials to objects...')
 	for meshGroupInfo in wmb.meshGroupInfoArray:
@@ -623,12 +604,14 @@ def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl00
 			meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
 			materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
 			groupIndex = int(meshes[Index + mesh_start].name.split('-')[2])
-			uv = []
+			uvMaps = [[], [], [], [], []]
 			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
 				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
-				uv.append( uvs[groupIndex][VertexIndex])
+				for k in range(5):
+					if uvs[k][groupIndex] != None:
+						uvMaps[k].append( uvs[k][groupIndex][VertexIndex])
 			if len(materials) > 0:
-				add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uv)
+				add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uvMaps)
 	if wmb.hasBone:
 		amt = bpy.data.objects.get(armature_name)
 	if wmb.hasBone:

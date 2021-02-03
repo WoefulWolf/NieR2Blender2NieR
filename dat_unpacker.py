@@ -156,7 +156,7 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 
 		# Bucket Offsets
 	for i in bucketOffsets:
-		print(bucketOffsets)
+		#print(bucketOffsets)
 		outfile.write(struct.pack('<H', i))
 
 		# Hashes
@@ -165,7 +165,7 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 
 		# File Indices
 	for i in fileIndices:
-		print(i)
+		#print(i)
 		outfile.write(struct.pack('<H', i))
 
 	outfile.close()
