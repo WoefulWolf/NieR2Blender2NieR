@@ -184,8 +184,8 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         row = layout.row()
         row.label(text="Materials:")
         row = layout.row()
-        row.operator("na.sync_blender_materials")
         row.operator("na.sync_material_identifiers")
+        row.operator("na.sync_blender_materials")
 
         loaded_mats = []
         for item in context.scene.WTAMaterials:
@@ -207,7 +207,7 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         row = layout.row()
         box = row.box()
         row = box.row()
-        row.label(text='- Texture identifier has to be 8 characters long.')
+        row.label(text='- Texture identifier has to be 8 HEX characters long.')
         row = box.row()
         row.label(text='- Textures have to be in DDS format (DXT1, DXT3, DXT5).')
         row = box.row()

@@ -32,14 +32,12 @@ def purge_unused_materials():
             print('Purging unused material:', material)
             bpy.data.materials.remove(material)
 
-def prepare_blend():
-    print('Preparing .blend File:')
+def triangulate_meshes():
     bpy.ops.object.mode_set(mode='OBJECT')
-    print('Triangulating meshes:')
+    print('Triangulating meshes...')
     for obj in bpy.data.objects:
         if obj.type == 'MESH':
-
-            # Triangulate meshes
+            # Add and apply Triangulate Modifier
             bpy.context.view_layer.objects.active = obj
             bpy.ops.object.modifier_add(type='TRIANGULATE')
             if bpy.app.version >= (2, 90, 0):
@@ -47,9 +45,24 @@ def prepare_blend():
             else:    
                 bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Triangulate")
 
+def centre_origins():
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.scene.cursor.location = [0, 0, 0]
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH':
+            obj.select_set(True)
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+            obj.select_set(False)
+    bpy.data.objects[0].select_set(True)
+
+def prepare_blend():
+    print('Preparing .blend File:')
+    for obj in bpy.data.objects:
         if obj.type not in ['MESH', 'ARMATURE']:
             print('[-] Removed ', obj)
             bpy.data.objects.remove(obj)
+
 
 def restore_blend():
     print('Restoring .blend File:')

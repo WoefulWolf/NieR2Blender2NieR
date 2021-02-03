@@ -31,6 +31,7 @@ class c_mesh(object):
 
         def get_bones(self, obj):
             bones = []
+            numBones = 0
             obj_mesh_name = obj.name.split('-')[1]
             for mesh in bpy.data.objects:
                 if mesh.type == 'MESH' and mesh.name.split('-')[1] == obj_mesh_name:
@@ -38,13 +39,14 @@ class c_mesh(object):
                         boneName = vertexGroup.name.replace('bone', '')
                         if int(boneName) not in bones:
                             bones.append(int(boneName))
+                            numBones += 1
             if len(bones) == 0:
                 bones.append(0)
 
             bones.sort()
-            return bones
+            return bones, numBones
       
-        self.bones = get_bones(self, obj)
+        self.bones, self.numBones = get_bones(self, obj)
 
         self.nameOffset = offsetMeshes + numMeshes * 44
 
@@ -58,9 +60,10 @@ class c_mesh(object):
 
         self.numMaterials = len(self.materials)
 
-        self.offsetBones = self.offsetMaterials + 2*self.numMaterials
-
-        self.numBones = len(self.bones)     
+        if self.numBones > 0:
+            self.offsetBones = self.offsetMaterials + 2*self.numMaterials
+        else:
+            self.offsetBones = 0     
 
         def get_mesh_StructSize(self):
             mesh_StructSize = 0

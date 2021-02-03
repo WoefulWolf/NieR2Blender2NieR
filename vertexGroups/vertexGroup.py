@@ -54,21 +54,52 @@ class c_vertexGroup(object):
 
             return blenderLoops
 
-        def get_blenderUVCoords(self, objOwner, loopIndex):
+        def get_blenderUVCoords(self, objOwner, loopIndex, uvSlot):
             uv_coords = []
-            uv_coords = objOwner.data.uv_layers.active.data[loopIndex].uv
-            return uv_coords
+            uv_coords = objOwner.data.uv_layers[uvSlot].data[loopIndex].uv
+            return [uv_coords.x, 1-uv_coords.y]
 
-        if self.blenderObjects[0]['boneSetIndex'] == -1:         # 4, 7, 10, 11, 14
-            self.vertexFlags = 4                                             
-        elif self.blenderObjects[0]['vertexColours_mean'] == None:
-            self.vertexFlags = 7
-        else:    
-            self.vertexFlags = 10
-        if self.blenderObjects[0]['boneSetIndex'] == -1 and self.blenderObjects[0]['vertexColours_mean'] != None:
+        # Has bones = 7, 10, 11
+        # 1 UV  = 0
+        # 2 UVs = 1, 4, 7, 10
+        # 3 UVs = 5, 11
+        # 4 UVs = 14
+        # 5 UVs = 12
+        # Has Color = 4, 5, 10, 11, 12, 14
+
+        if len(self.blenderObjects[0].data.uv_layers) == 1:         # 0
+            self.vertexFlags = 0
+        elif len(self.blenderObjects[0].data.uv_layers) == 2:       # 1, 4, 7, 10
+            if self.blenderObjects[0]['boneSetIndex'] != -1:        # > 7, 10
+                if self.blenderObjects[0].data.vertex_colors:       # >> 10
+                    self.vertexFlags = 10
+                else:                                               # >> 7
+                    self.vertexFlags = 7
+
+            else:                                                   # > 1, 4
+                if self.blenderObjects[0].data.vertex_colors:       # >> 4
+                    self.vertexFlags = 4
+                else:                                               # >> 1
+                    self.vertexFlags = 1
+
+
+        elif len(self.blenderObjects[0].data.uv_layers) == 3:       # 5, 11
+            if self.blenderObjects[0]['boneSetIndex'] != -1:        # >> 11
+                self.vertexFlags = 11
+            else:                                                   # >> 5
+                self.vertexFlags = 5
+
+        elif len(self.blenderObjects[0].data.uv_layers) == 4:       # 14
             self.vertexFlags = 14
+        elif len(self.blenderObjects[0].data.uv_layers) == 5:       # 12
+            self.vertexFlags = 12
+        else:
+            print(" - UV Maps Error: No UV Map found!")
 
-        if self.vertexFlags == 4:                                            # SIZE OF ONE 'vertexesExData' 8, 12, 16, 20
+        print("VERTEXFLAGS", self.vertexFlags)
+        if self.vertexFlags == 0:
+            self.vertexExDataSize = 0
+        if self.vertexFlags == 4:                                         
             self.vertexExDataSize = 8       
         elif self.vertexFlags in [5, 7]:                                          
             self.vertexExDataSize = 12                                    
@@ -106,7 +137,7 @@ class c_vertexGroup(object):
                 loops = get_blenderLoops(self, bvertex_obj[1])
                 sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
 
-                if self.vertexFlags not in [4, 5]:
+                if self.vertexFlags not in [0, 1, 4, 5, 12, 14]:
                     boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
 
                 added_indices = []
@@ -127,25 +158,26 @@ class c_vertexGroup(object):
 
                     tangents = [tx, ty, tz, sign]
 
-                    # UVs
-                    uv_coords = get_blenderUVCoords(self, bvertex_obj[1], loop.index)
-                    mapping = [uv_coords.x, 1-uv_coords.y]      # NieR uses inverted Y from Blender, thus 1-y
+                    # Normal
+                    normal = []
+                    if self.vertexFlags in [0]:
+                        normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
 
-                    # Bone Indexes
-                    if self.vertexFlags == 4:
-                        mapping2 = mapping
-                        color = [0, 0, 0, 255] 
-                    elif self.vertexFlags == 5:
-                        mapping2 = mapping
-                        color = [255, 255, 255, 255] 
-                    elif self.vertexFlags == 7:
-                        mapping2 = [0, 0, 0, 0]
-                        color = [255, 0, 0, 0]
-                    elif self.vertexFlags == 14:
-                        mapping2 = mapping
-                        color = [255, 0, 0, 255]  
-                    else:
-                        boneIndexes = []
+                    # UVs
+                    uv_maps = []
+
+                    uv1 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                    uv_maps.append(uv1)
+
+                    if self.vertexFlags in [1, 4, 5, 12, 14]:
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
+                        uv_maps.append(uv2)
+
+                    # Bones
+                    boneIndexes = []
+                    boneWeights = []
+                    if self.vertexFlags in [7, 10, 11]:
+                        # Bone Indices
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:
                                 boneGroupName = bvertex_obj[1].vertex_groups[groupRef.group].name
@@ -162,8 +194,6 @@ class c_vertexGroup(object):
                         while len(boneIndexes) < 4:
                             boneIndexes.append(0)
 
-                        mapping2 = boneIndexes
-
                         # Bone Weights
                         weights = [group.weight for group in bvertex.groups]
 
@@ -177,84 +207,91 @@ class c_vertexGroup(object):
                             else:
                                 normalized_weights.append(0)
 
-                        color = []
                         for val in normalized_weights:
-                            if len(color) < 4:
+                            if len(boneWeights) < 4:
                                 weight = math.floor(val * 256.0)
                                 if val == 1.0:
                                     weight = 255
-                                color.append(weight)
+                                boneWeights.append(weight)
                         
-                        while len(color) < 4:
-                            color.append(0)
+                        while len(boneWeights) < 4:
+                            boneWeights.append(0)
 
-                        while sum(color) < 255:                     # MOAR checks to make sure weights are normalized but in bytes. (A bit cheating but these values should make such a minor impact.)
-                            color[0] += 1
+                        while sum(boneWeights) < 255:                     # MOAR checks to make sure weights are normalized but in bytes. (A bit cheating but these values should make such a minor impact.)
+                            boneWeights[0] += 1
 
-                        while sum(color) > 255:                     
-                            color[0] -= 1
+                        while sum(boneWeights) > 255:                     
+                            boneWeights[0] -= 1
 
-                        if sum(color) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
+                        if sum(boneWeights) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
-                    vertexes.append([position.xyz, tangents, mapping, mapping2, color])
+                    color = []
+                    if self.vertexFlags in [4, 5, 12, 14]:
+                        if len (bvertex_obj[1].data.vertex_colors) == 0:
+                            print("Object had no vertex colour layer when one was expected - creating one.")
+                            new_vertex_colors = bvertex_obj[1].data.vertex_colors.new()
+                        loop_color = bvertex_obj[1].data.vertex_colors.active.data[loop.index].color
+                        color = [round(loop_color[0]*255), round(loop_color[1]*255), round(loop_color[2]*255), round(loop_color[3]*255)]
 
+                    vertexes.append([position.xyz, tangents, normal, uv_maps, boneIndexes, boneWeights, color])
+
+
+                    ##################################################
                     ###### Now lets do the extra data shit ###########
+                    ##################################################
+                    normal = []
+                    uv_maps = []
+                    color = []
 
-                    vertexNormal = loop.normal
-                    nx = vertexNormal[0]
-                    ny = vertexNormal[1]
-                    nz = vertexNormal[2]
-                    dummy = 0
+                    if self.vertexFlags in [10, 11]:
+                        if len (bvertex_obj[1].data.vertex_colors) == 0:
+                            print("Object had no vertex colour layer when one was expected - creating one.")
+                            new_vertex_colors = bvertex_obj[1].data.vertex_colors.new()
 
-                    if self.vertexExDataSize == 8:
-                        vertexExData = [nx, ny, nz, dummy] # Normal xyz + dummy
-                        vertexesExData.append(vertexExData)
+                    if self.vertexFlags in [1, 4, 5, 7, 10, 11, 12, 14]:
+                        normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                    
+                    if self.vertexFlags in [5]:
+                        uv3 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 2)
+                        uv_maps.append(uv3)
 
-                    elif self.vertexExDataSize == 12:
-                        mapping2 = vertexes[-1][2]
+                    elif self.vertexFlags in [7]:
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                        uv_maps.append(uv2)
 
-                        normal = [nx, ny, nz, dummy] # Normal xyz + dummy
+                    elif self.vertexFlags in [10]:
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                        uv_maps.append(uv2)
+                        loop_color = bvertex_obj[1].data.vertex_colors.active.data[loop.index].color
+                        color = [round(loop_color[0]*255), round(loop_color[1]*255), round(loop_color[2]*255), round(loop_color[3]*255)]
 
-                        vertexExData = [mapping2, normal]
-                        vertexesExData.append(vertexExData)
+                    elif self.vertexFlags in [11]:
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                        uv_maps.append(uv2)
+                        loop_color = bvertex_obj[1].data.vertex_colors.active.data[loop.index].color
+                        color = [round(loop_color[0]*255), round(loop_color[1]*255), round(loop_color[2]*255), round(loop_color[3]*255)]
+                        uv3 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
+                        uv_maps.append(uv3)
 
-                    elif self.vertexExDataSize == 16 and self.vertexFlags == 14:
+                    elif self.vertexFlags in [12]:
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
+                        uv_maps.append(uv2)
+                        uv3 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 2)
+                        uv_maps.append(uv3)
+                        uv4 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 3)
+                        uv_maps.append(uv4)
+                        uv5 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 4)
+                        uv_maps.append(uv5)
 
-                        mapping3 = vertexes[-1][2]
-                        mapping4 = vertexes[-1][2]                            
+                    elif self.vertexFlags in [14]:
+                        uv3 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 2)
+                        uv_maps.append(uv3)
+                        uv4 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 3)
+                        uv_maps.append(uv4)
 
-                        normal = [nx, ny, nz, dummy] # Normal xyz + dummy
-
-                        vertexExData = [normal, mapping3, mapping4]
-                        vertexesExData.append(vertexExData)
-
-                    elif self.vertexExDataSize == 16:
-                        mapping2 = vertexes[-1][2]
-                        if bvertex_obj[1]['vertexColours_mean'] == None:
-                            color = [255, 255, 255, 255]
-                        else:
-                            color = bvertex_obj[1]['vertexColours_mean']                            
-
-                        normal = [nx, ny, nz, dummy] # Normal xyz + dummy
-
-                        vertexExData = [mapping2, color, normal]
-                        vertexesExData.append(vertexExData)
-
-                    elif self.vertexExDataSize == 20:
-                        mapping2 = vertexes[-1][2]
-                        
-                        if bvertex_obj[1]['vertexColours_mean'] == None:
-                            color = [255, 255, 255, 255]
-                        else:
-                            color = bvertex_obj[1]['vertexColours_mean']                            
-
-                        normal = [nx, ny, nz, dummy] # Normal xyz + dummy
-
-                        mapping3 = mapping2
-
-                        vertexExData = [mapping2, color, normal, mapping3]
-                        vertexesExData.append(vertexExData)
+                    vertexExData = [normal, uv_maps, color]
+                    vertexesExData.append(vertexExData)
 
             return vertexes, vertexesExData
 
