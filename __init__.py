@@ -1,10 +1,10 @@
 bl_info = {
-    "name": "Blender2Nier (NieR:Automata Model Exporter)",
+    "name": "Blender2NieR (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
     "version": (0, 2, 00),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
-    "description": "Export Nier:Automata WMB/WTP/WTA/DTT/DAT files.",
+    "description": "Export NieR:Automata WMB/WTP/WTA/DTT/DAT files.",
     "category": "Import-Export"}
 
 import traceback
@@ -12,6 +12,10 @@ import sys
 import bpy
 from bpy_extras.io_utils import ExportHelper,ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
+
+from . import util
+from .wta_wtp_exporter import wta_wtp_ui_manager
+from .dat_dtt_exporter import dat_dtt_ui_manager
 
 class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata WMB File'''
@@ -48,42 +52,52 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
             util.show_message('Error: An unexpected error has occurred during export. Please check the console for more info.', 'WMB Export Error', 'ERROR')
             return {'CANCELLED'}
 
+class OBJECT_MT_B2N(bpy.types.Menu):
+    bl_idname = 'object.b2n'
+    bl_label = 'Blender2NieR'
+    def draw(self, context):
+        self.layout.operator(util.B2NRecalculateObjectIndices.bl_idname)
+        self.layout.operator(util.B2NRemoveUnusedVertexGroups.bl_idname)
+        self.layout.operator(util.B2NMergeVertexGroupCopies.bl_idname)
+        self.layout.operator(util.B2NDeleteLooseGeometrySelected.bl_idname)
+        self.layout.operator(util.B2NDeleteLooseGeometryAll.bl_idname)
+        self.layout.operator(util.B2NRipMeshByUVIslands.bl_idname)
+
 def menu_func_export(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(ExportBlender2Nier.bl_idname, text="WMB File for Nier: Automata (.wmb)")
+    self.layout.operator(ExportBlender2Nier.bl_idname, text="WMB File for NieR:Automata (.wmb)")
+
+def menu_func_utils(self, context):
+    self.layout.menu(OBJECT_MT_B2N.bl_idname)
 
 def register():
-    from . import util
-    from .wta_wtp_exporter import wta_wtp_ui_manager
-    from .dat_dtt_exporter import dat_dtt_ui_manager
-
     bpy.utils.register_class(ExportBlender2Nier)
+    bpy.utils.register_class(OBJECT_MT_B2N)
     bpy.utils.register_class(util.B2NRecalculateObjectIndices)
     bpy.utils.register_class(util.B2NRemoveUnusedVertexGroups)
     bpy.utils.register_class(util.B2NMergeVertexGroupCopies)
     bpy.utils.register_class(util.B2NDeleteLooseGeometrySelected)
     bpy.utils.register_class(util.B2NDeleteLooseGeometryAll)
     bpy.utils.register_class(util.B2NRipMeshByUVIslands)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    bpy.types.VIEW3D_MT_object.append(menu_func_utils)
 
 
 def unregister():
-    from . import util
-    from .wta_wtp_exporter import wta_wtp_ui_manager
-    from .dat_dtt_exporter import dat_dtt_ui_manager
-
     bpy.utils.unregister_class(ExportBlender2Nier)
+    bpy.utils.unregister_class(OBJECT_MT_B2N)
     bpy.utils.unregister_class(util.B2NRecalculateObjectIndices)
     bpy.utils.unregister_class(util.B2NRemoveUnusedVertexGroups)
     bpy.utils.unregister_class(util.B2NMergeVertexGroupCopies)
     bpy.utils.unregister_class(util.B2NDeleteLooseGeometrySelected)
     bpy.utils.unregister_class(util.B2NDeleteLooseGeometryAll)
     bpy.utils.unregister_class(util.B2NRipMeshByUVIslands)
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     wta_wtp_ui_manager.unregister()
     dat_dtt_ui_manager.unregister()
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
 
 
 if __name__ == '__main__':

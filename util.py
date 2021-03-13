@@ -79,9 +79,9 @@ def show_message(message = "", title = "Message Box", icon = 'INFO'):
 	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 class B2NRecalculateObjectIndices(bpy.types.Operator):
-    """Blender2NieR: Re-calculate Object Indices"""
+    """Re-calculate object indices for ordering (e.g. ##_Body_0)"""
     bl_idname = "b2n.recalculateobjectindices"
-    bl_label = "Blender2NieR: Re-calculate Object Indices"
+    bl_label = "Re-calculate Object Indices"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -98,9 +98,9 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
         return {'FINISHED'}
 
 class B2NRemoveUnusedVertexGroups(bpy.types.Operator):
-    """Blender2NieR: Remove Unused Vertex Groups"""
+    """Remove all unused vertex groups."""
     bl_idname = "b2n.removeunusedvertexgroups"
-    bl_label = "Blender2NieR: Remove Unused Vertex Groups"
+    bl_label = "Remove Unused Vertex Groups"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -134,9 +134,9 @@ class B2NRemoveUnusedVertexGroups(bpy.types.Operator):
         return {'FINISHED'}
 
 class B2NMergeVertexGroupCopies(bpy.types.Operator):
-    """Blender2NieR: Merge Vertex Group Name Copies"""
+    """Merge vertex groups by name copies (etc. bone69 & bone69.001)"""
     bl_idname = "b2n.mergevertexgroupcopies"
-    bl_label = "Blender2NieR: Merge Vertex Group Name Copies"
+    bl_label = "Merge Vertex Groups by Name Copies"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -169,9 +169,9 @@ class B2NMergeVertexGroupCopies(bpy.types.Operator):
         return {'FINISHED'}
 
 class B2NDeleteLooseGeometrySelected(bpy.types.Operator):
-    """Blender2NieR: Delete Loose Geometry (Selected)"""
+    """Delete Loose Geometry (Selected)"""
     bl_idname = "b2n.deleteloosegeometrysel"
-    bl_label = "Blender2NieR: Delete Loose Geometry (Selected)"
+    bl_label = "Delete Loose Geometry (Selected)"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -200,9 +200,9 @@ class B2NDeleteLooseGeometrySelected(bpy.types.Operator):
         return {'FINISHED'}
 
 class B2NDeleteLooseGeometryAll(bpy.types.Operator):
-    """Blender2NieR: Delete Loose Geometry (All)"""
+    """Delete Loose Geometry (All)"""
     bl_idname = "b2n.deleteloosegeometryall"
-    bl_label = "Blender2NieR: Delete Loose Geometry (All)"
+    bl_label = "Delete Loose Geometry (All)"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -231,9 +231,9 @@ class B2NDeleteLooseGeometryAll(bpy.types.Operator):
         return {'FINISHED'}
 
 class B2NRipMeshByUVIslands(bpy.types.Operator):
-    """Blender2NieR: Rip Mesh by UV Islands"""
+    """Rip Mesh by UV Islands"""
     bl_idname = "b2n.ripmeshbyuvislands"
-    bl_label = "Blender2NieR: Rip Mesh by UV Islands"
+    bl_label = "Rip Mesh by UV Islands"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
