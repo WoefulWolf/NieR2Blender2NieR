@@ -56,6 +56,8 @@ class c_vertexGroup(object):
 
         def get_blenderUVCoords(self, objOwner, loopIndex, uvSlot):
             uv_coords = []
+            if uvSlot > len(objOwner.data.uv_layers)-1:
+                print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", objOwner.name, "but it does not exist.")
             uv_coords = objOwner.data.uv_layers[uvSlot].data[loopIndex].uv
             return [uv_coords.x, 1-uv_coords.y]
 
@@ -96,7 +98,6 @@ class c_vertexGroup(object):
         else:
             print(" - UV Maps Error: No UV Map found!")
 
-        print("VERTEXFLAGS", self.vertexFlags)
         if self.vertexFlags == 0:
             self.vertexExDataSize = 0
         if self.vertexFlags == 4:                                         
@@ -257,17 +258,17 @@ class c_vertexGroup(object):
                         uv_maps.append(uv3)
 
                     elif self.vertexFlags in [7]:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
                         uv_maps.append(uv2)
 
                     elif self.vertexFlags in [10]:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
                         uv_maps.append(uv2)
                         loop_color = bvertex_obj[1].data.vertex_colors.active.data[loop.index].color
                         color = [round(loop_color[0]*255), round(loop_color[1]*255), round(loop_color[2]*255), round(loop_color[3]*255)]
 
                     elif self.vertexFlags in [11]:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 0)
+                        uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
                         uv_maps.append(uv2)
                         loop_color = bvertex_obj[1].data.vertex_colors.active.data[loop.index].color
                         color = [round(loop_color[0]*255), round(loop_color[1]*255), round(loop_color[2]*255), round(loop_color[3]*255)]
