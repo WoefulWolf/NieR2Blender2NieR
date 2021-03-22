@@ -574,10 +574,17 @@ def import_wmb_boundingbox(wmb):
 	bpy.context.scene['boundingBoxXYZ'] = boundingBoxXYZ
 	bpy.context.scene['boundingBoxUVW'] = boundingBoxUVW
 
-def main(wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
+def main(only_extract, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
 	wmb = WMB3(wmb_file)
 	wmbname = wmb_file.split('\\')[-1]
+
+	if only_extract:
+		texture_dir = wmb_file.replace(wmbname, '\\textures\\')
+		wmb_materials = get_wmb_material(wmb, texture_dir)
+		print('Extraction finished. ;)')
+		return {'FINISHED'}
+
 	collection_name = wmbname[:-4]
 
 	col = bpy.data.collections.new(collection_name)
