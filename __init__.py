@@ -4,7 +4,7 @@ bl_info = {
     "version": (2, 2),
     "blender": (2, 80, 0),
     "api": 38019,
-    "location": "File > Import-Export",
+    "location": "File > Import",
     "description": "Import Nier:Automata Model Data",
     "warning": "",
     "wiki_url": "",
