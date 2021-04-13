@@ -268,12 +268,27 @@ class wmb3_material(object):
 		wmb_fp.seek(techniqueNameOffset)
 		self.techniqueName = to_string(wmb_fp.read(256))
 		self.textureArray = {}
+
+		path_split = wmb_fp.name.split('\\')
+
+		mat_list_filepath = "\\".join(path_split[:-3])
+		mat_list_file = open(mat_list_filepath + '\\materials.txt', 'a') #
+		mat_list_file.write(self.materialName + '\n') #
+
 		for i in range(textureNum):
 			wmb_fp.seek(textureOffset + i * 8)
 			offset = to_int(wmb_fp.read(4))
 			identifier = "%08x"%to_int(wmb_fp.read(4))
 			wmb_fp.seek(offset)
-			self.textureArray[to_string(wmb_fp.read(256))] = identifier
+			textureTypeName = to_string(wmb_fp.read(256))
+			self.textureArray[textureTypeName] = identifier
+
+			mat_list_file.write(' - ' + textureTypeName + ': ') #
+			mat_list_file.write(identifier + '\n') #
+
+		mat_list_file.write('\n')
+		mat_list_file.close() #
+		
 
 		wmb_fp.seek(paramterGroupsOffset)
 		self.parameterGroups = []
@@ -396,18 +411,29 @@ class WMB3(object):
 		wtp_fp = 0
 		self.wta = 0
 
-		if os.path.exists(wmb_file):
-			wmb_fp = open(wmb_file, "rb")
-		if os.path.exists(wmb_file.replace('.dtt','.dat').replace('.wmb','.wta')):
-			print('open wta file')
-			wta_fp = open(wmb_file.replace('.dtt','.dat').replace('.wmb','.wta'),'rb')
-		if os.path.exists(wmb_file.replace('.wmb','.wtp')):	
+		wmb_path = wmb_file
+		if not os.path.exists(wmb_path):
+			wmb_path = wmb_file.replace('.dat','.dtt')
+		wtp_path = wmb_file.replace('.dat','.dtt').replace('.wmb','.wtp')
+		wta_path = wmb_file.replace('.dtt','.dat').replace('.wmb','.wta')
+
+		if os.path.exists(wtp_path):	
 			print('open wtp file')
-			self.wtp_fp = open(wmb_file.replace('.wmb','.wtp'),'rb')
+			self.wtp_fp = open(wtp_path,'rb')
+		if os.path.exists(wta_path):
+			print('open wta file')
+			wta_fp = open(wta_path,'rb')
 		
 		if wta_fp:
 			self.wta = WTA(wta_fp)
 			wta_fp.close()
+
+		if os.path.exists(wmb_path):
+			wmb_fp = open(wmb_path, "rb")
+		else:
+			print("DTT/DAT does not contain WMB file.")
+			return
+
 		self.wmb3_header = WMB_Header(wmb_fp)
 		self.hasBone = False
 		if self.wmb3_header.boneCount > 0:
@@ -417,6 +443,7 @@ class WMB3(object):
 		self.boneArray = []
 		for boneIndex in range(self.wmb3_header.boneCount):
 			self.boneArray.append(wmb3_bone(wmb_fp,boneIndex))
+
 		
 		# indexBoneTranslateTable
 		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)

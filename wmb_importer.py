@@ -502,28 +502,44 @@ def format_wmb_mesh(wmb, collection_name):
 def get_wmb_material(wmb, texture_dir):
 	materials = []
 	if wmb.wta:
-		for materialIndex in range(len(wmb.materialArray)):
-			material = wmb.materialArray[materialIndex]
-			material_name = material.materialName
-			shader_name = material.effectName
-			technique_name = material.techniqueName
-			uniforms = material.uniformArray
-			textures = material.textureArray
-			parameterGroups = material.parameterGroups
-			for key in textures.keys():
-				identifier = textures[key]
-				try:
-					texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
-					if texture_stream:
-						if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
-							create_dir(texture_dir)
-							texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
-							print('[+] dumping %s.dds'% identifier)
-							texture_fp.write(texture_stream)
-							texture_fp.close()
-				except:
-					continue
-			materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
+		if hasattr(wmb, 'materialArray'):
+			for materialIndex in range(len(wmb.materialArray)):
+				material = wmb.materialArray[materialIndex]
+				material_name = material.materialName
+				shader_name = material.effectName
+				technique_name = material.techniqueName
+				uniforms = material.uniformArray
+				textures = material.textureArray
+				parameterGroups = material.parameterGroups
+				for textureIndex in range(wmb.wta.textureCount):		# for key in textures.keys():
+					#identifier = textures[key]
+					identifier = wmb.wta.wtaTextureIdentifier[textureIndex]
+					try:
+						texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
+						if texture_stream:
+							if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
+								create_dir(texture_dir)
+								texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
+								print('[+] dumping %s.dds'% identifier)
+								texture_fp.write(texture_stream)
+								texture_fp.close()
+					except:
+						continue
+				materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
+		else:
+			texture_dir = texture_dir.replace('.dat','.dtt')
+			for textureIndex in range(wmb.wta.textureCount):
+				print(textureIndex)
+				identifier = wmb.wta.wtaTextureIdentifier[textureIndex]
+				texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
+				if texture_stream:
+					if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
+						create_dir(texture_dir)
+						texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
+						print('[+] dumping %s.dds'% identifier)
+						texture_fp.write(texture_stream)
+						texture_fp.close()
+
 	else:
 		print('Missing .wta')
 		show_message("Error: Could not open .wta file, textures not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
@@ -553,7 +569,7 @@ def import_colTreeNodes(wmb, collection):
 		col_Bound = bpy.context.active_object
 		col_Bound.name =  str(index) + "-" + str(node.left) + "-" + str(node.right)
 		bpy.ops.transform.resize(value=(node.p2[0], node.p2[1], node.p2[2]))
-		bpy.ops.transform.rotate(value=math.radians(90), orient_axis='X', center_override=(0, 0, 0))
+		bpy.ops.transform.rotate(value=math.radians(-90), orient_axis='X', center_override=(0, 0, 0))
 		bpy.context.object.display_type = 'BOUNDS'
 		collision_col.objects.link(col_Bound)
 		collection.objects.unlink(col_Bound)
