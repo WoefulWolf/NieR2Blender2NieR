@@ -125,7 +125,7 @@ def main(filepath):
         create_wmb_unknownWorldData(wmb_file, generated_data)
 
     print('Finished writing. Closing file..')
-    close_wmb(wmb_file)
+    close_wmb(wmb_file, generated_data)
 
     end_time = int(time.time())
     export_duration = end_time - start_time

@@ -3,7 +3,7 @@ bl_info = {
     "author": "Woeful_Wolf",
     "version": (0, 2, 00),
     "blender": (2, 80, 0),
-    "location": "File > Import-Export",
+    "location": "File > Export",
     "description": "Export NieR:Automata WMB/WTP/WTA/DTT/DAT files.",
     "category": "Import-Export"}
 
@@ -52,8 +52,8 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
             util.show_message('Error: An unexpected error has occurred during export. Please check the console for more info.', 'WMB Export Error', 'ERROR')
             return {'CANCELLED'}
 
-class OBJECT_MT_B2N(bpy.types.Menu):
-    bl_idname = 'object.b2n'
+class B2NObjectMenu(bpy.types.Menu):
+    bl_idname = 'OBJECT_MT_b2n'
     bl_label = 'Blender2NieR'
     def draw(self, context):
         self.layout.operator(util.B2NRecalculateObjectIndices.bl_idname)
@@ -68,11 +68,11 @@ def menu_func_export(self, context):
     self.layout.operator(ExportBlender2Nier.bl_idname, text="WMB File for NieR:Automata (.wmb)")
 
 def menu_func_utils(self, context):
-    self.layout.menu(OBJECT_MT_B2N.bl_idname)
+    self.layout.menu(B2NObjectMenu.bl_idname)
 
 def register():
     bpy.utils.register_class(ExportBlender2Nier)
-    bpy.utils.register_class(OBJECT_MT_B2N)
+    bpy.utils.register_class(B2NObjectMenu)
     bpy.utils.register_class(util.B2NRecalculateObjectIndices)
     bpy.utils.register_class(util.B2NRemoveUnusedVertexGroups)
     bpy.utils.register_class(util.B2NMergeVertexGroupCopies)
@@ -87,7 +87,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(ExportBlender2Nier)
-    bpy.utils.unregister_class(OBJECT_MT_B2N)
+    bpy.utils.unregister_class(B2NObjectMenu)
     bpy.utils.unregister_class(util.B2NRecalculateObjectIndices)
     bpy.utils.unregister_class(util.B2NRemoveUnusedVertexGroups)
     bpy.utils.unregister_class(util.B2NMergeVertexGroupCopies)

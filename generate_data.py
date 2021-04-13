@@ -90,6 +90,8 @@ class c_generate_data(object):
         currentOffset += self.batches_Size
         print('batches_Size: ', self.batches_Size)
 
+        currentOffset += 52
+
         self.lods_Offset = currentOffset
         self.lods = c_lods(self.lods_Offset, self.batches)
         self.lods_Size = self.lods.lods_StructSize
