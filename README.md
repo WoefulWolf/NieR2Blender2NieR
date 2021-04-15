@@ -41,6 +41,7 @@ widely known so that others can start modding too. :)
 ## THANKS:
 * The wonderful people from Bayonetta Tools, namely Elediane.
 * Kekoulis, literal months of support and help with testing.
+* DevolasRevenge, for help with testing and the writing of wiki pages.
 * The BONE boi Ameii.
 * Comrade Petrarca. o7
 * Martino.
