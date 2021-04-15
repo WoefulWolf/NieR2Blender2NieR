@@ -8,10 +8,10 @@ def create_wmb_header(wmb_file, data):
         write_char(wmb_file, char)                                 
     write_uInt32(wmb_file, 538312982)                           # version
     write_Int32(wmb_file, 0)                                    # unknownA
-    if data.vertexGroups.vertexGroups[0].vertexFlags == 4:
+    if data.vertexGroups.vertexGroups[0].vertexFlags in [4, 5] and data.numBones > 0:
         write_Int16(wmb_file, 8)                                    # flags
         write_Int16(wmb_file, 0)                                    # referenceBone
-    elif data.vertexGroups.vertexGroups[0].vertexFlags == 14:
+    elif data.vertexGroups.vertexGroups[0].vertexFlags in [5, 14]:
         write_Int16(wmb_file, 8)                                    
         write_Int16(wmb_file, -1) 
     else:
