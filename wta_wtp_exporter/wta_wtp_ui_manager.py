@@ -28,7 +28,7 @@ class GetMaterialsOperator(bpy.types.Operator):
         for mat in bpy.data.materials:
             for key, value in mat.items():
                 # Only include listed textures map types
-                if any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap']):
+                if any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
                     id = len(context.scene.WTAMaterials)
                     new_tex = context.scene.WTAMaterials.add()
                     new_tex.index = id
