@@ -1,5 +1,6 @@
 import bpy
 import os
+import math
 from ..util import *
 from .dat_dtt_ui_manager import ShowMessageBox
 
@@ -74,6 +75,7 @@ def main(dat_dir, export_filepath):
     fileOffsets = []
     currentOffset = hashMapOffset + hashMapSize
     for fp in files:
+        currentOffset = (math.ceil(currentOffset / 16)) * 16
         fileOffsets.append(currentOffset)
         currentOffset += os.path.getsize(fp)
 
@@ -122,7 +124,8 @@ def main(dat_dir, export_filepath):
     hashMapFile.close()
 
         # Files
-    for fp in files:
+    for i, fp in enumerate(files):
+        dat_file.seek(fileOffsets[i])
         fileData = open(fp, 'rb')
         fileContent = fileData.read()
         dat_file.write(fileContent)
