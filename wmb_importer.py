@@ -590,7 +590,7 @@ def import_wmb_boundingbox(wmb):
 	bpy.context.scene['boundingBoxXYZ'] = boundingBoxXYZ
 	bpy.context.scene['boundingBoxUVW'] = boundingBoxUVW
 
-def main(only_extract, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
+def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
 	wmb = WMB3(wmb_file)
 	wmbname = wmb_file.split('\\')[-1]

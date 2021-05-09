@@ -30,7 +30,7 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
         from . import wmb_importer
         if self.reset_blend:
             wmb_importer.reset_blend()
-        return wmb_importer.main(self.filepath)
+        return wmb_importer.main(False, self.filepath)
 
 class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DTT (and DAT) File.'''
