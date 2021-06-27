@@ -18,7 +18,7 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 
 class ImportNier2blender(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata WMB File.'''
-    bl_idname = "import.wmb_data"
+    bl_idname = "import_scene.wmb_data"
     bl_label = "Import WMB Data"
     bl_options = {'PRESET'}
     filename_ext = ".wmb"
@@ -34,7 +34,7 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
 
 class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DTT (and DAT) File.'''
-    bl_idname = "import.dtt_data"
+    bl_idname = "import_scene.dtt_data"
     bl_label = "Import DTT (and DAT) Data"
     bl_options = {'PRESET'}
     filename_ext = ".dtt"
