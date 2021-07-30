@@ -31,7 +31,7 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 		type='ARMATURE', 
 		enter_editmode=True,
 		location=(0,0,0))
-	ob = bpy.context.object
+	ob = bpy.context.active_object
 	ob.show_in_front = False
 	ob.name = name
 	amt = ob.data
