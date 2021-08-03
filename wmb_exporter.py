@@ -34,7 +34,6 @@ def purge_unused_materials():
 
 def triangulate_meshes():
     bpy.ops.object.mode_set(mode='OBJECT')
-    print('Triangulating meshes...')
     for obj in bpy.data.objects:
         if obj.type == 'MESH':
             # Add and apply Triangulate Modifier
