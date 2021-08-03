@@ -93,7 +93,13 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
 
         for idx, obj in reversed(list(enumerate(objects_list))):
             split_name = obj.name.split("-")
-            obj.name = str(idx) + "-" + split_name[1] + "-" + split_name[2]     
+            obj.name = str(idx) + "-" + split_name[1] + "-" + split_name[2]
+
+        for obj in bpy.data.objects:
+            if obj.type == "MESH":
+                regex = re.search(".*(?=\.)", obj.name)
+                if regex != None:
+                    obj.name = regex.group()
 
         return {'FINISHED'}
 
