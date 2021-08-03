@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender2NieR (NieR:Automata Model Exporter)",
     "author": "Woeful_Wolf",
-    "version": (0, 2, 00),
+    "version": (0, 2, 1),
     "blender": (2, 80, 0),
     "location": "File > Export",
     "description": "Export NieR:Automata WMB/WTP/WTA/DTT/DAT files.",

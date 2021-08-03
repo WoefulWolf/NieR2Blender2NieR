@@ -58,7 +58,7 @@ def write_float16(file, val):
 
 def close_wmb(wmb_file, generated_data):
     wmb_file.seek(generated_data.lods_Offset-52)
-    write_string(wmb_file, 'WMB created with Blender2NieR v0.2.0 by Woeful_Wolf')
+    write_string(wmb_file, 'WMB created with Blender2NieR v0.2.1 by Woeful_Wolf')
     wmb_file.flush()
     wmb_file.close()
 
