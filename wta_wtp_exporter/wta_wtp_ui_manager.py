@@ -9,11 +9,23 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
         self.layout.label(text=message)
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
+def generateID(context):
+    if len(context.scene.WTAMaterials) != 0:
+        return context.scene.WTAMaterials[-1].id + 1
+    else:
+        return 0
+
+def getManualTextureItems(context):
+    manual_items = []
+    for item in context.scene.WTAMaterials:
+        if item.parent_mat == "":
+            manual_items.append(item)
+    return manual_items
+
 class WTAItems(bpy.types.PropertyGroup):
-    index : bpy.props.IntProperty()
+    id : bpy.props.IntProperty()
 
     parent_mat : bpy.props.StringProperty()
-
     texture_map_type : bpy.props.StringProperty()
     texture_identifier : bpy.props.StringProperty()
     texture_path : bpy.props.StringProperty()
@@ -29,9 +41,9 @@ class GetMaterialsOperator(bpy.types.Operator):
             for key, value in mat.items():
                 # Only include listed textures map types
                 if any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
-                    id = len(context.scene.WTAMaterials)
+                    id = generateID(context)
                     new_tex = context.scene.WTAMaterials.add()
-                    new_tex.index = id
+                    new_tex.id = id
 
                     new_tex.parent_mat = mat.name
                     new_tex.texture_map_type = key
@@ -100,11 +112,12 @@ class ExportWTAOperator(bpy.types.Operator, ExportHelper):
         export_wta.main(context, self.filepath)
         return{'FINISHED'}
 
-class FilepathSelector(bpy.types.Operator, ExportHelper):
+class FilepathSelector(bpy.types.Operator, ImportHelper):
     '''Select texture file'''
     bl_idname = "na.filepath_selector"
     bl_label = "Select Texture"
-    filename_ext = ""
+    filename_ext = ".dds"
+    filter_glob: StringProperty(default="*.dds", options={'HIDDEN'})
 
     id : bpy.props.IntProperty(options={'HIDDEN'})
 
@@ -155,6 +168,37 @@ class SyncMaterialIdentifiers(bpy.types.Operator):
                     break
         return{'FINISHED'}
 
+class AddManualTextureOperator(bpy.types.Operator):
+    '''Manually add a texture to be exported'''
+    bl_idname = "na.add_manual_texture"
+    bl_label = "Add Texture"
+
+    def execute(self, context):
+        id = generateID(context)
+        new_tex = context.scene.WTAMaterials.add()
+        new_tex.id = id
+        new_tex.parent_mat = ""
+        new_tex.texture_map_type = "Enter Map Type"
+        new_tex.texture_identifier = "Enter Identifier"
+        new_tex.texture_path = 'Enter Path'
+        return {"FINISHED"}
+
+class RemoveManualTextureOperator(bpy.types.Operator):
+    '''Remove a manually added texture'''
+    bl_idname = "na.remove_manual_texture"
+    bl_label = "Remove"
+
+    id : bpy.props.IntProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        index_to_remove = 0
+        for i, item in enumerate(context.scene.WTAMaterials):
+            if item.id == self.id:
+                index_to_remove = i
+                break
+
+        context.scene.WTAMaterials.remove(index_to_remove)
+        return {"FINISHED"}
 
 class WTA_WTP_PT_Export(bpy.types.Panel):
     bl_label = "NieR:Automata WTP/WTA Export"
@@ -187,8 +231,21 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         row.operator("na.sync_material_identifiers")
         row.operator("na.sync_blender_materials")
 
+class WTA_WTP_PT_Materials(bpy.types.Panel):
+    bl_parent_id = "WTA_WTP_PT_Export"
+    bl_label = "Blender Materials"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "output"
+
+    def draw(self, context):
+        layout = self.layout
+
         loaded_mats = []
         for item in context.scene.WTAMaterials:
+            # Skip if this texture has no Blender material (is thus manual texture)
+            if item.parent_mat == "":
+                continue
             # Split material categories into boxes
             if item.parent_mat not in loaded_mats:  
                 box = layout.box()
@@ -198,12 +255,45 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
             row.label(text=item.texture_map_type)
             row.prop(item, "texture_identifier", text="")
             row.prop(item, "texture_path", text="")
-            row.operator("na.filepath_selector", icon="FILE_FOLDER", text="").id = item.index
+            row.operator("na.filepath_selector", icon="FILE", text="").id = item.id
 
             loaded_mats.append(item.parent_mat)
 
+class WTA_WTP_PT_Manual(bpy.types.Panel):
+    bl_parent_id = "WTA_WTP_PT_Export"
+    bl_label = "Manually Add Textures To Export"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "output"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        layout = self.layout
         row = layout.row()
-        row.label(text='Hints:')
+        row.scale_y = 1.5
+        row.operator("na.add_manual_texture")
+
+        manual_items = getManualTextureItems(context)
+
+        for item in manual_items:
+            box = layout.box()
+            row = box.row()
+            row.prop(item, "texture_map_type", text="")
+            row.prop(item, "texture_identifier", text="")
+            row.prop(item, "texture_path", text="")
+            row.operator("na.filepath_selector", icon="FILE", text="").id = item.id
+            row.operator("na.remove_manual_texture", icon="X", text="").id = item.id
+
+class WTA_WTP_PT_Hints(bpy.types.Panel):
+    bl_parent_id = "WTA_WTP_PT_Export"
+    bl_label = "Hints"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "output"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        layout = self.layout
         row = layout.row()
         box = row.box()
         row = box.row()
@@ -216,7 +306,12 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
 def register():
     bpy.utils.register_class(WTAItems)
     bpy.utils.register_class(GetMaterialsOperator)
+    bpy.utils.register_class(AddManualTextureOperator)
+    bpy.utils.register_class(RemoveManualTextureOperator)
     bpy.utils.register_class(WTA_WTP_PT_Export)
+    bpy.utils.register_class(WTA_WTP_PT_Materials)
+    bpy.utils.register_class(WTA_WTP_PT_Manual)
+    bpy.utils.register_class(WTA_WTP_PT_Hints)
     bpy.utils.register_class(FilepathSelector)
     bpy.utils.register_class(ExportWTAOperator)
     bpy.utils.register_class(ExportWTPOperator)
@@ -230,7 +325,12 @@ def register():
 def unregister():
     bpy.utils.unregister_class(WTAItems)
     bpy.utils.unregister_class(GetMaterialsOperator)
+    bpy.utils.unregister_class(AddManualTextureOperator)
+    bpy.utils.unregister_class(RemoveManualTextureOperator)
     bpy.utils.unregister_class(WTA_WTP_PT_Export)
+    bpy.utils.unregister_class(WTA_WTP_PT_Materials)
+    bpy.utils.unregister_class(WTA_WTP_PT_Manual)
+    bpy.utils.unregister_class(WTA_WTP_PT_Hints)
     bpy.utils.unregister_class(FilepathSelector)
     bpy.utils.unregister_class(ExportWTAOperator)
     bpy.utils.unregister_class(ExportWTPOperator)
@@ -238,3 +338,4 @@ def unregister():
     bpy.utils.unregister_class(AssignBulkTextures)
     bpy.utils.unregister_class(SyncBlenderMaterials)
     bpy.utils.unregister_class(SyncMaterialIdentifiers)
+    del bpy.types.Scene.WTAMaterials
