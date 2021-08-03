@@ -6,6 +6,10 @@ from .wta_wtp_utils import *
 def main(context, export_filepath):
     identifiers_array, texture_paths_array, albedo_indexes = generate_wta_wtp_data.generate(context)
 
+    if None in [identifiers_array, texture_paths_array, albedo_indexes]:
+        print("WTP Export Failed! :{")
+        return
+
     # Make sure DDS are padded
     #pad_dds_files(texture_paths_array)
 
