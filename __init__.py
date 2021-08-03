@@ -25,9 +25,10 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
     filename_ext = ".wmb"
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
-    centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended for a stable export)", default=True)
-    purge_materials: bpy.props.BoolProperty(name="Purge Materials", description="This permanently removes all unused materials from the .blend file before exporting. Enable if you have invalid materials remaining in your project.", default=False)
-    triangluate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times.", default=True)
+    centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended)", default=True)
+    purge_materials: bpy.props.BoolProperty(name="Purge Materials", description="This permanently removes all unused materials from the .blend file before exporting. Enable if you have invalid materials remaining in your project", default=False)
+    triangluate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times", default=True)
+    delete_loose_geometry: bpy.props.BoolProperty(name="Delete Loose Geometry", description="This automatically runs the Blender2NieR 'Delete Loose Geometry (All)' operator before exporting. It deletes all loose vertices or edges that could result in unwanted results in-game", default=True)
 
     def execute(self, context):
         from . import wmb_exporter
@@ -36,15 +37,23 @@ class ExportBlender2Nier(bpy.types.Operator, ExportHelper):
         bpy.data.objects[0].select_set(True)
 
         if self.centre_origins:
+            print("Centering origins...")
             wmb_exporter.centre_origins()
 
         if self.purge_materials:
+            print("Purging materials...")
             wmb_exporter.purge_unused_materials()
 
         if self.triangluate_meshes:
-            wmb_exporter.triangulate_meshes()    
+            print("Triangulating meshes...")
+            wmb_exporter.triangulate_meshes() 
+
+        if self.delete_loose_geometry:
+            print("Deleting loose geometry...")
+            bpy.ops.b2n.deleteloosegeometryall()
         
         try:
+            print("Starting export...")
             wmb_exporter.main(self.filepath)
             return wmb_exporter.restore_blend()
         except:
