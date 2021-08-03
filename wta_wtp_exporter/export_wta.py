@@ -8,7 +8,9 @@ def main(context, export_filepath):
 
     # Assign data and check if valid
     identifiers_array, texture_paths_array, albedo_indexes = generate_wta_wtp_data.generate(context)
-    if identifiers_array == None:
+
+    if None in [identifiers_array, texture_paths_array, albedo_indexes]:
+        print("WTP Export Failed! :{")
         return
 
     # Assign some shit
@@ -80,6 +82,12 @@ def main(context, export_filepath):
         else:
             unknownArray1[i] = 570425376
         #unknownArray2
+        if dxt not in [b'DXT1', b'DXT3', b'DXT5']:
+            print("Unknown DXT format! Make sure you use DXT1, DXT3 or DXT5!")
+            dds_fp.close()
+            wta_fp.close()
+            return
+
         if dxt == b'DXT1':
             unknownArray2.append(71)
             unknownArray2.append(3)
