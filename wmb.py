@@ -289,7 +289,7 @@ class wmb3_material(object):
 			textureTypeName = to_string(wmb_fp.read(256))
 			self.textureArray[textureTypeName] = identifier
 			# Add new texture to nested material dictionary
-			mat_json[self.materialName][textureTypeName] = identifier
+			mat_dict[self.materialName][textureTypeName] = identifier
 
 		mat_list_file.write(json.dumps(mat_dict))
 		mat_list_file.close() 
