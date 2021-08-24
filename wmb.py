@@ -276,14 +276,19 @@ class wmb3_material(object):
 		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a+') #
 		mat_dict = {}
 		try:
-			mat_dict = json.loads(mat_list_file.read())
-			print("Material dictionary loaded:" + mat_dict)
+			temp_dict = json.loads(mat_list_file.read())
+			if self.materialName in temp_dict:
+				mat_dict = temp_dict
+				print("Material dictionary loaded:" + mat_dict)
+			else:
+				mat_dict[self.materialName] = {}
+				print("Could not load material dictionary, creating empty")
 		except:
 			mat_dict[self.materialName] = {}
 			print("Could not load material dictionary, creating empty")
 		
 		mat_list_file.close()
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'w') #
+		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a') #
 		for i in range(textureNum):
 			wmb_fp.seek(textureOffset + i * 8)
 			offset = to_int(wmb_fp.read(4))
