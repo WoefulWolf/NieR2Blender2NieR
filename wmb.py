@@ -275,7 +275,7 @@ class wmb3_material(object):
 		mat_list_filepath = "\\".join(path_split[:-3])
 		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a') #
 		mat_dict = {}
-		if os.path.getsize(mat_list_file) == 0:
+		if os.path.getsize(mat_list_filepath + '\\materials.json') == 0:
 			# Initialize a new dictionary if file is empty
 			mat_dict[self.materialName] = {}
 		else:
