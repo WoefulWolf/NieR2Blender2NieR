@@ -273,14 +273,14 @@ class wmb3_material(object):
 		path_split = wmb_fp.name.split('\\')
 
 		mat_list_filepath = "\\".join(path_split[:-3])
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'r') #
+		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a+') #
 		mat_dict = {}
-		if os.path.getsize(mat_list_filepath + '\\materials.json') == 0:
-			# Initialize a new dictionary if file is empty
-			mat_dict[self.materialName] = {}
-		else:
-			# Load dictionary from json
+		try:
 			mat_dict = json.loads(mat_list_file.read())
+			print("Material dictionary loaded:" + mat_dict)
+		except:
+			mat_dict[self.materialName] = {}
+			print("Could not load material dictionary, creating empty")
 		
 		mat_list_file.close()
 		mat_list_file = open(mat_list_filepath + '\\materials.json', 'w') #
