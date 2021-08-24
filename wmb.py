@@ -273,7 +273,9 @@ class wmb3_material(object):
 		path_split = wmb_fp.name.split('\\')
 
 		mat_list_filepath = "\\".join(path_split[:-3])
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a+') #
+		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a') # create file
+		mat_list_file.close()
+		mat_list_file = open(mat_list_filepath + '\\materials.json', 'r') # read
 		file_dict = {}
 		try:
 			file_dict = json.load(mat_list_file)
