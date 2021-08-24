@@ -276,7 +276,7 @@ class wmb3_material(object):
 		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a+') #
 		file_dict = {}
 		try:
-			file_dict = json.loads(mat_list_file.read())
+			file_dict = json.load(mat_list_file.read())
 		except:
 			print("Could not load json, creating empty")
 		
