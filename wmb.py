@@ -278,7 +278,7 @@ class wmb3_material(object):
 		try:
 			file_dict = json.load(mat_list_file)
 		except Exception as ex:
-			print("Could not load json: " + ex)
+			print("Could not load json: " , ex)
 		
 		file_dict[self.materialName] = {}
 		mat_list_file.close()
