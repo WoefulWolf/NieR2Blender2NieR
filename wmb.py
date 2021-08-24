@@ -1,6 +1,7 @@
 from .util import *
 from .wta import *
 import numpy as np
+import json
 
 class WMB_Header(object):
 	""" fucking header	"""
@@ -272,9 +273,14 @@ class wmb3_material(object):
 		path_split = wmb_fp.name.split('\\')
 
 		mat_list_filepath = "\\".join(path_split[:-3])
-		mat_list_file = open(mat_list_filepath + '\\materials.txt', 'a') #
-		mat_list_file.write(self.materialName + '\n') #
-
+		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a') #
+		mat_dict = {}
+		if os.path.getsize(mat_list_file) == 0:
+			# Initialize a new dictionary if file is empty
+			mat_dict[self.materialName] = {}
+		else:
+			# Load dictionary from json
+			mat_dict = json.loads(mat_list_file)
 		for i in range(textureNum):
 			wmb_fp.seek(textureOffset + i * 8)
 			offset = to_int(wmb_fp.read(4))
@@ -282,12 +288,11 @@ class wmb3_material(object):
 			wmb_fp.seek(offset)
 			textureTypeName = to_string(wmb_fp.read(256))
 			self.textureArray[textureTypeName] = identifier
+			# Add new texture to nested material dictionary
+			mat_json[self.materialName][textureTypeName] = identifier
 
-			mat_list_file.write(' - ' + textureTypeName + ': ') #
-			mat_list_file.write(identifier + '\n') #
-
-		mat_list_file.write('\n')
-		mat_list_file.close() #
+		mat_list_file.write(json.dumps(mat_dict))
+		mat_list_file.close() 
 		
 
 		wmb_fp.seek(paramterGroupsOffset)
