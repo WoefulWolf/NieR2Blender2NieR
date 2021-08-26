@@ -271,20 +271,21 @@ class wmb3_material(object):
 		self.textureArray = {}
 
 		path_split = wmb_fp.name.split('\\')
-
 		mat_list_filepath = "\\".join(path_split[:-3])
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a') # create file
-		mat_list_file.close()
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'r') # read
+		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a+')
+		mat_list_file.seek(0)
 		file_dict = {}
+		# Try to load json from pre-existing file
 		try:
 			file_dict = json.load(mat_list_file)
 		except Exception as ex:
-			print("Could not load json: " , ex)
+			#print("Could not load json: " , ex)
+			pass
 		
+		# Clear file contents
+		mat_list_file.truncate(0)
 		file_dict[self.materialName] = {}
-		mat_list_file.close()
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'w') #
+		# Append textures to materials in the dictionary
 		for i in range(textureNum):
 			wmb_fp.seek(textureOffset + i * 8)
 			offset = to_int(wmb_fp.read(4))
@@ -294,6 +295,7 @@ class wmb3_material(object):
 			self.textureArray[textureTypeName] = identifier
 			# Add new texture to nested material dictionary
 			file_dict[self.materialName][textureTypeName] = identifier
+		# Write the current material to materials.json
 		json.dump(file_dict, mat_list_file, indent= 4)
 		mat_list_file.close() 
 		
