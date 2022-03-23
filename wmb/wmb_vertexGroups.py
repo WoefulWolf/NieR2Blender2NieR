@@ -27,21 +27,21 @@ def create_wmb_vertexGroups(wmb_file, data):
             if vertexGroup.vertexFlags == 0:                      # Normal
                 for val in vertex[2]:
                     write_float16(wmb_file, val)
-            if vertexGroup.vertexFlags == 1 or vertexGroup.vertexFlags == 4 or vertexGroup.vertexFlags == 5 or vertexGroup.vertexFlags == 12 or vertexGroup.vertexFlags == 14:
+            if vertexGroup.vertexFlags in [1, 4, 5, 12, 14]:
                 for val in vertex[3][1]:                            # UVMap 2
                     write_float16(wmb_file, val)
-            if vertexGroup.vertexFlags == 7 or vertexGroup.vertexFlags == 10 or vertexGroup.vertexFlags == 11:
+            if vertexGroup.vertexFlags in [7, 10, 11]:
                 for val in vertex[4]:                               
                     write_byte(wmb_file, val)                       # Bone Indices
                 for val in vertex[5]:                                   
                     write_byte(wmb_file, val)                       # Bone Weights
-            if vertexGroup.vertexFlags == 4 or vertexGroup.vertexFlags == 5 or vertexGroup.vertexFlags == 12 or vertexGroup.vertexFlags == 14:
+            if vertexGroup.vertexFlags in [4, 5, 12, 14]:
                 for val in vertex[6]:                                   
                     write_byte(wmb_file, val)                       # Color
 
         wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # [normal, uv_maps, color]
-            if vertexGroup.vertexFlags == 1 or vertexGroup.vertexFlags == 4:                   # [1, 4]
+            if vertexGroup.vertexFlags in [1, 4]:                   # [1, 4]
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
             elif vertexGroup.vertexFlags == 5:                    # [5]

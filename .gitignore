@@ -1,12 +1,5 @@
 *.pyc
 blender2nier/.vscode/launch.json
-*.pyc
 blender2nier/__pycache__/__init__.cpython-37.pyc
-*.pyc
-*.pyc
-*.pyc
-*.pyc
-*.pyc
-*.pyc
-*.pyc
 blender2nier/__pycache__/wmb_exporter.cpython-37.pyc
+.idea

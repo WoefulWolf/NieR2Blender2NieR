@@ -137,7 +137,7 @@ class c_vertexGroup(object):
                 loops = get_blenderLoops(self, bvertex_obj[1])
                 sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
 
-                if not(self.vertexFlags == 0 or self.vertexFlags == 1 or self.vertexFlags == 4 or self.vertexFlags == 5 or self.vertexFlags == 12 or self.vertexFlags == 14):
+                if self.vertexFlags not in [0, 1, 4, 5, 12, 14]:
                     boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
 
                 previousIndex = -1
@@ -177,7 +177,7 @@ class c_vertexGroup(object):
                     # Bones
                     boneIndexes = []
                     boneWeights = []
-                    if self.vertexFlags == 7 or self.vertexFlags == 10 or self.vertexFlags == 11:
+                    if self.vertexFlags in [7, 10, 11]:
                         # Bone Indices
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:
@@ -245,12 +245,12 @@ class c_vertexGroup(object):
                     normal = []
                     uv_maps = []
                     color = []
-                    if self.vertexFlags == 10 or self.vertexFlags == 11:
+                    if self.vertexFlags in [10, 11]:
                         if len (bvertex_obj[1].data.vertex_colors) == 0:
                             print("Object had no vertex colour layer when one was expected - creating one.")
                             new_vertex_colors = bvertex_obj[1].data.vertex_colors.new()
 
-                    if self.vertexFlags == 1 or self.vertexFlags == 4 or self.vertexFlags == 5 or self.vertexFlags == 7 or self.vertexFlags == 10 or self.vertexFlags == 11 or self.vertexFlags == 12 or self.vertexFlags == 14:
+                    if self.vertexFlags in [1, 4, 5, 7, 10, 11, 12, 14]:
                         normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
                     
                     if self.vertexFlags == 5:
