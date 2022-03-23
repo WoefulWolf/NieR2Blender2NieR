@@ -1,15 +1,7 @@
 from ..util import *
-from timeit import default_timer as timer
 
 def create_wmb_vertexGroups(wmb_file, data):
-    totals = [0]*5
-    totalT1 = timer()
-    t1 = timer()
-
     wmb_file.seek(data.vertexGroups_Offset)
-
-    totals[0] += timer() - t1
-    t1 = timer()
     
     for vertexGroup in data.vertexGroups.vertexGroups:
         write_uInt32(wmb_file, vertexGroup.vertexOffset)            # vertexOffset
@@ -25,11 +17,7 @@ def create_wmb_vertexGroups(wmb_file, data):
         write_Int32(wmb_file, vertexGroup.indexBufferOffset)        # indexBufferOffset
         write_Int32(wmb_file, vertexGroup.numIndexes)               # numIndexes
 
-    totals[1] += timer() - t1
-    t1 = timer()
-
     for vertexGroup in data.vertexGroups.vertexGroups:
-        t1 = timer()
         for vertex in vertexGroup.vertexes:                         # [position.xyz, tangents, normal, uv_maps, boneIndexes, boneWeights, color]
             write_xyz(wmb_file, vertex[0])                          # position.xyz
             for val in vertex[1]:                                   # tangents
@@ -50,9 +38,6 @@ def create_wmb_vertexGroups(wmb_file, data):
             if vertexGroup.vertexFlags == 4 or vertexGroup.vertexFlags == 5 or vertexGroup.vertexFlags == 12 or vertexGroup.vertexFlags == 14:
                 for val in vertex[6]:                                   
                     write_byte(wmb_file, val)                       # Color
-
-        totals[2] += timer() - t1
-        t1 = timer()
 
         wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # [normal, uv_maps, color]
@@ -102,12 +87,6 @@ def create_wmb_vertexGroups(wmb_file, data):
                 for val in vertexExData[1][1]:                      # UVMap 4
                     write_float16(wmb_file, val)
 
-        totals[3] += timer() - t1
-        t1 = timer()
-        
         for index in vertexGroup.indexes:                           # indexes
             write_uInt32(wmb_file, index)
         
-        totals[4] += timer() - t1
-    
-    print(totals, timer() - totalT1)

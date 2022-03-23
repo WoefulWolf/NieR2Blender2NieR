@@ -55,8 +55,6 @@ def write_byte(file, val):
 def write_float16(file, val):
     entry = struct.pack("<e", val)
     file.write(entry)
-    # f16 = np.float16(val)
-    # f16.tofile(file)
 
 def close_wmb(wmb_file, generated_data):
     wmb_file.seek(generated_data.lods_Offset-52)

@@ -1,9 +1,5 @@
 import bpy, bmesh, math, mathutils
-import numpy as np
 import math
-from ..util import Vector3
-import time
-from timeit import default_timer as timer
 
 
 class c_vertexGroup(object):
@@ -136,47 +132,25 @@ class c_vertexGroup(object):
         def get_vertexesData(self):
             vertexes = []
             vertexesExData = []
-            totals = [0]*15
-            totalT1 = timer()
             for bvertex_obj in blenderVertices:
                 print('   [>] Generating vertex data for object', bvertex_obj[1].name)
-                t1 = timer()
                 loops = get_blenderLoops(self, bvertex_obj[1])
                 sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
 
                 if not(self.vertexFlags == 0 or self.vertexFlags == 1 or self.vertexFlags == 4 or self.vertexFlags == 5 or self.vertexFlags == 12 or self.vertexFlags == 14):
                     boneSet = get_boneSet(self, bvertex_obj[1]["boneSetIndex"])
-                    # print("   ", boneSet, sep="")
 
-                totals[0] += timer() - t1
-                t1 = timer()
-
-                # added_indices = []
                 previousIndex = -1
                 for loop in sorted_loops:
-                    t1 = timer()
-                    
-                    # print(loop.vertex_index, "", end="")
-
                     if loop.vertex_index == previousIndex:
-                        totals[9] += timer() - t1
-                        # print("- ", end="")
                         continue
 
                     previousIndex = loop.vertex_index
             
-                    totals[8] += timer() - t1
-                    t1 = timer()
-
-                    # added_indices.append(loop.vertex_index)
-
                     bvertex = bvertex_obj[0][loop.vertex_index]
                     # XYZ Position
                     position = [round(bvertex.co.x, 6), round(bvertex.co.y, 6), round(bvertex.co.z, 6)]
 
-                    totals[5] += timer() - t1
-                    t1 = timer()
-            
                     # Tangents
                     tx = clamp(round(loop.tangent[0]*127.0+127.0), 0, 255)
                     ty = clamp(round(loop.tangent[1]*127.0+127.0), 0, 255)
@@ -185,16 +159,10 @@ class c_vertexGroup(object):
 
                     tangents = [tx, ty, tz, sign]
 
-                    totals[6] += timer() - t1
-                    t1 = timer()
-
                     # Normal
                     normal = []
                     if self.vertexFlags == 0:
                         normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
-
-                    totals[7] += timer() - t1
-                    t1 = timer()
 
                     # UVs
                     uv_maps = []
@@ -206,13 +174,10 @@ class c_vertexGroup(object):
                         uv2 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 1)
                         uv_maps.append(uv2)
 
-                    totals[1] += timer() - t1
-
                     # Bones
                     boneIndexes = []
                     boneWeights = []
                     if self.vertexFlags == 7 or self.vertexFlags == 10 or self.vertexFlags == 11:
-                        t1 = timer()
                         # Bone Indices
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:
@@ -226,9 +191,6 @@ class c_vertexGroup(object):
                         
                         if len(boneIndexes) == 0:
                             print(len(vertexes) ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
-
-                        totals[11] += timer() - t1
-                        t1 = timer()
 
                         while len(boneIndexes) < 4:
                             boneIndexes.append(0)
@@ -247,9 +209,6 @@ class c_vertexGroup(object):
                             else:
                                 normalized_weights.append(0)
 
-                        totals[12] += timer() - t1
-                        t1 = timer()
-
                         for val in normalized_weights:
                             if len(boneWeights) < 4:
                                 weight = math.floor(val * 256.0)
@@ -257,9 +216,6 @@ class c_vertexGroup(object):
                                     weight = 255
                                 boneWeights.append(weight)
                         
-                        totals[13] += timer() - t1
-                        t1 = timer()
-
                         while len(boneWeights) < 4:
                             boneWeights.append(0)
 
@@ -272,10 +228,6 @@ class c_vertexGroup(object):
                         if sum(boneWeights) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
-                        totals[14] += timer() - t1
-                    
-                    t1 = timer()
-
                     color = []
                     if self.vertexFlags in [4, 5, 12, 14]:
                         if len (bvertex_obj[1].data.vertex_colors) == 0:
@@ -287,9 +239,6 @@ class c_vertexGroup(object):
                     vertexes.append([position, tangents, normal, uv_maps, boneIndexes, boneWeights, color])
 
                     
-                    totals[3] += timer() - t1
-                    t1 = timer()
-
                     ##################################################
                     ###### Now lets do the extra data shit ###########
                     ##################################################
@@ -342,12 +291,9 @@ class c_vertexGroup(object):
                         uv4 = get_blenderUVCoords(self, bvertex_obj[1], loop.index, 3)
                         uv_maps.append(uv4)
                     
-                    totals[4] += timer() - t1
-                    t1 = timer()
-
                     vertexExData = [normal, uv_maps, color]
                     vertexesExData.append(vertexExData)
-            print(totals, timer() - totalT1)
+            
             return vertexes, vertexesExData
 
         def get_indexes(self):
