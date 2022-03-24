@@ -306,24 +306,26 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
 
         # texture replacer
         row = layout.row()
-        row.label(text="Find, rename & replace textures")
-        row = layout.row()
-        row.label(text="Identifier")
-        row.label(text="New Identifier")
-        row.label(text="Path")
-        row.label(text="", icon="FILE_BLANK")
-        row = layout.row()
-        row.prop(context.scene, "ReplaceTextureName", text="")
-        row.prop(context.scene, "NewTextureName", text="")
-        row.prop(context.scene, "TexturePath", text="")
-        row.operator("na.texture_filepath_selector", icon="FILE", text="")
-        row = layout.row()
-        replacableTexturesCount = len([ mat for mat in context.scene.WTAMaterials \
-             if materialMatchesSearch(mat, context.scene.ReplaceTextureName, newTexture=context.scene.TexturePath) ])
-        replacableTexturesCountStr = str(replacableTexturesCount) if replacableTexturesCount < len(context.scene.WTAMaterials) else "all"
-        row.operator("na.mass_texture_replacer", text=f"Replace {replacableTexturesCountStr} Texture{'s' if replacableTexturesCountStr != '1' else ''}")
-
-        layout.separator_spacer()
+        row.alignment = "LEFT"
+        row.prop(context.scene, "bShowMassReplacer", emboss=False, \
+            text="Find, rename & replace textures",  \
+            icon = "TRIA_DOWN" if context.scene.bShowMassReplacer else "TRIA_RIGHT")
+        if context.scene.bShowMassReplacer:
+            row = layout.row()
+            row.label(text="Identifier")
+            row.label(text="New Identifier")
+            row.label(text="Path")
+            row.label(text="", icon="FILE_BLANK")
+            row = layout.row()
+            row.prop(context.scene, "ReplaceTextureName", text="")
+            row.prop(context.scene, "NewTextureName", text="")
+            row.prop(context.scene, "TexturePath", text="")
+            row.operator("na.texture_filepath_selector", icon="FILE", text="")
+            row = layout.row()
+            replacableTexturesCount = len([ mat for mat in context.scene.WTAMaterials \
+                 if materialMatchesSearch(mat, context.scene.ReplaceTextureName, newTexture=context.scene.TexturePath) ])
+            replacableTexturesCountStr = str(replacableTexturesCount) if replacableTexturesCount < len(context.scene.WTAMaterials) else "all"
+            row.operator("na.mass_texture_replacer", text=f"Replace {replacableTexturesCountStr} Texture{'s' if replacableTexturesCountStr != '1' else ''}")
 
         # search
         row = layout.row(align=True)
@@ -424,6 +426,10 @@ def register():
 
     bpy.types.Scene.WTAMaterials = bpy.props.CollectionProperty(type=WTAItems)
     # Mass texture replacer props
+    bpy.types.Scene.bShowMassReplacer = bpy.props.BoolProperty ( \
+        name = "Show texture replacer",
+        default = False,
+    )
     bpy.types.Scene.ReplaceTextureName = bpy.props.StringProperty ( \
         name = "Search ID",
         default = "",
@@ -433,13 +439,13 @@ def register():
     bpy.types.Scene.NewTextureName = bpy.props.StringProperty ( \
         name = "New ID",
         default = "",
-        description = "",
+        description = "If empty: don't change",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
     bpy.types.Scene.TexturePath = bpy.props.StringProperty ( \
         name = "Texture Path",
         default = "",
-        description = "",
+        description = "If empty: don't change",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
     # materials search props
@@ -495,6 +501,7 @@ def unregister():
     bpy.utils.unregister_class(MassTextureReplacer)
 
     del bpy.types.Scene.WTAMaterials
+    del bpy.types.Scene.bShowMassReplacer
     del bpy.types.Scene.ReplaceTextureName
     del bpy.types.Scene.NewTextureName
     del bpy.types.Scene.TexturePath
