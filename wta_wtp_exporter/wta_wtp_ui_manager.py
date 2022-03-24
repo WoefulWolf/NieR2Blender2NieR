@@ -307,8 +307,8 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
         # texture replacer
         row = layout.row()
         row.alignment = "LEFT"
-        row.prop(context.scene, "bShowMassReplacer", emboss=False, \
-            text="Find, rename & replace textures",  \
+        row.prop(context.scene, "bShowMassReplacer", emboss=False,
+            text="Find, rename & replace textures",
             icon = "TRIA_DOWN" if context.scene.bShowMassReplacer else "TRIA_RIGHT")
         if context.scene.bShowMassReplacer:
             row = layout.row()
@@ -322,7 +322,7 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             row.prop(context.scene, "TexturePath", text="")
             row.operator("na.texture_filepath_selector", icon="FILE", text="")
             row = layout.row()
-            replacableTexturesCount = len([ mat for mat in context.scene.WTAMaterials \
+            replacableTexturesCount = len([ mat for mat in context.scene.WTAMaterials
                  if materialMatchesSearch(mat, context.scene.ReplaceTextureName, newTexture=context.scene.TexturePath) ])
             replacableTexturesCountStr = str(replacableTexturesCount) if replacableTexturesCount < len(context.scene.WTAMaterials) else "all"
             row.operator("na.mass_texture_replacer", text=f"Replace {replacableTexturesCountStr} Texture{'s' if replacableTexturesCountStr != '1' else ''}")
@@ -426,56 +426,56 @@ def register():
 
     bpy.types.Scene.WTAMaterials = bpy.props.CollectionProperty(type=WTAItems)
     # Mass texture replacer props
-    bpy.types.Scene.bShowMassReplacer = bpy.props.BoolProperty ( \
+    bpy.types.Scene.bShowMassReplacer = bpy.props.BoolProperty (
         name = "Show texture replacer",
         default = False,
     )
-    bpy.types.Scene.ReplaceTextureName = bpy.props.StringProperty ( \
+    bpy.types.Scene.ReplaceTextureName = bpy.props.StringProperty (
         name = "Search ID",
         default = "",
         description = "",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
-    bpy.types.Scene.NewTextureName = bpy.props.StringProperty ( \
+    bpy.types.Scene.NewTextureName = bpy.props.StringProperty (
         name = "New ID",
         default = "",
         description = "If empty: don't change",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
-    bpy.types.Scene.TexturePath = bpy.props.StringProperty ( \
+    bpy.types.Scene.TexturePath = bpy.props.StringProperty (
         name = "Texture Path",
         default = "",
         description = "If empty: don't change",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
     # materials search props
-    bpy.types.Scene.SearchStr = bpy.props.StringProperty ( \
+    bpy.types.Scene.SearchStr = bpy.props.StringProperty (
         # name = "Search String",
         default = "",
         description = "",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
-    bpy.types.Scene.bSearchMatName = bpy.props.BoolProperty ( \
+    bpy.types.Scene.bSearchMatName = bpy.props.BoolProperty (
         name = "Material Names",
         default = True,
         description = "Search in material names",
     )
-    bpy.types.Scene.bSearchTexName = bpy.props.BoolProperty ( \
+    bpy.types.Scene.bSearchTexName = bpy.props.BoolProperty (
         name = "Texture Map Names",
         default = True,
         description = "Search in texture map names",
     )
-    bpy.types.Scene.bSearchIdentifiers = bpy.props.BoolProperty ( \
+    bpy.types.Scene.bSearchIdentifiers = bpy.props.BoolProperty (
         name = "Identifiers",
         default = True,
         description = "Search in identifiers",
     )
-    bpy.types.Scene.bSearchTexPaths = bpy.props.BoolProperty ( \
+    bpy.types.Scene.bSearchTexPaths = bpy.props.BoolProperty (
         name = "Texture Paths",
         default = True,
         description = "Search in texture paths",
     )
-    bpy.types.Scene.bSearchRegex = bpy.props.BoolProperty ( \
+    bpy.types.Scene.bSearchRegex = bpy.props.BoolProperty (
         name = "Regex Mode",
         default = False,
         description = "Use regular expressions",
