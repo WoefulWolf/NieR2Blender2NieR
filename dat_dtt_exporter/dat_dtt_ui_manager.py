@@ -159,7 +159,7 @@ class ExportAll(bpy.types.Operator):
     '''Export wmb, wat, wtp, dat, dtt'''
     bl_idname = "na.export_all"
     bl_label = "Export all"
-    bl_description = "Export scene as wmb, wat, wtp, dat, dtt"
+    bl_description = "Export scene to wmb, wat, wtp, dat, dtt files"
 
     def execute(self, context):
         t1 = time.time()
@@ -216,10 +216,10 @@ class ExportAll(bpy.types.Operator):
         return {"FINISHED"}
 
 class GetBaseName(bpy.types.Operator):
-    '''Export wmb, wat, wtp, dat, dtt'''
+    '''Set base name to scene name'''
     bl_idname = "na.get_base_name"
     bl_label = "Get the base file name"
-    bl_description = "Export scene as wmb, wat, wtp, dat, dtt"
+    bl_description = "Set base name to scene name"
         
     def execute(self, context):
         context.scene.ExportFileName = bpy.data.collections[0].name

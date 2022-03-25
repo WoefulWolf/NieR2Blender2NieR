@@ -202,16 +202,14 @@ class RemoveManualTextureOperator(bpy.types.Operator):
         return {"FINISHED"}
 
 class TextureFilepathSelector(bpy.types.Operator, ImportHelper):
-    '''Select texture file'''
+    '''Select texture file for Texture Replacer'''
     bl_idname = "na.texture_filepath_selector"
     bl_label = "Select Texture"
     filename_ext = ".dds"
     filter_glob: StringProperty(default="*.dds", options={'HIDDEN'})
 
-    id : bpy.props.IntProperty(options={'HIDDEN'})
-
     def execute(self, context):
-        context.scene.TexturePath = self.properties.filepath
+        context.scene.ReplaceTexturePath = self.properties.filepath
 
         return{'FINISHED'}
 
@@ -225,14 +223,14 @@ class MassTextureReplacer(bpy.types.Operator):
 
         searchId = context.scene.ReplaceTextureName
         replaceId = context.scene.NewTextureName
-        replacePath = context.scene.TexturePath
+        replacePath = context.scene.ReplaceTexturePath
 
         if not searchId:
             ShowMessageBox("Empty Search Identifier not allowed!")
             return{"CANCELLED"}
 
         for item in context.scene.WTAMaterials:
-            if not materialMatchesSearch(item, searchId, newTexture=replacePath):
+            if not textureMatchesSearch(item, searchId, newTexture=replacePath):
                 continue
 
             replacedTextures += 1
@@ -275,7 +273,7 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         row.operator("na.sync_material_identifiers")
         row.operator("na.sync_blender_materials")
 
-def materialMatchesSearch(
+def textureMatchesSearch(
     mat : WTAItems, searchStr : str,
     checkIdName = True, checkTexName = False, checkMatName = False, checkTexPath = False,
     useRegex = False,
@@ -319,17 +317,18 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             row = layout.row()
             row.prop(context.scene, "ReplaceTextureName", text="")
             row.prop(context.scene, "NewTextureName", text="")
-            row.prop(context.scene, "TexturePath", text="")
+            row.prop(context.scene, "ReplaceTexturePath", text="")
             row.operator("na.texture_filepath_selector", icon="FILE", text="")
             row = layout.row()
             replacableTexturesCount = len([ mat for mat in context.scene.WTAMaterials
-                 if materialMatchesSearch(mat, context.scene.ReplaceTextureName, newTexture=context.scene.TexturePath) ])
+                 if textureMatchesSearch(mat, context.scene.ReplaceTextureName, newTexture=context.scene.ReplaceTexturePath) ])
             replacableTexturesCountStr = str(replacableTexturesCount) if replacableTexturesCount < len(context.scene.WTAMaterials) else "all"
             row.operator("na.mass_texture_replacer", text=f"Replace {replacableTexturesCountStr} Texture{'s' if replacableTexturesCountStr != '1' else ''}")
+            layout.separator()
 
         # search
         row = layout.row(align=True)
-        row.prop(context.scene, "SearchStr", icon="VIEWZOOM", text="")
+        row.prop(context.scene, "MatSearchStr", icon="VIEWZOOM", text="")
         row.prop(context.scene, "bSearchRegex", icon="EVENT_R", text="")
         row.prop(context.scene, "bSearchMatName", icon="MATERIAL", text="")
         row.prop(context.scene, "bSearchTexName", icon="TEXTURE", text="")
@@ -343,7 +342,7 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             if item.parent_mat == "":
                 continue
             # text search filter
-            if not materialMatchesSearch(item, context.scene.SearchStr,
+            if not textureMatchesSearch(item, context.scene.MatSearchStr,
                     checkMatName=context.scene.bSearchMatName, checkTexName=context.scene.bSearchTexName,
                     checkIdName=context.scene.bSearchIdentifiers, checkTexPath=context.scene.bSearchTexPaths,
                     useRegex=context.scene.bSearchRegex):
@@ -360,6 +359,9 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             row.operator("na.filepath_selector", icon="FILE", text="").id = item.id
 
             loaded_mats.append(item.parent_mat)
+
+        if len(loaded_mats) == 0:
+            layout.label(text="No materials found", icon="INFO")
 
 class WTA_WTP_PT_Manual(bpy.types.Panel):
     bl_parent_id = "WTA_WTP_PT_Export"
@@ -442,14 +444,14 @@ def register():
         description = "If empty: don't change",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
-    bpy.types.Scene.TexturePath = bpy.props.StringProperty (
+    bpy.types.Scene.ReplaceTexturePath = bpy.props.StringProperty (
         name = "Texture Path",
         default = "",
         description = "If empty: don't change",
         options = {"SKIP_SAVE", "TEXTEDIT_UPDATE"}
     )
     # materials search props
-    bpy.types.Scene.SearchStr = bpy.props.StringProperty (
+    bpy.types.Scene.MatSearchStr = bpy.props.StringProperty (
         # name = "Search String",
         default = "",
         description = "",
@@ -504,8 +506,8 @@ def unregister():
     del bpy.types.Scene.bShowMassReplacer
     del bpy.types.Scene.ReplaceTextureName
     del bpy.types.Scene.NewTextureName
-    del bpy.types.Scene.TexturePath
-    del bpy.types.Scene.SearchStr
+    del bpy.types.Scene.ReplaceTexturePath
+    del bpy.types.Scene.MatSearchStr
     del bpy.types.Scene.bSearchMatName
     del bpy.types.Scene.bSearchTexName
     del bpy.types.Scene.bSearchIdentifiers
