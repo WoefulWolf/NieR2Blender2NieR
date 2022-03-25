@@ -106,24 +106,24 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
         col = layout.column()
         self.label_multiline(
             context,
-            "INFO: WMB Export will not center origins, triangulate meshes or delete loose geometry. If you want that, export the WMB manually and uncheck \"Export WMB\" below.",
+            "INFO: WMB Export will not center origins, triangulate meshes or delete loose geometry. If you want that," + 
+            " export the WMB manually and uncheck \"WMB\" below.",
             col
         )
         layout.separator()
 
         row = layout.row()
-        row.alignment = "CENTER"
-        row.prop(context.scene.ExportAllSteps, "useWmbStep")
-        row = layout.row()
-        row.prop(context.scene.ExportAllSteps, "useWtpStep")
-        row.prop(context.scene.ExportAllSteps, "useWtaStep")
-        row = layout.row()
-        row.prop(context.scene.ExportAllSteps, "useDatStep")
-        row.prop(context.scene.ExportAllSteps, "useDttStep")
+        row.label(text="Select Export Steps")
+        row = layout.row(align=True)
+        row.prop(context.scene.ExportAllSteps, "useWmbStep", text="WMB", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWmbStep else "ADD")
+        row.prop(context.scene.ExportAllSteps, "useWtpStep", text="WTP", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtpStep else "ADD")
+        row.prop(context.scene.ExportAllSteps, "useWtaStep", text="WTA", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtaStep else "ADD")
+        row.prop(context.scene.ExportAllSteps, "useDatStep", text="DAT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDatStep else "ADD")
+        row.prop(context.scene.ExportAllSteps, "useDttStep", text="DTT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDttStep else "ADD")
 
     def label_multiline(self, context, text, parent):
         '''Stolen from https://b3d.interplanety.org/en/multiline-text-in-blender-interface-panels/'''
-        chars = int(context.region.width / (6 *  bpy.context.preferences.system.ui_scale))   # 7 pix on 1 character
+        chars = int(context.region.width / (6 *  bpy.context.preferences.system.ui_scale))   # 6 pix on 1 character
         wrapper = textwrap.TextWrapper(width=chars)
         text_lines = wrapper.wrap(text=text)
         for text_line in text_lines:
@@ -142,8 +142,12 @@ class SelectFolder(bpy.types.Operator, ImportHelper):
         directory = os.path.dirname(self.filepath)
         if self.target == "dat":
             context.scene.DatDir = directory
+            if directory.endswith(".dtt"):
+                ShowMessageBox("WARNING: DTT directory selected, this field is for the DAT directory")
         elif self.target == "dtt":
             context.scene.DttDir = directory
+            if directory.endswith(".dat"):
+                ShowMessageBox("WARNING: DAT directory selected, this field is for the DTT directory")
         else:
             print("Invalid target", self.target)
             return {"CANCELLED"}
@@ -178,20 +182,20 @@ class ExportAll(bpy.types.Operator):
         datFilePath = os.path.join(datDir, baseFilename + ".dat")
         dttFilePath = os.path.join(dttDir, baseFilename + ".dtt")
 
+        from .. import wmb_exporter
         if context.scene.ExportAllSteps.useWmbStep:
             print("Exporting WMB")
-            from .. import wmb_exporter
             wmb_exporter.main(wmbFilePath)
+        from ..wta_wtp_exporter import export_wta, export_wtp
         if context.scene.ExportAllSteps.useWtpStep:
             print("Exporting WTP")
-            from ..wta_wtp_exporter import export_wta, export_wtp
             export_wtp.main(context, wtpFilePath)
         if context.scene.ExportAllSteps.useWtaStep:
             print("Exporting WTA")
             export_wta.main(context, wtaFilePath)
+        from . import export_dat
         if context.scene.ExportAllSteps.useDatStep:
             print("Exporting DAT")
-            from . import export_dat
             export_dat.main(datDir, datFilePath)
         if context.scene.ExportAllSteps.useDttStep:
             print("Exporting DTT")
