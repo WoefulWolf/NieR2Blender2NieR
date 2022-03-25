@@ -97,7 +97,8 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         row = layout.row(align=True)
-        row.prop(context.scene, "ExportFileName", text="Base Name")
+        row.label(text="Base Name")
+        row.prop(context.scene, "ExportFileName", text="")
         row.operator("na.get_base_name", icon="LOOP_BACK", text="")
         
         row = layout.row()
@@ -162,18 +163,19 @@ class ExportAll(bpy.types.Operator):
 
     def execute(self, context):
         t1 = time.time()
+        exportedFilesCount = 0
         datDir = context.scene.DatDir
         dttDir = context.scene.DttDir
         baseFilename = context.scene.ExportFileName
 
         if not datDir:
-            ShowMessageBox("Missing DAT Path")
+            ShowMessageBox("Missing DAT Directory!")
             return {"CANCELLED"}
         if not dttDir:
-            ShowMessageBox("Missing DTT Path")
+            ShowMessageBox("Missing DTT Directory!")
             return {"CANCELLED"}
         if not baseFilename:
-            ShowMessageBox("Missing file name base")
+            ShowMessageBox("Missing Base Name!")
             return {"CANCELLED"}
         
         wmbFilePath = os.path.join(dttDir, baseFilename + ".wmb")
@@ -186,23 +188,30 @@ class ExportAll(bpy.types.Operator):
         if context.scene.ExportAllSteps.useWmbStep:
             print("Exporting WMB")
             wmb_exporter.main(wmbFilePath)
+            exportedFilesCount += 1
         from ..wta_wtp_exporter import export_wta, export_wtp
         if context.scene.ExportAllSteps.useWtpStep:
             print("Exporting WTP")
             export_wtp.main(context, wtpFilePath)
+            exportedFilesCount += 1
         if context.scene.ExportAllSteps.useWtaStep:
             print("Exporting WTA")
             export_wta.main(context, wtaFilePath)
+            exportedFilesCount += 1
         from . import export_dat
         if context.scene.ExportAllSteps.useDatStep:
             print("Exporting DAT")
             export_dat.main(datDir, datFilePath)
+            exportedFilesCount += 1
         if context.scene.ExportAllSteps.useDttStep:
             print("Exporting DTT")
             export_dat.main(dttDir, dttFilePath)
+            exportedFilesCount += 1
 
         tDiff = int(time.time() - t1)
-        print(f"All exports finished ({tDiff}s) :P")
+
+        print(f"Exported {exportedFilesCount} files in {tDiff}s   :P")
+        ShowMessageBox(f"Exported {exportedFilesCount} files")
 
         return {"FINISHED"}
 

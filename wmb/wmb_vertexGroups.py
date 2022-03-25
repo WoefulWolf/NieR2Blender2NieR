@@ -24,7 +24,7 @@ def create_wmb_vertexGroups(wmb_file, data):
                 write_byte(wmb_file, val)
             for val in vertex[3][0]:                                # UVMap 1
                 write_float16(wmb_file, val)
-            if vertexGroup.vertexFlags == 0:                      # Normal
+            if vertexGroup.vertexFlags == 0:                        # Normal
                 for val in vertex[2]:
                     write_float16(wmb_file, val)
             if vertexGroup.vertexFlags in [1, 4, 5, 12, 14]:
@@ -44,24 +44,24 @@ def create_wmb_vertexGroups(wmb_file, data):
             if vertexGroup.vertexFlags in [1, 4]:                   # [1, 4]
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
-            elif vertexGroup.vertexFlags == 5:                    # [5]
+            elif vertexGroup.vertexFlags == 5:                      # [5]
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
                 for val in vertexExData[1][0]:                      # UVMap 3
                     write_float16(wmb_file, val)
-            elif vertexGroup.vertexFlags == 7:                    # [7]
+            elif vertexGroup.vertexFlags == 7:                      # [7]
                 for val in vertexExData[1][0]:                      # UVMap 1
                     write_float16(wmb_file, val)
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
-            elif vertexGroup.vertexFlags == 10:                   # [10]
+            elif vertexGroup.vertexFlags == 10:                     # [10]
                 for val in vertexExData[1][0]:                      # UVMap 1
                     write_float16(wmb_file, val)
                 for val in vertexExData[2]:                         # Color                               
                     write_byte(wmb_file, val)
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
-            elif vertexGroup.vertexFlags == 11:                   # [11]
+            elif vertexGroup.vertexFlags == 11:                     # [11]
                 for val in vertexExData[1][0]:                      # UVMap 1
                     write_float16(wmb_file, val)
                 for val in vertexExData[2]:                         # Color                                   
@@ -70,7 +70,7 @@ def create_wmb_vertexGroups(wmb_file, data):
                     write_float16(wmb_file, val)
                 for val in vertexExData[1][1]:                      # UVMap 2
                     write_float16(wmb_file, val)
-            elif vertexGroup.vertexFlags == 12:                   # [12]
+            elif vertexGroup.vertexFlags == 12:                     # [12]
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
                 for val in vertexExData[1][0]:                      # UVMap 3
@@ -79,7 +79,7 @@ def create_wmb_vertexGroups(wmb_file, data):
                     write_float16(wmb_file, val)
                 for val in vertexExData[1][2]:                      # UVMap 5
                     write_float16(wmb_file, val)
-            elif vertexGroup.vertexFlags == 14:                   # [14]
+            elif vertexGroup.vertexFlags == 14:                     # [14]
                 for val in vertexExData[0]:                         # normal
                     write_float16(wmb_file, val)
                 for val in vertexExData[1][0]:                      # UVMap 3
