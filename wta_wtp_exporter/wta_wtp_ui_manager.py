@@ -124,6 +124,24 @@ class PurgeUnusedMaterials(bpy.types.Operator):
                 bpy.data.materials.remove(material)
         return{'FINISHED'}
 
+class RemoveWtaMaterial(bpy.types.Operator):
+    '''Removes a material by id'''
+    bl_idname = "na.remove_wta_material"
+    bl_label = "Remove Wta Material"
+
+    material_name : bpy.props.StringProperty()
+
+    def execute(self, context):
+        i = 0
+        while i < len(context.scene.WTAMaterials):
+            material = context.scene.WTAMaterials[i]
+            if material.parent_mat == self.material_name:
+                context.scene.WTAMaterials.remove(i)
+            else:
+                i += 1
+
+        return{'FINISHED'}
+
 class ExportWTPOperator(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata WTP File'''
     bl_idname = "na.export_wtp"
@@ -389,7 +407,9 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             # Split material categories into boxes
             if item.parent_mat not in loaded_mats:  
                 box = layout.box()
-                box.label(text=item.parent_mat + ':', icon='MATERIAL')
+                row = box.row()
+                row.label(text=item.parent_mat + ':', icon='MATERIAL')
+                row.operator("na.remove_wta_material", icon="X", text="", emboss=False).material_name = item.parent_mat
             
             row = box.row()
             row.label(text=item.texture_map_type)
@@ -452,6 +472,7 @@ def register():
     bpy.utils.register_class(GetNewMaterialsOperator)
     bpy.utils.register_class(AddManualTextureOperator)
     bpy.utils.register_class(RemoveManualTextureOperator)
+    bpy.utils.register_class(RemoveWtaMaterial)
     bpy.utils.register_class(WTA_WTP_PT_Export)
     bpy.utils.register_class(WTA_WTP_PT_Materials)
     bpy.utils.register_class(WTA_WTP_PT_Manual)
@@ -529,6 +550,7 @@ def unregister():
     bpy.utils.unregister_class(GetNewMaterialsOperator)
     bpy.utils.unregister_class(AddManualTextureOperator)
     bpy.utils.unregister_class(RemoveManualTextureOperator)
+    bpy.utils.unregister_class(RemoveWtaMaterial)
     bpy.utils.unregister_class(WTA_WTP_PT_Export)
     bpy.utils.unregister_class(WTA_WTP_PT_Materials)
     bpy.utils.unregister_class(WTA_WTP_PT_Manual)
