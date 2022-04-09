@@ -53,6 +53,43 @@ class GetMaterialsOperator(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class GetNewMaterialsOperator(bpy.types.Operator):
+    '''Fetch newly added NieR:Automata materials in scene'''
+    bl_idname = "na.get_new_wta_materials"
+    bl_label = "Fetch New Materials"
+
+    def execute(self, context):
+        def doesWtaMaterialExist(blenderMat: bpy.types.Material, context: bpy.types.Context) -> bool:
+            for wtaMat in context.scene.WTAMaterials:
+                if wtaMat.parent_mat == blenderMat.name:
+                    return True
+
+            return False
+        
+        newMaterialsAdded = 0
+        for mat in bpy.data.materials:
+            if doesWtaMaterialExist(mat, context):
+                continue
+
+            newMaterialsAdded += 1
+            for key, value in mat.items():
+                if not any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
+                    continue
+
+                id = generateID(context)
+                new_tex = context.scene.WTAMaterials.add()
+                new_tex.id = id
+
+                new_tex.parent_mat = mat.name
+                new_tex.texture_map_type = key
+                new_tex.texture_identifier = value
+                new_tex.texture_path = 'None'
+
+
+        ShowMessageBox(f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
+
+        return {'FINISHED'}
+
 class AssignBulkTextures(bpy.types.Operator, ImportHelper):
     '''Quickly assign textures from a directory (according to filename)'''
     bl_idname = "na.assign_original"
@@ -258,6 +295,8 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         row = layout.row()
         row.scale_y = 2.0
         row.operator("na.get_wta_materials")
+        row = layout.row()
+        row.operator("na.get_new_wta_materials")
 
         row = layout.row()
         row.operator("na.assign_original")
@@ -410,6 +449,7 @@ class WTA_WTP_PT_Hints(bpy.types.Panel):
 def register():
     bpy.utils.register_class(WTAItems)
     bpy.utils.register_class(GetMaterialsOperator)
+    bpy.utils.register_class(GetNewMaterialsOperator)
     bpy.utils.register_class(AddManualTextureOperator)
     bpy.utils.register_class(RemoveManualTextureOperator)
     bpy.utils.register_class(WTA_WTP_PT_Export)
@@ -486,6 +526,7 @@ def register():
 def unregister():
     bpy.utils.unregister_class(WTAItems)
     bpy.utils.unregister_class(GetMaterialsOperator)
+    bpy.utils.unregister_class(GetNewMaterialsOperator)
     bpy.utils.unregister_class(AddManualTextureOperator)
     bpy.utils.unregister_class(RemoveManualTextureOperator)
     bpy.utils.unregister_class(WTA_WTP_PT_Export)
