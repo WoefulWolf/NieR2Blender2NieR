@@ -53,6 +53,43 @@ class GetMaterialsOperator(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class GetNewMaterialsOperator(bpy.types.Operator):
+    '''Fetch newly added NieR:Automata materials in scene'''
+    bl_idname = "na.get_new_wta_materials"
+    bl_label = "Fetch New Materials"
+
+    def execute(self, context):
+        def doesWtaMaterialExist(blenderMat: bpy.types.Material, context: bpy.types.Context) -> bool:
+            for wtaMat in context.scene.WTAMaterials:
+                if wtaMat.parent_mat == blenderMat.name:
+                    return True
+
+            return False
+        
+        newMaterialsAdded = 0
+        for mat in bpy.data.materials:
+            if doesWtaMaterialExist(mat, context):
+                continue
+
+            newMaterialsAdded += 1
+            for key, value in mat.items():
+                if not any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
+                    continue
+
+                id = generateID(context)
+                new_tex = context.scene.WTAMaterials.add()
+                new_tex.id = id
+
+                new_tex.parent_mat = mat.name
+                new_tex.texture_map_type = key
+                new_tex.texture_identifier = value
+                new_tex.texture_path = 'None'
+
+
+        ShowMessageBox(f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
+
+        return {'FINISHED'}
+
 class AssignBulkTextures(bpy.types.Operator, ImportHelper):
     '''Quickly assign textures from a directory (according to filename)'''
     bl_idname = "na.assign_original"
@@ -85,6 +122,24 @@ class PurgeUnusedMaterials(bpy.types.Operator):
             if not material.users:
                 print('Purging unused material:', material)
                 bpy.data.materials.remove(material)
+        return{'FINISHED'}
+
+class RemoveWtaMaterial(bpy.types.Operator):
+    '''Removes a material by id'''
+    bl_idname = "na.remove_wta_material"
+    bl_label = "Remove Wta Material"
+
+    material_name : bpy.props.StringProperty()
+
+    def execute(self, context):
+        i = 0
+        while i < len(context.scene.WTAMaterials):
+            material = context.scene.WTAMaterials[i]
+            if material.parent_mat == self.material_name:
+                context.scene.WTAMaterials.remove(i)
+            else:
+                i += 1
+
         return{'FINISHED'}
 
 class ExportWTPOperator(bpy.types.Operator, ExportHelper):
@@ -258,6 +313,8 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
         row = layout.row()
         row.scale_y = 2.0
         row.operator("na.get_wta_materials")
+        row = layout.row()
+        row.operator("na.get_new_wta_materials")
 
         row = layout.row()
         row.operator("na.assign_original")
@@ -350,7 +407,9 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             # Split material categories into boxes
             if item.parent_mat not in loaded_mats:  
                 box = layout.box()
-                box.label(text=item.parent_mat + ':', icon='MATERIAL')
+                row = box.row()
+                row.label(text=item.parent_mat + ':', icon='MATERIAL')
+                row.operator("na.remove_wta_material", icon="X", text="", emboss=False).material_name = item.parent_mat
             
             row = box.row()
             row.label(text=item.texture_map_type)
@@ -410,8 +469,10 @@ class WTA_WTP_PT_Hints(bpy.types.Panel):
 def register():
     bpy.utils.register_class(WTAItems)
     bpy.utils.register_class(GetMaterialsOperator)
+    bpy.utils.register_class(GetNewMaterialsOperator)
     bpy.utils.register_class(AddManualTextureOperator)
     bpy.utils.register_class(RemoveManualTextureOperator)
+    bpy.utils.register_class(RemoveWtaMaterial)
     bpy.utils.register_class(WTA_WTP_PT_Export)
     bpy.utils.register_class(WTA_WTP_PT_Materials)
     bpy.utils.register_class(WTA_WTP_PT_Manual)
@@ -486,8 +547,10 @@ def register():
 def unregister():
     bpy.utils.unregister_class(WTAItems)
     bpy.utils.unregister_class(GetMaterialsOperator)
+    bpy.utils.unregister_class(GetNewMaterialsOperator)
     bpy.utils.unregister_class(AddManualTextureOperator)
     bpy.utils.unregister_class(RemoveManualTextureOperator)
+    bpy.utils.unregister_class(RemoveWtaMaterial)
     bpy.utils.unregister_class(WTA_WTP_PT_Export)
     bpy.utils.unregister_class(WTA_WTP_PT_Materials)
     bpy.utils.unregister_class(WTA_WTP_PT_Manual)
