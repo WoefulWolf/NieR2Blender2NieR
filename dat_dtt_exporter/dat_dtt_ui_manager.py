@@ -17,13 +17,21 @@ class ExportAllSteps(bpy.types.PropertyGroup):
         name = "Export WMB",
         default = True
     )
+    useWtpStep: bpy.props.BoolProperty(
+        name = "Export WTP",
+        default = True
+    )
     useWtaStep: bpy.props.BoolProperty(
         name = "Export WTA",
         default = True
     )
-    useWtpStep: bpy.props.BoolProperty(
-        name = "Export WTP",
-        default = True
+    useColStep: bpy.props.BoolProperty(
+        name = "Export COL",
+        default = False
+    )
+    useLayStep: bpy.props.BoolProperty(
+        name = "Export LAY",
+        default = False
     )
     useDatStep: bpy.props.BoolProperty(
         name = "Export DAT",
@@ -100,6 +108,10 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
         row.label(text="Base Name")
         row.prop(context.scene, "ExportFileName", text="")
         row.operator("na.get_base_name", icon="LOOP_BACK", text="")
+        row = layout.row(align=True)
+        row.label(text="DAT/DTT Export Directory")
+        row.prop(context.scene, "DatDttExportDir", text="")
+        row.operator("na.folder_select", icon="FILE_FOLDER", text="").target = "datdttdir"
         
         row = layout.row()
         row.scale_y = 2.0
@@ -119,6 +131,8 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
         row.prop(context.scene.ExportAllSteps, "useWmbStep", text="WMB", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWmbStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtpStep", text="WTP", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtpStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtaStep", text="WTA", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtaStep else "ADD")
+        row.prop(context.scene.ExportAllSteps, "useColStep", text="COL", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useColStep else "ADD")
+        row.prop(context.scene.ExportAllSteps, "useLayStep", text="LAY", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useLayStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDatStep", text="DAT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDatStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDttStep", text="DTT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDttStep else "ADD")
 
@@ -149,6 +163,8 @@ class SelectFolder(bpy.types.Operator, ImportHelper):
             context.scene.DttDir = directory
             if directory.endswith(".dat"):
                 ShowMessageBox("WARNING: DAT directory selected, this field is for the DTT directory")
+        elif self.target == "datdttdir":
+            context.scene.DatDttExportDir = directory
         else:
             print("Invalid target", self.target)
             return {"CANCELLED"}
@@ -167,6 +183,7 @@ class ExportAll(bpy.types.Operator):
         datDir = context.scene.DatDir
         dttDir = context.scene.DttDir
         baseFilename = context.scene.ExportFileName
+        datDttExportDir = context.scene.DatDttExportDir
 
         if not datDir:
             ShowMessageBox("Missing DAT Directory!")
@@ -179,24 +196,36 @@ class ExportAll(bpy.types.Operator):
             return {"CANCELLED"}
         
         wmbFilePath = os.path.join(dttDir, baseFilename + ".wmb")
-        wtaFilePath = os.path.join(datDir, baseFilename + ".wta")
         wtpFilePath = os.path.join(dttDir, baseFilename + ".wtp")
-        datFilePath = os.path.join(datDir, baseFilename + ".dat")
-        dttFilePath = os.path.join(dttDir, baseFilename + ".dtt")
+        wtaFilePath = os.path.join(datDir, baseFilename + ".wta")
+        colFilePath = os.path.join(datDir, baseFilename + ".col")
+        layFilePath = os.path.join(datDir, "Layout" + ".lay")
+        datFilePath = os.path.join(datDttExportDir, baseFilename + ".dat")
+        dttFilePath = os.path.join(datDttExportDir, baseFilename + ".dtt")
 
-        from .. import wmb_exporter
+        from ..wmb import wmb_exporter
         if context.scene.ExportAllSteps.useWmbStep:
             print("Exporting WMB")
             wmb_exporter.main(wmbFilePath)
             exportedFilesCount += 1
         from ..wta_wtp_exporter import export_wta, export_wtp
+        if context.scene.ExportAllSteps.useWtaStep:
+            print("Exporting WTA")
+            export_wta.main(context, wtaFilePath)
+            exportedFilesCount += 1
         if context.scene.ExportAllSteps.useWtpStep:
             print("Exporting WTP")
             export_wtp.main(context, wtpFilePath)
             exportedFilesCount += 1
-        if context.scene.ExportAllSteps.useWtaStep:
-            print("Exporting WTA")
-            export_wta.main(context, wtaFilePath)
+        from ..col import col_exporter
+        if context.scene.ExportAllSteps.useColStep:
+            print("Exporting COL")
+            col_exporter.main(colFilePath, True)
+            exportedFilesCount += 1
+        from ..lay import lay_exporter
+        if context.scene.ExportAllSteps.useLayStep:
+            print("Exporting COL")
+            col_exporter.main(layFilePath, True)
             exportedFilesCount += 1
         from . import export_dat
         if context.scene.ExportAllSteps.useDatStep:
@@ -246,6 +275,10 @@ def register():
         name = "Base File Name",
         description = "When exporting the .wmb/.dat/... extension will be added to the base"
     )
+    bpy.types.Scene.DatDttExportDir = bpy.props.StringProperty(
+        name = "DAT/DTT Export Directory",
+        description = "When exporting this is where the final DAT/DTT files will be placed"
+    )
 
 def unregister():
     bpy.utils.unregister_class(ExportAllSteps)
@@ -261,3 +294,4 @@ def unregister():
     del bpy.types.Scene.DatDir
     del bpy.types.Scene.DttDir
     del bpy.types.Scene.ExportFileName
+    del bpy.types.Scene.DatDttExportDir

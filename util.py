@@ -5,6 +5,7 @@ import numpy as np
 import bpy
 import re
 import bmesh
+from mathutils import Vector
 
 def create_wmb(filepath):
     print('Creating wmb file: ', filepath)
@@ -58,7 +59,7 @@ def write_float16(file, val):
 
 def close_wmb(wmb_file, generated_data):
     wmb_file.seek(generated_data.lods_Offset-52)
-    write_string(wmb_file, 'WMB created with Blender2NieR v0.2.1 by Woeful_Wolf')
+    write_string(wmb_file, 'WMB created with Blender2NieR v0.3.0 by Woeful_Wolf')
     wmb_file.flush()
     wmb_file.close()
 
@@ -78,6 +79,41 @@ def show_message(message = "", title = "Message Box", icon = 'INFO'):
 		self.layout.alignment = 'CENTER'
 	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
+def getUsedMaterials():
+    materials = []
+    for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+        for slot in obj.material_slots:
+            material = slot.material
+            if material not in materials:
+                materials.append(material)
+    return materials
+
+def getObjectCenter(obj):
+    obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
+    #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
+    return obj_local_bbox_center
+
+def getGlobalBoundingBox():
+    xVals = []
+    yVals = []
+    zVals = []
+
+    for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+        xVals.extend([getObjectCenter(obj)[0] - obj.dimensions[0]/2, getObjectCenter(obj)[0] + obj.dimensions[0]/2])
+        yVals.extend([getObjectCenter(obj)[1] - obj.dimensions[1]/2, getObjectCenter(obj)[1] + obj.dimensions[1]/2])
+        zVals.extend([getObjectCenter(obj)[2] - obj.dimensions[2]/2, getObjectCenter(obj)[2] + obj.dimensions[2]/2])
+
+    minX = min(xVals)
+    maxX = max(xVals)
+    minY = min(yVals)
+    maxY = max(yVals)
+    minZ = min(zVals)
+    maxZ = max(zVals)
+
+    midPoint = [(minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2]
+    scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
+    return midPoint, scale
+
 class B2NRecalculateObjectIndices(bpy.types.Operator):
     """Re-calculate object indices for ordering (e.g. ##_Body_0)"""
     bl_idname = "b2n.recalculateobjectindices"
@@ -86,7 +122,7 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
 
     def execute(self, context):
         objects_list = []
-        for obj in bpy.data.objects:
+        for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == "MESH":
                 objects_list.append(obj)
         objects_list.sort(key = lambda x: int(x.name.split("-")[0]))
@@ -95,7 +131,7 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
             split_name = obj.name.split("-")
             obj.name = str(idx) + "-" + split_name[1] + "-" + split_name[2]
 
-        for obj in bpy.data.objects:
+        for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == "MESH":
                 regex = re.search(".*(?=\.)", obj.name)
                 if regex != None:

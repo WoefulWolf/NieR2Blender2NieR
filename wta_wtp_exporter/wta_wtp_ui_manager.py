@@ -3,6 +3,7 @@ import os
 from bpy_extras.io_utils import ExportHelper,ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 import re
+from ..util import getUsedMaterials
 
 def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
 
@@ -38,7 +39,7 @@ class GetMaterialsOperator(bpy.types.Operator):
 
     def execute(self, context):
         context.scene.WTAMaterials.clear()
-        for mat in bpy.data.materials:
+        for mat in getUsedMaterials():
             for key, value in mat.items():
                 # Only include listed textures map types
                 if any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
@@ -196,7 +197,7 @@ class SyncBlenderMaterials(bpy.types.Operator):
         for item in context.scene.WTAMaterials:
             if item.texture_path == "None":
                 continue
-            for mat in bpy.data.materials:
+            for mat in getUsedMaterials():
                 if mat.name == item.parent_mat:
                     nodes = mat.node_tree.nodes
                     for node in nodes:
@@ -215,7 +216,7 @@ class SyncMaterialIdentifiers(bpy.types.Operator):
 
     def execute(self, context):
         for item in context.scene.WTAMaterials:
-            for mat in bpy.data.materials:
+            for mat in getUsedMaterials():
                 if mat.name == item.parent_mat:
                     for key in mat.keys():
                         if key == item.texture_map_type:
@@ -307,8 +308,8 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        row = layout.row()
-        row.operator("na.purge_materials")
+        #row = layout.row()
+        #row.operator("na.purge_materials")
 
         row = layout.row()
         row.scale_y = 2.0
