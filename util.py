@@ -74,10 +74,10 @@ class Vector3(object):
         self.xyz = [x, y, z]
 
 def show_message(message = "", title = "Message Box", icon = 'INFO'):
-	def draw(self, context):
-		self.layout.label(text = message)
-		self.layout.alignment = 'CENTER'
-	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+    def draw(self, context):
+        self.layout.label(text = message)
+        self.layout.alignment = 'CENTER'
+    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 def getUsedMaterials():
     materials = []
@@ -120,9 +120,11 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
     bl_label = "Re-calculate Object Indices"
     bl_options = {'REGISTER', 'UNDO'}
 
-    def execute(self, context):
+    def recalculateIndicesInCollection(self, collectionName: str):
+        if collectionName not in bpy.data.collections:
+            return
         objects_list = []
-        for obj in bpy.data.collections['WMB'].all_objects:
+        for obj in bpy.data.collections[collectionName].all_objects:
             if obj.type == "MESH":
                 objects_list.append(obj)
         objects_list.sort(key = lambda x: int(x.name.split("-")[0]))
@@ -131,11 +133,15 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
             split_name = obj.name.split("-")
             obj.name = str(idx) + "-" + split_name[1] + "-" + split_name[2]
 
-        for obj in bpy.data.collections['WMB'].all_objects:
+        for obj in bpy.data.collections[collectionName].all_objects:
             if obj.type == "MESH":
                 regex = re.search(".*(?=\.)", obj.name)
                 if regex != None:
                     obj.name = regex.group()
+
+    def execute(self, context):
+        self.recalculateIndicesInCollection("WMB")
+        self.recalculateIndicesInCollection("COL")
 
         return {'FINISHED'}
 
