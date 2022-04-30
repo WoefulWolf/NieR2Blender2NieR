@@ -16,6 +16,7 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 from . import util
 from .wta_wtp_exporter import wta_wtp_ui_manager
 from .dat_dtt_exporter import dat_dtt_ui_manager
+from .col import col_ui_manager
 
 class ExportBlender2NieRLay(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata LAY File'''
@@ -154,10 +155,12 @@ def register():
 
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
+    col_ui_manager.register()
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.types.VIEW3D_MT_object.append(menu_func_utils)
 
     bpy.types.Object.collisionType = bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType)
+    bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
     bpy.types.Object.slidable = bpy.props.BoolProperty(name="Slidable/Modifier")
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
 
@@ -167,6 +170,7 @@ def unregister():
 
     wta_wtp_ui_manager.unregister()
     dat_dtt_ui_manager.unregister()
+    col_ui_manager.unregister()
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
 
@@ -176,7 +180,7 @@ if __name__ == '__main__':
 
 ## Extras
 def setColourByCollisionType(obj):
-    opacity = 0.95
+    opacity = 1.0
     collisionType = int(obj.collisionType)
     if collisionType == 127:
         obj.color = [0.0, 1.0, 0.0, opacity]
