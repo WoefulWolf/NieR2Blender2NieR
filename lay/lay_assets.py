@@ -57,10 +57,10 @@ def write_assets(lay_file, data):
         write_uInt32(lay_file, asset.unknownIndex)
 
         # Null stuff, no idea what they are
-        write_uInt32(lay_file, 2399141888)
-        write_uInt32(lay_file, 32768)
+        write_uInt32(lay_file, 234602496)
         write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 536870912)
+        write_uInt32(lay_file, 0)
+        write_uInt32(lay_file, 0)
         write_uInt32(lay_file, 0)
         write_uInt32(lay_file, 0)
         write_uInt32(lay_file, 0)
