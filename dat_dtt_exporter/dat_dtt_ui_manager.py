@@ -131,6 +131,7 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
         row.prop(context.scene.ExportAllSteps, "useWmbStep", text="WMB", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWmbStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtpStep", text="WTP", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtpStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtaStep", text="WTA", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtaStep else "ADD")
+        row = layout.row(align=True)
         row.prop(context.scene.ExportAllSteps, "useColStep", text="COL", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useColStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useLayStep", text="LAY", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useLayStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDatStep", text="DAT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDatStep else "ADD")
@@ -180,15 +181,16 @@ class ExportAll(bpy.types.Operator):
     def execute(self, context):
         t1 = time.time()
         exportedFilesCount = 0
+        exportSteps = context.scene.ExportAllSteps
         datDir = context.scene.DatDir
         dttDir = context.scene.DttDir
         baseFilename = context.scene.ExportFileName
         datDttExportDir = context.scene.DatDttExportDir
 
-        if not datDir:
+        if not datDir and (exportSteps.useWtaStep or exportSteps.useColStep or exportSteps.useLayStep or exportSteps.useDatStep):
             ShowMessageBox("Missing DAT Directory!")
             return {"CANCELLED"}
-        if not dttDir:
+        if not dttDir and (exportSteps.useWtpStep or exportSteps.useWmbStep or exportSteps.useDttStep):
             ShowMessageBox("Missing DTT Directory!")
             return {"CANCELLED"}
         if not baseFilename:
@@ -204,35 +206,35 @@ class ExportAll(bpy.types.Operator):
         dttFilePath = os.path.join(datDttExportDir, baseFilename + ".dtt")
 
         from ..wmb import wmb_exporter
-        if context.scene.ExportAllSteps.useWmbStep:
+        if exportSteps.useWmbStep:
             print("Exporting WMB")
             wmb_exporter.main(wmbFilePath)
             exportedFilesCount += 1
         from ..wta_wtp_exporter import export_wta, export_wtp
-        if context.scene.ExportAllSteps.useWtaStep:
+        if exportSteps.useWtaStep:
             print("Exporting WTA")
             export_wta.main(context, wtaFilePath)
             exportedFilesCount += 1
-        if context.scene.ExportAllSteps.useWtpStep:
+        if exportSteps.useWtpStep:
             print("Exporting WTP")
             export_wtp.main(context, wtpFilePath)
             exportedFilesCount += 1
         from ..col import col_exporter
-        if context.scene.ExportAllSteps.useColStep:
+        if exportSteps.useColStep:
             print("Exporting COL")
             col_exporter.main(colFilePath, True)
             exportedFilesCount += 1
         from ..lay import lay_exporter
-        if context.scene.ExportAllSteps.useLayStep:
+        if exportSteps.useLayStep:
             print("Exporting COL")
-            col_exporter.main(layFilePath, True)
+            lay_exporter.main(layFilePath)
             exportedFilesCount += 1
         from . import export_dat
-        if context.scene.ExportAllSteps.useDatStep:
+        if exportSteps.useDatStep:
             print("Exporting DAT")
             export_dat.main(datDir, datFilePath)
             exportedFilesCount += 1
-        if context.scene.ExportAllSteps.useDttStep:
+        if exportSteps.useDttStep:
             print("Exporting DTT")
             export_dat.main(dttDir, dttFilePath)
             exportedFilesCount += 1
@@ -251,7 +253,8 @@ class GetBaseName(bpy.types.Operator):
     bl_description = "Set base name to scene name"
         
     def execute(self, context):
-        context.scene.ExportFileName = bpy.data.collections[0].name
+        if "WMB" in bpy.data.collections and len(bpy.data.collections["WMB"].children) > 0:
+            context.scene.ExportFileName = bpy.data.collections["WMB"].children[0].name
         return {"FINISHED"}
 
 def register():
