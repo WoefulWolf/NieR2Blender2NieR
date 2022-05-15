@@ -1,6 +1,7 @@
 import bpy, bmesh, math
 
 from .batch import c_batch
+from ...util import allObjectsInCollectionInOrder
 
 class c_batches(object):
     def __init__(self, vertexGroupsCount):
@@ -9,7 +10,7 @@ class c_batches(object):
             batches = []
             currentVertexGroup = -1
 
-            for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
                 obj_name = obj.name.split('-')
                 obj_vertexGroupIndex = int(obj_name[-1])
                 print('[+] Generating Batch', obj.name)

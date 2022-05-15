@@ -319,3 +319,17 @@ class B2NRipMeshByUVIslands(bpy.types.Operator):
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
         return {'FINISHED'}
+
+
+def getObjKey(obj):
+    p1 = obj.name.split('-')
+    if p1[0].isdigit():
+        return f"{int(p1[0]):04d}-"
+    else:
+        return f"0000-{obj.name}"
+
+def objectsInCollectionInOrder(collectionName):
+    return sorted(bpy.data.collections[collectionName].objects, key=getObjKey)
+
+def allObjectsInCollectionInOrder(collectionName):
+    return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey)
