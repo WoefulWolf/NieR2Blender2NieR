@@ -3,7 +3,7 @@ import re
 
 
 def onGlobalAlphaChange(self, context):
-	for obj in bpy.data.collections["COL"].all_objects:
+	for obj in bpy.data.collections["COL"].objects:
 		if obj.type != "MESH":
 			continue
 		obj.color[3] = context.scene.collisionTools.globalAlpha
@@ -22,7 +22,7 @@ class B2NCollisionToolsPanel(bpy.types.Panel):
 		layout = self.layout
 		
 		layout.label(text="Current Object Collision")
-		if "collisionType" in context.object:
+		if context.object and "collisionType" in context.object:
 			row = layout.row()
 			row.label(text="Collision Type")
 			row.prop(context.object, "collisionType", text="")
@@ -47,8 +47,8 @@ class B2NCollisionToolsPanel(bpy.types.Panel):
 		layout.separator()
 		layout.label(text="Other Collision Tools")
 		
-		row = layout.row()
-		row.operator("b2n.join_collision_objects")
+		layout.operator("b2n.join_collision_objects")
+		layout.operator("b2n.fix_collision_objects_order")
 		row = layout.row()
 		row.label(text="Collision Alpha")
 		row.prop(context.scene.collisionTools, "globalAlpha", text="")
@@ -70,8 +70,6 @@ class B2NApplyCollisionToAllSelected(bpy.types.Operator):
 			obj.surfaceType = context.object.surfaceType
 		return {"FINISHED"}
 
-
-
 class B2NJoinCollisionObjects(bpy.types.Operator):
     """Join Collision Objects"""
     bl_idname = "b2n.join_collision_objects"
@@ -80,9 +78,8 @@ class B2NJoinCollisionObjects(bpy.types.Operator):
 
     def execute(self, context):
         def objToKey(obj):
-            objName = re.sub(r'^\d+-', '', obj.name)
             return str({
-                'name': re.sub(r'\.\d{3,}', '', obj.name),
+                'name': re.sub(r'^\d+-', '', obj.name),
                 'collisionType': obj.collisionType,
                 'surfaceType': obj.surfaceType,
                 'slidable': obj.slidable,
@@ -90,7 +87,7 @@ class B2NJoinCollisionObjects(bpy.types.Operator):
             })
 
         groupedObjects = {}
-        for obj in bpy.data.collections["COL"].all_objects:
+        for obj in bpy.data.collections["COL"].objects:
             if obj.type != "MESH":
                 continue
             
@@ -111,11 +108,42 @@ class B2NJoinCollisionObjects(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class B2NFixCollisionObjectsOrder(bpy.types.Operator):
+	"""Fix Collision Objects Order"""
+	bl_idname = "b2n.fix_collision_objects_order"
+	bl_label = "Fix Collision Objects Order"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	def execute(self, context):
+		objects = list(bpy.data.collections["COL"].objects)
+		# Gather object names in order
+		namesOrder = []
+		groupedObjects = {}
+		for obj in objects:
+			objName = re.match(r'^\d+-(.*-\d+)$', obj.name)
+			if not objName:
+				continue
+			objName = objName.group(1)
+			if objName not in groupedObjects:
+				namesOrder.append(objName)
+				groupedObjects[objName] = []
+			groupedObjects[objName].append(obj)
+		
+		# bring objects in order
+		i = 0
+		for name in namesOrder:
+			for obj in groupedObjects[name]:
+				obj.name = f"{i}-{name}"
+				i += 1
+		
+		return {'FINISHED'}
+
 def register():
 	bpy.utils.register_class(CollisionToolsData)
 	bpy.utils.register_class(B2NCollisionToolsPanel)
 	bpy.utils.register_class(B2NApplyCollisionToAllSelected)
 	bpy.utils.register_class(B2NJoinCollisionObjects)
+	bpy.utils.register_class(B2NFixCollisionObjectsOrder)
 
 	bpy.types.Scene.collisionTools = bpy.props.PointerProperty(type=CollisionToolsData)
 
@@ -124,5 +152,6 @@ def unregister():
 	bpy.utils.unregister_class(B2NCollisionToolsPanel)
 	bpy.utils.unregister_class(B2NApplyCollisionToAllSelected)
 	bpy.utils.unregister_class(B2NJoinCollisionObjects)
+	bpy.utils.unregister_class(B2NFixCollisionObjectsOrder)
 
 	del bpy.types.Scene.collisionTools
