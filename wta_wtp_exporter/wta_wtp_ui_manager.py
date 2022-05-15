@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import bpy
 import os
 from bpy_extras.io_utils import ExportHelper,ImportHelper
@@ -32,12 +33,91 @@ class WTAItems(bpy.types.PropertyGroup):
     texture_identifier : bpy.props.StringProperty()
     texture_path : bpy.props.StringProperty()
 
+def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTAItems], warnings: List[str]):
+    # filter relevant wta items for this material
+    wtaItems = [item for item in allWtaItems if item.parent_mat == blendMat.name]
+
+    # group blender textures by name
+    def splitName(name: str, offset: int) -> Tuple[str, int]:
+        """example: 'g_albedoMap1' -> ('g_albedoMap', 1 + offset)"""
+        nameParts = re.match(r"^([^\d]+)([\d]*)", name)
+        baseName = nameParts.group(1)
+        index = int(nameParts.group(2)) + offset if nameParts.group(2) != "" else 0
+        return baseName, index
+    
+    texturesInMat = [
+        { "name": node.label, "path": node.image.filepath_from_user() }
+        for node in blendMat.node_tree.nodes
+        if node.type == "TEX_IMAGE"
+    ]
+    groupedTextures = {}    # { baseName: list[paths] }
+    for tex in texturesInMat:
+        baseName, index = splitName(tex["name"], 1)
+        
+        if baseName not in groupedTextures:
+            groupedTextures[baseName] = []
+        if len(groupedTextures[baseName]) < index + 1:
+            groupedTextures[baseName].extend([None] * (index + 1 - len(groupedTextures[baseName])))
+        groupedTextures[baseName][index] = tex["path"]
+    
+    # gather texture directories
+    textureDirs = []
+    for tex in texturesInMat:
+        texDir = os.path.dirname(tex["path"])
+        if texDir not in textureDirs:
+            textureDirs.append(texDir)
+    def searchForTexture(texId: str) -> str:
+        for texDir in textureDirs:
+            texPath = os.path.join(texDir, f"{texId}.dds")
+            if os.path.exists(texPath):
+                return texPath
+        return None
+    
+    # set wta texture paths
+    for item in wtaItems:
+        baseName, index = splitName(item.texture_map_type, -1)
+        newTexPath = None
+        # best case: texture in texture groups
+        if baseName in groupedTextures and len(groupedTextures[baseName]) > index:
+            newTexPath = groupedTextures[baseName][index]
+        # if out of range and multiple textures with same name, try previous
+        elif baseName in groupedTextures and index != -1 and len(groupedTextures[baseName]) > 0 and len(groupedTextures[baseName]) < index + 1:
+            index = len(groupedTextures[baseName]) - 1
+            newTexPath = groupedTextures[baseName][index]
+        # search in texture directories
+        if newTexPath:
+            # find other textures with same id
+            # to ensure that there aren't multiple different textures with the same id
+            existingTexPath = next(filter(lambda item2: item.texture_identifier == item2.texture_identifier and item2.texture_path and item2.texture_path != "None", allWtaItems), None)
+            if existingTexPath:
+                if existingTexPath.texture_path == newTexPath:
+                    item.texture_path = newTexPath
+                else:
+                    item.texture_path = existingTexPath.texture_path
+                    warnings.append(f"{item.texture_map_type} {item.texture_identifier} in {item.parent_mat} different from texture path in {existingTexPath.parent_mat}")
+            else:
+                item.texture_path = newTexPath
+        else:
+            newTexPath = searchForTexture(item.texture_identifier)
+            if newTexPath:
+                item.texture_path = newTexPath
+
+def handleAutoSetTextureWarnings(operatorSelf, warnings: List[str]):
+    if len(warnings) == 0:
+        return
+    operatorSelf.report({'WARNING'}, f"{len(warnings)} ids have different texture paths! Check logs for details.")
+    print(f"WARNING: {len(warnings)} ids have different texture paths")
+    print("First encountered textures used instead. Consider changing the ids.")
+    print("\n".join(warnings))
+
 class GetMaterialsOperator(bpy.types.Operator):
     '''Fetch all NieR:Automata materials in scene'''
     bl_idname = "na.get_wta_materials"
     bl_label = "Fetch NieR:Automata Materials"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
+        autoTextureWarnings = []
         context.scene.WTAMaterials.clear()
         for mat in getUsedMaterials():
             for key, value in mat.items():
@@ -52,12 +132,16 @@ class GetMaterialsOperator(bpy.types.Operator):
                     new_tex.texture_identifier = value
                     new_tex.texture_path = 'None'
 
+            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+        handleAutoSetTextureWarnings(self, autoTextureWarnings)
+
         return {'FINISHED'}
 
 class GetNewMaterialsOperator(bpy.types.Operator):
     '''Fetch newly added NieR:Automata materials in scene'''
     bl_idname = "na.get_new_wta_materials"
     bl_label = "Fetch New Materials"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
         def doesWtaMaterialExist(blenderMat: bpy.types.Material, context: bpy.types.Context) -> bool:
@@ -68,6 +152,7 @@ class GetNewMaterialsOperator(bpy.types.Operator):
             return False
         
         newMaterialsAdded = 0
+        autoTextureWarnings = []
         for mat in bpy.data.materials:
             if doesWtaMaterialExist(mat, context):
                 continue
@@ -86,6 +171,8 @@ class GetNewMaterialsOperator(bpy.types.Operator):
                 new_tex.texture_identifier = value
                 new_tex.texture_path = 'None'
 
+            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+        handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         ShowMessageBox(f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
 
@@ -95,6 +182,8 @@ class AssignBulkTextures(bpy.types.Operator, ImportHelper):
     '''Quickly assign textures from a directory (according to filename)'''
     bl_idname = "na.assign_original"
     bl_label = "Select Textures Directory"
+    bl_options = {"UNDO"}
+    
     filename_ext = ""
     dirpath : StringProperty(name = "", description="Choose a textures directory:", subtype='DIR_PATH')
 
@@ -117,6 +206,7 @@ class PurgeUnusedMaterials(bpy.types.Operator):
     '''Permanently remove all unused materials'''
     bl_idname = "na.purge_materials"
     bl_label = "Purge Materials"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
         for material in bpy.data.materials:
@@ -129,6 +219,7 @@ class RemoveWtaMaterial(bpy.types.Operator):
     '''Removes a material by id'''
     bl_idname = "na.remove_wta_material"
     bl_label = "Remove Wta Material"
+    bl_options = {"UNDO"}
 
     material_name : bpy.props.StringProperty()
 
@@ -148,6 +239,8 @@ class ExportWTPOperator(bpy.types.Operator, ExportHelper):
     bl_idname = "na.export_wtp"
     bl_label = "Export WTP"
     bl_options = {'PRESET'}
+    bl_options = {"UNDO"}
+
     filename_ext = ".wtp"
     filter_glob: StringProperty(default="*.wtp", options={'HIDDEN'})
 
@@ -160,7 +253,7 @@ class ExportWTAOperator(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata WTA File'''
     bl_idname = "na.export_wta"
     bl_label = "Export WTA"
-    bl_options = {'PRESET'}
+    bl_options = {"PRESET"}
     filename_ext = ".wta"
     filter_glob: StringProperty(default="*.wta", options={'HIDDEN'})
 
@@ -173,6 +266,8 @@ class FilepathSelector(bpy.types.Operator, ImportHelper):
     '''Select texture file'''
     bl_idname = "na.filepath_selector"
     bl_label = "Select Texture"
+    bl_options = {"UNDO"}
+
     filename_ext = ".dds"
     filter_glob: StringProperty(default="*.dds", options={'HIDDEN'})
 
@@ -229,6 +324,7 @@ class AddManualTextureOperator(bpy.types.Operator):
     '''Manually add a texture to be exported'''
     bl_idname = "na.add_manual_texture"
     bl_label = "Add Texture"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
         id = generateID(context)
@@ -244,6 +340,7 @@ class RemoveManualTextureOperator(bpy.types.Operator):
     '''Remove a manually added texture'''
     bl_idname = "na.remove_manual_texture"
     bl_label = "Remove"
+    bl_options = {"UNDO"}
 
     id : bpy.props.IntProperty(options={'HIDDEN'})
 
@@ -261,6 +358,8 @@ class TextureFilepathSelector(bpy.types.Operator, ImportHelper):
     '''Select texture file for Texture Replacer'''
     bl_idname = "na.texture_filepath_selector"
     bl_label = "Select Texture"
+    bl_options = {"UNDO"}
+
     filename_ext = ".dds"
     filter_glob: StringProperty(default="*.dds", options={'HIDDEN'})
 
@@ -273,6 +372,7 @@ class MassTextureReplacer(bpy.types.Operator):
     '''Replace all texture paths that match set id'''
     bl_idname = "na.mass_texture_replacer"
     bl_label = "Replace Textures"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
         replacedTextures = 0
