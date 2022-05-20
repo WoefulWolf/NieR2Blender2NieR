@@ -1,5 +1,7 @@
 import bpy
 
+from ..util import objectsInCollectionInOrder
+
 class NameGroup:
     def __init__(self, name, startOffset):
         self.name = name
@@ -10,7 +12,7 @@ class NameGroups:
         
         # Get all names to add
         names_to_add = []
-        for obj in bpy.data.collections['COL'].objects:
+        for obj in objectsInCollectionInOrder('COL'):
             if obj.type == 'MESH':
                 name = obj.name.split("-")[1]
                 if name not in names_to_add:

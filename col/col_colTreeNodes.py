@@ -2,6 +2,7 @@ import enum
 import bpy, math
 from mathutils import Vector
 import numpy as np
+from ..util import objectsInCollectionInOrder
 
 def update_offsetMeshIndices(colTreeNodes, meshIndicesStartOffset):
     currentOffset = meshIndicesStartOffset
@@ -89,7 +90,7 @@ def volumeInsideOther(volumeCenter, volumeScale, otherVolumeCenter, otherVolumeS
     return False
 
 def getColMeshIndex(objToFind):
-    colMeshObjs = [obj for obj in bpy.data.collections['COL'].objects if obj.type == 'MESH']
+    colMeshObjs = [obj for obj in objectsInCollectionInOrder("COL") if obj.type == 'MESH']
     for i, obj in enumerate(colMeshObjs):
         if obj == objToFind:
             return i
@@ -155,7 +156,7 @@ def generate_colTreeNodes():
     custom_colTreeNodesCollection.objects.link(rootNode)
     rootNode.rotation_euler = (math.radians(90),0,0)
 
-    unassigned_objs = [obj for obj in bpy.data.collections['COL'].objects if obj.type == 'MESH']
+    unassigned_objs = [obj for obj in objectsInCollectionInOrder("COL") if obj.type == 'MESH']
 
     nodes = []
     while len(unassigned_objs) > 0:
@@ -311,7 +312,7 @@ class ColTreeNodes:
         self.structSize = 0
 
         self.colTreeNodes = []
-        for obj in bpy.data.collections['col_colTreeNodes'].objects:
+        for obj in objectsInCollectionInOrder("col_colTreeNodes"):
             if "Root" not in obj.name:
                 newColTreeNode = ColTreeNode(obj)
                 self.colTreeNodes.append(newColTreeNode)

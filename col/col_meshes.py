@@ -1,5 +1,6 @@
 import bpy
 from .col_batch import Batch
+from ..util import objectsInCollectionInOrder
 
 collisionTypes = [
     ("-1", "UNKNOWN", ""),
@@ -56,7 +57,7 @@ class Mesh:
 
         # Get the batches for this mesh
         self.batches = []
-        for obj in bpy.data.collections['COL'].objects:
+        for obj in objectsInCollectionInOrder("COL"):
             if obj.type == 'MESH':
                 if obj.name.split("-")[0] == meshIndex:
                     newBatch = Batch(obj, currentBatchOffset)
@@ -72,7 +73,7 @@ class Meshes:
         # Get all the mesh indices
         meshBlenderObjs = []
         meshIndices = []
-        for obj in bpy.data.collections['COL'].objects:
+        for obj in objectsInCollectionInOrder("COL"):
             if obj.type == 'MESH':
                 meshIndex = obj.name.split("-")[0]
                 if meshIndex not in meshIndices:
