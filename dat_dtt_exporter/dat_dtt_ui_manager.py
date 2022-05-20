@@ -116,14 +116,6 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
         row = layout.row()
         row.scale_y = 2.0
         row.operator("na.export_all", text="One Click Export All", icon="EXPORT")
-        col = layout.column()
-        self.label_multiline(
-            context,
-            "INFO: WMB Export will not center origins, triangulate meshes or delete loose geometry. If you want that," + 
-            " export the WMB manually and uncheck \"WMB\" below.",
-            col
-        )
-        layout.separator()
 
         row = layout.row()
         row.label(text="Select Export Steps")
@@ -136,6 +128,15 @@ class DAT_DTT_PT_ExportAll(bpy.types.Panel):
         row.prop(context.scene.ExportAllSteps, "useLayStep", text="LAY", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useLayStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDatStep", text="DAT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDatStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDttStep", text="DTT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDttStep else "ADD")
+
+        layout.separator()
+        col = layout.column()
+        self.label_multiline(
+            context,
+            "INFO: WMB Export will not center origins, triangulate meshes or delete loose geometry. If you want that," +
+            " export the WMB manually and uncheck \"WMB\" below.",
+            col
+        )
 
     def label_multiline(self, context, text, parent):
         '''Stolen from https://b3d.interplanety.org/en/multiline-text-in-blender-interface-panels/'''
@@ -192,6 +193,9 @@ class ExportAll(bpy.types.Operator):
             return {"CANCELLED"}
         if not dttDir and (exportSteps.useWtpStep or exportSteps.useWmbStep or exportSteps.useDttStep):
             ShowMessageBox("Missing DTT Directory!")
+            return {"CANCELLED"}
+        if not datDttExportDir and (exportSteps.useDatStep or exportSteps.useDttStep):
+            ShowMessageBox("Missing DAT/DTT Export Directory!")
             return {"CANCELLED"}
         if not baseFilename:
             ShowMessageBox("Missing Base Name!")
