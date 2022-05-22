@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import bpy
 import os
 from bpy_extras.io_utils import ExportHelper,ImportHelper
@@ -31,12 +32,90 @@ class WTAItems(bpy.types.PropertyGroup):
     texture_identifier : bpy.props.StringProperty()
     texture_path : bpy.props.StringProperty()
 
+def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTAItems], warnings: List[str]):
+    # filter relevant wta items for this material
+    wtaItems = [item for item in allWtaItems if item.parent_mat == blendMat.name]
+
+    # group blender textures by name
+    def splitName(name: str, offset: int) -> Tuple[str, int]:
+        """example: 'g_albedoMap1' -> ('g_albedoMap', 1 + offset)"""
+        nameParts = re.match(r"^([^\d]+)([\d]*)", name)
+        baseName = nameParts.group(1)
+        index = int(nameParts.group(2)) + offset if nameParts.group(2) != "" else 0
+        return baseName, index
+    
+    texturesInMat = [
+        { "name": node.label, "path": node.image.filepath_from_user() }
+        for node in blendMat.node_tree.nodes
+        if node.type == "TEX_IMAGE"
+    ]
+    groupedTextures = {}    # { baseName: list[paths] }
+    for tex in texturesInMat:
+        baseName, index = splitName(tex["name"], 1)
+        
+        if baseName not in groupedTextures:
+            groupedTextures[baseName] = []
+        if len(groupedTextures[baseName]) < index + 1:
+            groupedTextures[baseName].extend([None] * (index + 1 - len(groupedTextures[baseName])))
+        groupedTextures[baseName][index] = tex["path"]
+    
+    # gather texture directories
+    textureDirs = []
+    for tex in texturesInMat:
+        texDir = os.path.dirname(tex["path"])
+        if texDir not in textureDirs:
+            textureDirs.append(texDir)
+    def searchForTexture(texId: str) -> str:
+        for texDir in textureDirs:
+            texPath = os.path.join(texDir, f"{texId}.dds")
+            if os.path.exists(texPath):
+                return texPath
+        return None
+    
+    # set wta texture paths
+    for item in wtaItems:
+        baseName, index = splitName(item.texture_map_type, -1)
+        newTexPath = None
+        # best case: texture in texture groups
+        if baseName in groupedTextures and len(groupedTextures[baseName]) > index:
+            newTexPath = groupedTextures[baseName][index]
+        # if out of range and multiple textures with same name, try previous
+        elif baseName in groupedTextures and index != -1 and len(groupedTextures[baseName]) > 0 and len(groupedTextures[baseName]) < index + 1:
+            index = len(groupedTextures[baseName]) - 1
+            newTexPath = groupedTextures[baseName][index]
+        # search in texture directories
+        if newTexPath:
+            # find other textures with same id
+            # to ensure that there aren't multiple different textures with the same id
+            existingTexPath = next(filter(lambda item2: item.texture_identifier == item2.texture_identifier and item2.texture_path and item2.texture_path != "None", allWtaItems), None)
+            if existingTexPath:
+                if existingTexPath.texture_path == newTexPath:
+                    item.texture_path = newTexPath
+                else:
+                    item.texture_path = existingTexPath.texture_path
+                    warnings.append(f"{item.texture_map_type} {item.texture_identifier} in {item.parent_mat} different from texture path in {existingTexPath.parent_mat}")
+            else:
+                item.texture_path = newTexPath
+        else:
+            newTexPath = searchForTexture(item.texture_identifier)
+            if newTexPath:
+                item.texture_path = newTexPath
+
+def handleAutoSetTextureWarnings(operatorSelf, warnings: List[str]):
+    if len(warnings) == 0:
+        return
+    operatorSelf.report({'WARNING'}, f"{len(warnings)} ids have different texture paths! Check logs for details.")
+    print(f"WARNING: {len(warnings)} ids have different texture paths")
+    print("First encountered textures used instead. Consider changing the ids.")
+    print("\n".join(warnings))
+
 class GetMaterialsOperator(bpy.types.Operator):
     '''Fetch all NieR:Automata materials in scene'''
     bl_idname = "na.get_wta_materials"
     bl_label = "Fetch NieR:Automata Materials"
 
     def execute(self, context):
+        autoTextureWarnings = []
         context.scene.WTAMaterials.clear()
         for mat in bpy.data.materials:
             for key, value in mat.items():
@@ -50,6 +129,9 @@ class GetMaterialsOperator(bpy.types.Operator):
                     new_tex.texture_map_type = key
                     new_tex.texture_identifier = value
                     new_tex.texture_path = 'None'
+
+            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+        handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         return {'FINISHED'}
 
@@ -67,6 +149,7 @@ class GetNewMaterialsOperator(bpy.types.Operator):
             return False
         
         newMaterialsAdded = 0
+        autoTextureWarnings = []
         for mat in bpy.data.materials:
             if doesWtaMaterialExist(mat, context):
                 continue
@@ -85,6 +168,8 @@ class GetNewMaterialsOperator(bpy.types.Operator):
                 new_tex.texture_identifier = value
                 new_tex.texture_path = 'None'
 
+            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+        handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         ShowMessageBox(f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
 
