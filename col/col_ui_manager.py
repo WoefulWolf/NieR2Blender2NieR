@@ -69,6 +69,8 @@ class B2NApplyCollisionToAllSelected(bpy.types.Operator):
             obj.UNKNOWN_collisionType = context.object.UNKNOWN_collisionType
             obj.slidable = context.object.slidable
             obj.surfaceType = context.object.surfaceType
+            if "unknownByte" in context.object:
+                obj["unknownByte"] = context.object["unknownByte"]
         return {"FINISHED"}
 
 class B2NJoinCollisionObjects(bpy.types.Operator):
