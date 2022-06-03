@@ -43,6 +43,7 @@ def main(layFilePath, addonName):
         boundingBox = getModelBoundingBox(assetName.split("_")[0], addonName)
         assetObj = createLayObject(assetName, layAssetsCollection, assetRootNode, asset.position, asset.rotation, asset.scale, boundingBox)
         assetObj["unknownIndex"] = asset.unknownIndex
+        assetObj["null1"] = asset.null1
         for instance in asset.instances:
             instanceName = assetName + "-Instance"
             createLayObject(instanceName, layInstancesCollection, instanceRootNode, instance.position, instance.rotation, instance.scale, boundingBox)
@@ -70,9 +71,11 @@ def createLayObject(name, collection, parent, pos, rot, scale, boundingBox):
 
 
 
-def createBoundingBoxObject(obj, name, collection, boundingBox):
+def createBoundingBoxObject(obj: bpy.types.Object, name, collection, boundingBox):
     boundingBoxObj = bpy.data.objects.new(name, None)
     collection.objects.link(boundingBoxObj)
+    for child in obj.children:
+        bpy.data.objects.remove(child, do_unlink=True)
     boundingBoxObj.parent = obj
     boundingBoxObj.empty_display_type = 'CUBE'
 

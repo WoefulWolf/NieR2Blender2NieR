@@ -31,7 +31,7 @@ class Asset:
 
         self.null0 = to_uint(layFile.read(4))
         self.unknownIndex = to_uint(layFile.read(4))
-        self.null1 = [to_uint(layFile.read(4)) for val in range(8)]
+        self.null1 = [to_uint(layFile.read(1)) for val in range(32)]
 
         self.instanceCount = to_uint(layFile.read(4))
 
