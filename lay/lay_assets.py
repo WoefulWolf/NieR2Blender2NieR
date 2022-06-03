@@ -11,6 +11,7 @@ class Asset:
         self.scale = bObj.scale
 
         self.unknownIndex = bObj["unknownIndex"]
+        self.null1 = bObj["null1"]
 
         self.instances = getInstances(bObj)
         self.instanceCount = len(self.instances)
@@ -57,14 +58,8 @@ def write_assets(lay_file, data):
         write_uInt32(lay_file, asset.unknownIndex)
 
         # Null stuff, no idea what they are
-        write_uInt32(lay_file, 234602496)
-        write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 0)
-        write_uInt32(lay_file, 0)
+        for byte in asset.null1:
+            write_byte(lay_file, byte)
 
         write_uInt32(lay_file, asset.instanceCount)
 
