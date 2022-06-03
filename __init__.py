@@ -176,7 +176,10 @@ class NieR2BlenderCreateObjBBox(bpy.types.Operator):
         from .lay_importer import getModelBoundingBox, createBoundingBoxObject
         for obj in bpy.context.selected_objects:
             boundingBox = getModelBoundingBox(obj.name.split("_")[0], __name__)
-            createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
+            if boundingBox:
+                createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
+            else:
+                self.report({'WARNING'}, "Couldn't find dtt of " + obj.name)
         return {'FINISHED'}
 
 class N2BLayoutObjectMenu(bpy.types.Menu):

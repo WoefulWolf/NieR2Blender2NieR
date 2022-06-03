@@ -35,7 +35,7 @@ surfaceTypes = [
 ]
 
 def setColourByCollisionType(obj):
-    opacity = 0.95
+    opacity = 1.0
     collisionType = int(obj.collisionType)
     if collisionType == 127:
         obj.color = [0.0, 1.0, 0.0, opacity]

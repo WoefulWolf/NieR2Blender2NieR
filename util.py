@@ -2,13 +2,12 @@
 import os
 import sys
 import struct
-import numpy as np
 
 def to_float(bs):
 	return struct.unpack("<f", bs)[0]
 
 def to_float16(bs):
-	return float(np.frombuffer(bs, np.float16)[0])
+	return struct.unpack("<e", bs)[0]
 
 def to_uint(bs):
 	return (int.from_bytes(bs, byteorder='little', signed=False))
