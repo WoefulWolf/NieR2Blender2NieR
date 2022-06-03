@@ -25,17 +25,17 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
+def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
 	print('[+] importing armature')
-	bpy.ops.object.add(
-		type='ARMATURE', 
-		enter_editmode=True,
-		location=(0,0,0))
-	ob = bpy.context.active_object
+	amt = bpy.data.armatures.new(name +'Amt')
+	ob = bpy.data.objects.new(name, amt)
+	#ob = bpy.context.active_object
 	ob.show_in_front = False
 	ob.name = name
-	amt = ob.data
-	amt.name = name +'Amt'
+	bpy.data.collections.get(collection_name).objects.link(ob)
+
+	bpy.context.view_layer.objects.active = ob
+	bpy.ops.object.mode_set(mode='EDIT')
 	 
 	amt['firstLevel'] = firstLevel
 	amt['secondLevel'] = secondLevel
@@ -119,7 +119,7 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	else:
 		obj = bpy.data.objects[name]	
 	obj.location = Vector((0,0,0))
-	bpy.context.collection.objects.link(obj)
+	bpy.data.collections.get(collection_name).objects.link(obj)
 	objmesh.from_pydata(vertices, [], faces)
 	objmesh.update(calc_edges=True)
 
@@ -155,8 +155,6 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	obj['LOD_Level'] = mesh_data[9]
 	obj['colTreeNodeIndex'] = mesh_data[10]
 	obj['unknownWorldDataIndex'] = mesh_data[11]
-	obj['boundingBoxXYZ'] = [mesh_data[12][0], mesh_data[12][1], mesh_data[12][2]]
-	obj['boundingBoxUVW'] = [mesh_data[12][3], mesh_data[12][4], mesh_data[12][5]]
 
 	obj.data.flip_normals()
 	return obj
@@ -559,21 +557,38 @@ def import_colTreeNodes(wmb, collection):
 	colTreeNodesDict = {}
 	#collision_col = bpy.data.collections.new("CollisionNodes")
 	#collection.children.link(collision_col)
-	for index, node in enumerate(wmb.colTreeNodes):
-		colTreeNodeName = 'colTreeNode' + str(index)
+
+	colTreeNodesCollection = bpy.data.collections.get("wmb_colTreeNodes")
+	if not colTreeNodesCollection:
+		colTreeNodesCollection = bpy.data.collections.new("wmb_colTreeNodes")
+		collection.children.link(colTreeNodesCollection)
+
+	bpy.context.view_layer.active_layer_collection.children["WMB"].children[collection.name].children["wmb_colTreeNodes"].hide_viewport = True
+
+	rootNode = bpy.data.objects.new("Root_wmb", None)
+	rootNode.hide_viewport = True
+	colTreeNodesCollection.objects.link(rootNode)
+	rootNode.rotation_euler = (math.radians(90),0,0)
+	for nodeIdx, node in enumerate(wmb.colTreeNodes):
+		colTreeNodeName = 'colTreeNode' + str(nodeIdx)
+		objName = str(nodeIdx) + "_" + str(node.left) + "_" + str(node.right) + "_wmb"
+		obj = bpy.data.objects.new(objName, None)
+		colTreeNodesCollection.objects.link(obj)
+		obj.parent = rootNode
+		obj.empty_display_type = 'CUBE'
+
+		obj.location = node.p1
+		obj.scale = node.p2
+		meshIndices = []
+		for bObj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+			if bObj["colTreeNodeIndex"] == nodeIdx:
+				idx = int(bObj.name.split("-")[0])
+				meshIndices.append(idx)
+		
+		if len(meshIndices) > 0:
+			obj["meshIndices"] = meshIndices
 		colTreeNode = [node.p1[0], node.p1[1], node.p1[2], node.p2[0], node.p2[1], node.p2[2], node.left, node.right]
 		colTreeNodesDict[colTreeNodeName] = colTreeNode
-
-		"""
-		bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=(node.p1[0], node.p1[1], node.p1[2]))
-		col_Bound = bpy.context.active_object
-		col_Bound.name =  str(index) + "-" + str(node.left) + "-" + str(node.right)
-		bpy.ops.transform.resize(value=(node.p2[0], node.p2[1], node.p2[2]))
-		bpy.ops.transform.rotate(value=math.radians(-90), orient_axis='X', center_override=(0, 0, 0))
-		bpy.context.object.display_type = 'BOUNDS'
-		collision_col.objects.link(col_Bound)
-		collection.objects.unlink(col_Bound)
-		"""
 
 	bpy.context.scene['colTreeNodes'] = colTreeNodesDict
 
@@ -583,12 +598,6 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataName = 'unknownWorldData' + str(index)
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
-
-def import_wmb_boundingbox(wmb):
-	boundingBoxXYZ = [wmb.wmb3_header.bounding_box1, wmb.wmb3_header.bounding_box2, wmb.wmb3_header.bounding_box3]
-	boundingBoxUVW = [wmb.wmb3_header.bounding_box4, wmb.wmb3_header.bounding_box5, wmb.wmb3_header.bounding_box6]
-	bpy.context.scene['boundingBoxXYZ'] = boundingBoxXYZ
-	bpy.context.scene['boundingBoxUVW'] = boundingBoxUVW
 
 def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
@@ -601,19 +610,23 @@ def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file_
 		print('Extraction finished. ;)')
 		return {'FINISHED'}
 
+	wmbCollection = bpy.data.collections.get("WMB")
+	if not wmbCollection:
+		wmbCollection = bpy.data.collections.new("WMB")
+		bpy.context.scene.collection.children.link(wmbCollection)
+
 	collection_name = wmbname[:-4]
 
 	col = bpy.data.collections.new(collection_name)
-	bpy.context.scene.collection.children.link(col)
-	bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
+	wmbCollection.children.link(col)
+	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	texture_dir = wmb_file.replace(wmbname, '\\textures\\')
-	import_wmb_boundingbox(wmb)
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
-		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray)
+		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
 	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []

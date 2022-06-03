@@ -2,7 +2,7 @@
 import os
 import sys
 import struct
-from .util import to_int
+from .util import to_uint
 
 def little_endian_to_float(bs):
     return struct.unpack("<f", bs)[0]
@@ -120,16 +120,16 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	# hash_data.metadata
 	# Header
 	fp.seek(hashMapOffset)
-	preHashShift = to_int(fp.read(4))
-	bucketOffsetsOffset = to_int(fp.read(4))
-	hashesOffset = to_int(fp.read(4))
-	fileIndicesOffset = to_int(fp.read(4))
+	preHashShift = to_uint(fp.read(4))
+	bucketOffsetsOffset = to_uint(fp.read(4))
+	hashesOffset = to_uint(fp.read(4))
+	fileIndicesOffset = to_uint(fp.read(4))
 
 	# Bucket Offsets
 	fp.seek(hashMapOffset + bucketOffsetsOffset)
 	bucketOffsets = []
 	while fp.tell() < (hashMapOffset + hashesOffset):
-		bucketOffsets.append(to_int(fp.read(2)))
+		bucketOffsets.append(to_uint(fp.read(2)))
 
 	# Hashes
 	fp.seek(hashMapOffset + hashesOffset)
@@ -141,7 +141,7 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	fp.seek(hashMapOffset + fileIndicesOffset)
 	fileIndices = []
 	for i in range(FileCount):
-		fileIndices.append(to_int(fp.read(2)))
+		fileIndices.append(to_uint(fp.read(2)))
  
 	# Extraction
 	filename = 'hash_data.metadata'

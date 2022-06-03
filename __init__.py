@@ -1,11 +1,11 @@
 bl_info = {
-    "name": "NieR2Blender (NieR:Automata Model Importer)",
+    "name": "NieR2Blender (NieR:Automata Data Importer)",
     "author": "Woeful_Wolf (Original by C4nf3ng)",
-    "version": (2, 2),
+    "version": (3, 0),
     "blender": (2, 80, 0),
     "api": 38019,
     "location": "File > Import",
-    "description": "Import Nier:Automata Model Data",
+    "description": "Import Nier:Automata Data",
     "warning": "",
     "wiki_url": "",
     "tracker_url": "",
@@ -32,6 +32,45 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
             wmb_importer.reset_blend()
         return wmb_importer.main(False, self.filepath)
 
+def importDat(only_extract, filepath):
+    head = os.path.split(filepath)[0]
+    tail = os.path.split(filepath)[1]
+    tailless_tail = tail[:-4]
+    dat_filepath = head + '\\' + tailless_tail + '.dat'
+    extract_dir = head + '\\nier2blender_extracted'
+    from . import dat_unpacker
+    if os.path.isfile(dat_filepath):
+        dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
+    else:
+        print('DAT not found. Only extracting DTT. (No materials, collisions or layouts will automatically be imported)')
+
+    last_filename = dat_unpacker.main(filepath, extract_dir + '\\' + tailless_tail + '.dtt', filepath)       # dtt
+
+    wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + last_filename[:-4] + '.wmb'
+    if not os.path.exists(wmb_filepath):
+        wmb_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + last_filename[:-4] + '.wmb'                     # if not in dtt, then must be in dat
+
+    # WMB
+    from . import wmb_importer
+    wmb_importer.main(only_extract, wmb_filepath)
+
+    if only_extract:
+        return {'FINISHED'}
+
+    # COL
+    col_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + tailless_tail + '.col'
+    if os.path.isfile(col_filepath):
+        from . import col_importer
+        col_importer.main(col_filepath)
+
+    # LAY
+    lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
+    if os.path.isfile(lay_filepath):
+        from . import lay_importer
+        lay_importer.main(lay_filepath, __name__)
+
+    return {'FINISHED'}
+
 class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DTT (and DAT) File.'''
     bl_idname = "import_scene.dtt_data"
@@ -54,69 +93,147 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
                 if filename[-4:] == '.dtt':
                     try:
                         filepath = folder + '\\' + filename
-                        head = os.path.split(filepath)[0]
-                        tail = os.path.split(filepath)[1]
-                        tailless_tail = tail[:-4]
-                        dat_filepath = head + '\\' + tailless_tail + '.dat'
-                        extract_dir = head + '\\nier2blender_extracted'
-                        from . import dat_unpacker
-                        if os.path.isfile(dat_filepath):
-                            dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
-                        else:
-                            print('DAT not found. Only extracting DTT. (No materials will automatically be imported)')
-
-                        wtp_filename = dat_unpacker.main(filepath, extract_dir + '\\' + tailless_tail + '.dtt', filepath)       # dtt
-
-                        wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + wtp_filename[:-4] + '.wmb'
-                        if not os.path.exists(wmb_filepath):
-                            wmb_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + wtp_filename[:-4] + '.wmb'                     # if not in dtt, then must be in dat
-
-                        wmb_importer.main(self.only_extract, wmb_filepath)
+                        importDat(self.only_extract, filepath)
                     except:
                         print('ERROR: FAILED TO IMPORT', filename)
             return {'FINISHED'}
 
         else:
-            head = os.path.split(self.filepath)[0]
-            tail = os.path.split(self.filepath)[1]
-            tailless_tail = tail[:-4]
-            dat_filepath = head + '\\' + tailless_tail + '.dat'
-            extract_dir = head + '\\nier2blender_extracted'
-            from . import dat_unpacker
-            if os.path.isfile(dat_filepath):
-                dat_unpacker.main(dat_filepath, extract_dir + '\\' + tailless_tail + '.dat', dat_filepath)   # dat
-            else:
-                print('DAT not found. Only extracting DTT. (No materials will automatically be imported)')
+            return importDat(self.only_extract, self.filepath)
 
-            wtp_filename = dat_unpacker.main(self.filepath, extract_dir + '\\' + tailless_tail + '.dtt', self.filepath)       # dtt
+class ImportColNier2Blender(bpy.types.Operator, ImportHelper):
+    '''Load a Nier:Automata Col (Collision) File.'''
+    bl_idname = "import_scene.col_data"
+    bl_label = "Import Col Data"
+    bl_options = {'PRESET'}
+    filename_ext = ".col"
+    filter_glob: StringProperty(default="*.col", options={'HIDDEN'})
 
-            wmb_filepath = extract_dir + '\\' + tailless_tail + '.dtt\\' + wtp_filename[:-4] + '.wmb'
-            if not os.path.exists(wmb_filepath):
-                wmb_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + wtp_filename[:-4] + '.wmb'                     # if not in dtt, then must be in dat
+    def execute(self, context):
+        from . import col_importer
+        return col_importer.main(self.filepath)
 
-            from . import wmb_importer
-            return wmb_importer.main(self.only_extract, wmb_filepath)
+class ImportLayNier2Blender(bpy.types.Operator, ImportHelper):
+    '''Load a Nier:Automata Lay (Layout) File.'''
+    bl_idname = "import_scene.lay_data"
+    bl_label = "Import Lay Data"
+    bl_options = {'PRESET'}
+    filename_ext = ".lay"
+    filter_glob: StringProperty(default="*.lay", options={'HIDDEN'})
 
-# Registration
+    def execute(self, context):
+        from . import lay_importer
+        return lay_importer.main(self.filepath, __name__)
+
+class SelectDirectory(bpy.types.Operator, ImportHelper):
+    '''Select Directory'''
+    bl_idname = "n2b.folder_select"
+    bl_label = "Select Directory"
+    filename_ext = ""
+    dirpath : StringProperty(name = "", description="Choose directory:", subtype='DIR_PATH')
+
+    target : bpy.props.StringProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        directory = os.path.dirname(self.filepath)
+        if self.target == "data005":
+            context.preferences.addons[__name__].preferences.data005_dir = directory
+        elif self.target == "data015":
+            context.preferences.addons[__name__].preferences.data015_dir = directory
+        else:
+            print("Invalid target", self.target)
+            return {"CANCELLED"}
+
+        return {'FINISHED'}
+
+class NieR2BlenderPreferences(bpy.types.AddonPreferences):
+    bl_idname = __package__
+    data005_dir : StringProperty(options={'HIDDEN'})
+    data015_dir : StringProperty(options={'HIDDEN'})
+
+    def draw(self, context):
+        layout = self.layout
+        
+        layout.label(text="Assign Directories Below If You Wish To Enable Bounding Box Visualization With Layout Import:")
+        box = layout.box()
+        box.label(text="Path To Extracted data005.cpk Directory:")
+        row = box.row(align=True)
+        row.prop(self, "data005_dir", text="")
+        row.operator("n2b.folder_select", icon="FILE_FOLDER", text="").target = "data005"
+
+        box.label(text="Path To Extracted data015.cpk Directory:")
+        row = box.row(align=True)
+        row.prop(self, "data015_dir", text="")
+        row.operator("n2b.folder_select", icon="FILE_FOLDER", text="").target = "data015"
+
+class NieR2BlenderCreateObjBBox(bpy.types.Operator):
+    """Create Layout Object Bounding Box"""
+    bl_idname = "n2b.create_lay_bb"
+    bl_label = "Create Layout Object Bounding Box"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        from .lay_importer import getModelBoundingBox, createBoundingBoxObject
+        for obj in bpy.context.selected_objects:
+            boundingBox = getModelBoundingBox(obj.name.split("_")[0], __name__)
+            createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
+        return {'FINISHED'}
+
+class N2BLayoutObjectMenu(bpy.types.Menu):
+    bl_idname = 'OBJECT_MT_n2blayout'
+    bl_label = 'NieR2Blender'
+    def draw(self, context):
+        self.layout.operator(NieR2BlenderCreateObjBBox.bl_idname, icon="CUBE")
+
+def menu_func_utils(self, context):
+    pcoll = preview_collections["main"]
+    yorha_icon = pcoll["yorha"]
+    self.layout.menu(N2BLayoutObjectMenu.bl_idname, icon_value=yorha_icon.icon_id)
 
 def menu_func_import(self, context):
-    self.layout.operator(ImportNier2blender.bl_idname, text="WMB File for Nier:Automata (.wmb)")
+    pcoll = preview_collections["main"]
+    yorha_icon = pcoll["yorha"]
+    self.layout.operator(ImportDATNier2blender.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNier2blender.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportColNier2Blender.bl_idname, text="Collision File for Nier:Automata (.col)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportLayNier2Blender.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
 
-def menu_func_import_dat(self, context):
-    self.layout.operator(ImportDATNier2blender.bl_idname, text="DTT File for Nier:Automata (.dtt)")
+classes = (
+    ImportNier2blender,
+    ImportDATNier2blender,
+    ImportColNier2Blender,
+    ImportLayNier2Blender,
+    SelectDirectory,
+    NieR2BlenderPreferences,
+    NieR2BlenderCreateObjBBox,
+    N2BLayoutObjectMenu
+)
+
+preview_collections = {}
 
 def register():
-    bpy.utils.register_class(ImportNier2blender)
-    bpy.utils.register_class(ImportDATNier2blender)
+    # Custom icons
+    import bpy.utils.previews
+    pcoll = bpy.utils.previews.new()
+    my_icons_dir = os.path.join(os.path.dirname(__file__), "icons")
+    pcoll.load("yorha", os.path.join(my_icons_dir, "yorha-filled.png"), 'IMAGE')
+    preview_collections["main"] = pcoll
+
+    for cls in classes:
+        bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import_dat)
+    bpy.types.VIEW3D_MT_object.append(menu_func_utils)
+
 
 def unregister():
-    bpy.utils.unregister_class(ImportNier2blender)
-    bpy.utils.unregister_class(ImportDATNier2blender)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_dat)
+    for pcoll in preview_collections.values():
+        bpy.utils.previews.remove(pcoll)
+    preview_collections.clear()
 
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+    bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
 
 if __name__ == '__main__':
     register()

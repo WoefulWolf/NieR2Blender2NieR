@@ -10,12 +10,17 @@ def to_float(bs):
 def to_float16(bs):
 	return float(np.frombuffer(bs, np.float16)[0])
 
+def to_uint(bs):
+	return (int.from_bytes(bs, byteorder='little', signed=False))
+
 def to_int(bs):
-	return (int.from_bytes(bs, byteorder='little'))
+	return (int.from_bytes(bs, byteorder='little', signed=True))
 
 def to_string(bs, encoding = 'utf8'):
 	return bs.split(b'\x00')[0].decode(encoding)
 
+def to_ushort(bs):
+	return struct.unpack("<H", bs)[0]
 
 def create_dir(dirpath):
 	if not os.path.exists(dirpath):
