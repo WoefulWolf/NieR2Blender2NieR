@@ -287,6 +287,7 @@ class SyncBlenderMaterials(bpy.types.Operator):
     '''Sync the texture of Blender's materials to these'''
     bl_idname = "na.sync_blender_materials"
     bl_label = "Sync Blender Materials"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
         for item in context.scene.WTAMaterials:
@@ -295,12 +296,29 @@ class SyncBlenderMaterials(bpy.types.Operator):
             for mat in getUsedMaterials():
                 if mat.name == item.parent_mat:
                     nodes = mat.node_tree.nodes
+                    hasFoundNode = False
                     for node in nodes:
                         if node.label == item.texture_map_type:
+                            hasFoundNode = True
                             node.image = bpy.data.images.load(item.texture_path)
                             if "MaskMap" in node.label or "NormalMap" in node.label:
                                 node.image.colorspace_settings.name = 'Non-Color'
                             break
+                    if not hasFoundNode:
+                        # add new texture node
+                        node = nodes.new("ShaderNodeTexImage")
+                        node.label = item.texture_map_type
+                        node.image = bpy.data.images.load(item.texture_path)
+                        if "MaskMap" in node.label or "NormalMap" in node.label:
+                            node.image.colorspace_settings.name = "Non-Color"
+                        # link up
+                        if "Albedo" in node.label:
+                            mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Base Color"])
+                        elif "Alpha" in node.label:
+                            mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Alpha"])
+                        else:
+                            print("Unhandled texture map type:", node.label)
+
                     break
         return{'FINISHED'}
 
@@ -308,6 +326,7 @@ class SyncMaterialIdentifiers(bpy.types.Operator):
     '''Sync the texture identifiers of materials to these'''
     bl_idname = "na.sync_material_identifiers"
     bl_label = "Sync Identifiers in Materials"
+    bl_options = {"UNDO"}
 
     def execute(self, context):
         for item in context.scene.WTAMaterials:
