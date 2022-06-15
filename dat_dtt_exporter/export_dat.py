@@ -46,7 +46,8 @@ def main(dat_dir, export_filepath):
     fileExtensions = []
     for fp in files:
         fileExt = fp.split('.')[-1]
-        fileExtensionsSize += len(fileExt)+1
+        fileExt += '\x00' * (3 - len(fileExt))
+        fileExtensionsSize += len(fileExt) + 1
         fileExtensions.append(fileExt)
 
     nameLength = 0                              
