@@ -41,6 +41,8 @@ def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTA
     def splitName(name: str, offset: int) -> Tuple[str, int]:
         """example: 'g_albedoMap1' -> ('g_albedoMap', 1 + offset)"""
         nameParts = re.match(r"^([^\d]+)([\d]*)", name)
+        if not nameParts:
+            return None, -1
         baseName = nameParts.group(1)
         index = int(nameParts.group(2)) + offset if nameParts.group(2) != "" else 0
         return baseName, index
@@ -53,7 +55,9 @@ def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTA
     groupedTextures = {}    # { baseName: list[paths] }
     for tex in texturesInMat:
         baseName, index = splitName(tex["name"], 1)
-        
+        if not baseName:
+            continue
+
         if baseName not in groupedTextures:
             groupedTextures[baseName] = []
         if len(groupedTextures[baseName]) < index + 1:
@@ -132,7 +136,11 @@ class GetMaterialsOperator(bpy.types.Operator):
                     new_tex.texture_identifier = value
                     new_tex.texture_path = 'None'
 
-            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+            try:
+                autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+            except Exception as e:
+                print(f"Error while setting texture paths for {mat.name}: {e}")
+
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         return {'FINISHED'}
@@ -171,7 +179,10 @@ class GetNewMaterialsOperator(bpy.types.Operator):
                 new_tex.texture_identifier = value
                 new_tex.texture_path = 'None'
 
-            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+            try:
+                autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+            except Exception as e:
+                print(f"Error while setting texture paths for {mat.name}: {e}")
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         ShowMessageBox(f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
