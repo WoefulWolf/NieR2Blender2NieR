@@ -111,6 +111,24 @@ def handleAutoSetTextureWarnings(operatorSelf, warnings: List[str]):
     print("First encountered textures used instead. Consider changing the ids.")
     print("\n".join(warnings))
 
+def isTextureTypeSupported(textureType: str) -> bool:
+    for supportedTex in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']:
+        if supportedTex in textureType:
+            return True
+    return False
+
+def makeWtaMaterial(matName, textures: List[Tuple[str, str, str]]):
+    for tex in textures:
+        newTex: WTAItems = bpy.context.scene.WTAMaterials.add()
+        newTex.id = generateID(bpy.context)
+        newTex.parent_mat = matName
+        newTex.texture_map_type = tex[0]
+        newTex.texture_identifier = tex[1]
+        if tex[2] is not None and tex[2] != "None" and os.path.exists(tex[2]):
+            newTex.texture_path = tex[2]
+        else:
+            newTex.texture_path = "None"
+
 class GetMaterialsOperator(bpy.types.Operator):
     '''Fetch all NieR:Automata materials in scene'''
     bl_idname = "na.get_wta_materials"
@@ -121,22 +139,17 @@ class GetMaterialsOperator(bpy.types.Operator):
         autoTextureWarnings = []
         context.scene.WTAMaterials.clear()
         for mat in getUsedMaterials():
-            for key, value in mat.items():
-                # Only include listed textures map types
-                if any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
-                    id = generateID(context)
-                    new_tex = context.scene.WTAMaterials.add()
-                    new_tex.id = id
-
-                    new_tex.parent_mat = mat.name
-                    new_tex.texture_map_type = key
-                    new_tex.texture_identifier = value
-                    new_tex.texture_path = 'None'
-
             try:
+                wtaTextures: List[Tuple[str, str, str]] = [
+                    (mapType, id, "None")
+                    for mapType, id in mat.items()
+                    if isTextureTypeSupported(mapType)
+                ]
+                makeWtaMaterial(mat.name, wtaTextures)
+
                 autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
             except Exception as e:
-                print(f"Error while setting texture paths for {mat.name}: {e}")
+                print(f"Error fetching material {mat.name}: {e}")
 
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
@@ -162,24 +175,18 @@ class GetNewMaterialsOperator(bpy.types.Operator):
             if doesWtaMaterialExist(mat, context):
                 continue
 
-            newMaterialsAdded += 1
-            for key, value in mat.items():
-                if not any(substring in key for substring in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']):
-                    continue
-
-                id = generateID(context)
-                new_tex = context.scene.WTAMaterials.add()
-                new_tex.id = id
-
-                new_tex.parent_mat = mat.name
-                new_tex.texture_map_type = key
-                new_tex.texture_identifier = value
-                new_tex.texture_path = 'None'
-
             try:
+                newMaterialsAdded += 1
+                wtaTextures: List[Tuple[str, str, str]] = [
+                    (mapType, id, "None")
+                    for mapType, id in mat.items()
+                    if isTextureTypeSupported(mapType)
+                ]
+                makeWtaMaterial(mat.name, wtaTextures)
                 autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
             except Exception as e:
-                print(f"Error while setting texture paths for {mat.name}: {e}")
+                print(f"Error fetching material {mat.name}: {e}")
+
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         self.report({"INFO"}, f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")

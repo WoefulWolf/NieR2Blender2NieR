@@ -1,5 +1,7 @@
 import math
+from typing import List, Tuple
 
+from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 from .wmb import *
 
 
@@ -168,7 +170,17 @@ def set_partent(parent, child):
 	child.select_set(False)
 	parent.select_set(False)
 
-def consturct_materials(texture_dir, material):
+def addWtaExportMaterial(texture_dir, material):
+	material_name = material[0]
+	textures = material[1]
+	wtaTextures: List[Tuple[str, str, str]] = [
+		(mapType, id, os.path.join(texture_dir, f"{id}.dds"))
+		for mapType, id in textures.items()
+		if isTextureTypeSupported(mapType)
+	]
+	makeWtaMaterial(material_name, wtaTextures)
+
+def construct_materials(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
 	uniforms = material[2]
@@ -633,7 +645,8 @@ def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file_
 	materials = []
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
-		materials.append(consturct_materials(texture_dir, material))
+		addWtaExportMaterial(texture_dir, material)
+		materials.append(construct_materials(texture_dir, material))
 	print('Linking materials to objects...')
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
