@@ -6,7 +6,6 @@ import bmesh
 import bpy
 from mathutils import Vector
 
-
 def create_wmb(filepath):
     print('Creating wmb file: ', filepath)
     wmb_file = open(filepath, 'wb')
@@ -114,7 +113,7 @@ def getGlobalBoundingBox():
     scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
     return midPoint, scale
 
-class B2NRecalculateObjectIndices(bpy.types.Operator):
+class RecalculateObjectIndices(bpy.types.Operator):
     """Re-calculate object indices for ordering (e.g. ##_Body_0)"""
     bl_idname = "b2n.recalculateobjectindices"
     bl_label = "Re-calculate Object Indices"
@@ -145,7 +144,7 @@ class B2NRecalculateObjectIndices(bpy.types.Operator):
 
         return {'FINISHED'}
 
-class B2NRemoveUnusedVertexGroups(bpy.types.Operator):
+class RemoveUnusedVertexGroups(bpy.types.Operator):
     """Remove all unused vertex groups."""
     bl_idname = "b2n.removeunusedvertexgroups"
     bl_label = "Remove Unused Vertex Groups"
@@ -166,7 +165,7 @@ class B2NRemoveUnusedVertexGroups(bpy.types.Operator):
                     armatch = re.search('((.R|.L)(.(\d){1,}){0,1})(?!.)', vgroup_name)
                     if armatch != None:
                         tag = armatch.group()
-                        mirror_tag =  tag.replace(".R", ".L") if armatch.group(2) == ".R" else tag.replace(".L", ".R") 
+                        mirror_tag =  tag.replace(".R", ".L") if armatch.group(2) == ".R" else tag.replace(".L", ".R")
                         mirror_vgname = vgroup_name.replace(tag, mirror_tag)
                         for i, name in sorted(vgroup_names.items(), reverse=True):
                             if mirror_vgname == name:
@@ -181,7 +180,7 @@ class B2NRemoveUnusedVertexGroups(bpy.types.Operator):
         show_message(str(v_unused_count) + ' vertex groups were unused and have been removed.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
-class B2NMergeVertexGroupCopies(bpy.types.Operator):
+class MergeVertexGroupCopies(bpy.types.Operator):
     """Merge vertex groups by name copies (etc. bone69 & bone69.001)"""
     bl_idname = "b2n.mergevertexgroupcopies"
     bl_label = "Merge Vertex Groups by Name Copies"
@@ -210,13 +209,13 @@ class B2NMergeVertexGroupCopies(bpy.types.Operator):
                             bpy.ops.object.modifier_apply(modifier="VertexWeightMix")
                             bpy.ops.object.vertex_group_set_active(group=group2.name)
                             bpy.ops.object.vertex_group_remove()
-                    
+
         bpy.context.view_layer.objects.active = last_active
         show_message(str(v_merged_count) + ' vertex groups had name copies and have been merged.', 'Blender2NieR: Tool Info')
 
         return {'FINISHED'}
 
-class B2NDeleteLooseGeometrySelected(bpy.types.Operator):
+class DeleteLooseGeometrySelected(bpy.types.Operator):
     """Delete Loose Geometry (Selected)"""
     bl_idname = "b2n.deleteloosegeometrysel"
     bl_label = "Delete Loose Geometry (Selected)"
@@ -247,7 +246,7 @@ class B2NDeleteLooseGeometrySelected(bpy.types.Operator):
         show_message(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
-class B2NDeleteLooseGeometryAll(bpy.types.Operator):
+class DeleteLooseGeometryAll(bpy.types.Operator):
     """Delete Loose Geometry (All)"""
     bl_idname = "b2n.deleteloosegeometryall"
     bl_label = "Delete Loose Geometry (All)"
@@ -278,7 +277,7 @@ class B2NDeleteLooseGeometryAll(bpy.types.Operator):
         show_message(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
-class B2NRipMeshByUVIslands(bpy.types.Operator):
+class RipMeshByUVIslands(bpy.types.Operator):
     """Rip Mesh by UV Islands"""
     bl_idname = "b2n.ripmeshbyuvislands"
     bl_label = "Rip Mesh by UV Islands"

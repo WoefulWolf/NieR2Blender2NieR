@@ -65,7 +65,7 @@ def createLayObject(name, collection, parent, pos, rot, scale, boundingBox):
 
     obj.show_axis = True
 
-    if boundingBox != None:
+    if boundingBox is not None:
         createBoundingBoxObject(obj, name + "-BoundingBox", collection, boundingBox)
 
     return obj
@@ -85,52 +85,36 @@ def createBoundingBoxObject(obj: bpy.types.Object, name, collection, boundingBox
 
     boundingBoxObj.hide_select = True
 
-def getModelBoundingBox(modelName, addonName):
-    data005_dir = bpy.context.preferences.addons[addonName].preferences.data005_dir
-    data015_dir = bpy.context.preferences.addons[addonName].preferences.data015_dir
-
-    if not os.path.isdir(data005_dir) or not os.path.isdir(data015_dir):
+def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
+    if depth > 0 and dir.endswith("nier2blender_extracted") or depth > 6:
         return None
 
-    #print("Model To Find", modelName)
+    for entry in os.scandir(dir):
+        if entry.is_file() and entry.name == modelName:
+            if entry.name.startswith(modelName):
+                return entry.path
+        elif entry.is_dir():
+            modelPath = searchDirForModel(entry.path, modelName, depth + 1)
+            if modelPath is not None:
+                return modelPath
+    
+    return None
 
-    fileFound = False
+def getModelBoundingBox(modelName, addonName):
+    searchDirs = bpy.context.preferences.addons[addonName].preferences.assetDirs
+    searchDirs = [dir.directory for dir in searchDirs]
+
     filePath = ""
-    # Search data005.cpk
-    for pathName in os.listdir(data005_dir):
-        if fileFound:
+    for pathName in searchDirs:
+        if not os.path.isdir(pathName):
+            continue
+        
+        modelPath = searchDirForModel(pathName, modelName + ".dtt")
+        if modelPath is not None:
+            filePath = modelPath
             break
-        fullPathName = os.path.join(data005_dir, pathName)
-        if os.path.isdir(fullPathName):
-            for file in os.listdir(fullPathName):
-                if file == (modelName + ".dtt"):
-                    filePath = fullPathName + "\\" + file
-                    fileFound = True
-                    break
-        else:
-            if pathName == (modelName + ".dtt"):
-                filePath = fullPathName + "\\" + pathName
-                fileFound = True
-                break
 
-    # Search data015.cpk
-    for pathName in os.listdir(data015_dir):
-        if fileFound:
-            break
-        fullPathName = os.path.join(data015_dir, pathName)
-        if os.path.isdir(fullPathName):
-            for file in os.listdir(fullPathName):
-                if file == (modelName + ".dtt"):
-                    filePath = fullPathName + "\\"  + file
-                    fileFound = True
-                    break
-        else:
-            if pathName == (modelName + ".dtt"):
-                filePath = fullPathName + "\\" + pathName
-                fileFound = True
-                break
-
-    if not fileFound:
+    if not filePath:
         return None
 
     with open(filePath, "rb") as modelDTTFile:

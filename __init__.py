@@ -1,3 +1,4 @@
+
 bl_info = {
     "name": "Nier2Blender2NieR (NieR:Automata Data Exporter)",
     "author": "Woeful_Wolf",
@@ -10,16 +11,17 @@ import traceback
 
 import bpy
 import os
-from bpy.props import StringProperty
+from bpy.props import StringProperty, CollectionProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import util
+from . import preferences
 from .col.exporter import col_ui_manager, col_exporter
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .wta_wtp.exporter import wta_wtp_ui_manager
 
 
-class ExportBlender2NieRLay(bpy.types.Operator, ExportHelper):
+class ExportNierLay(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata LAY File'''
     bl_idname = "export.lay_data"
     bl_label = "Export LAY File"
@@ -33,7 +35,7 @@ class ExportBlender2NieRLay(bpy.types.Operator, ExportHelper):
         lay_exporter.main(self.filepath)
         return {'FINISHED'}
 
-class ExportBlender2NieRCol(bpy.types.Operator, ExportHelper):
+class ExportNierCol(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata COL File'''
     bl_idname = "export.col_data"
     bl_label = "Export COL File"
@@ -58,7 +60,7 @@ class ExportBlender2NieRCol(bpy.types.Operator, ExportHelper):
         col_exporter.main(self.filepath, self.generateColTree)
         return {'FINISHED'}
 
-class ExportBlender2NieR(bpy.types.Operator, ExportHelper):
+class ExportNierWmb(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata WMB File'''
     bl_idname = "export.wmb_data"
     bl_label = "Export WMB File"
@@ -104,22 +106,20 @@ class ExportBlender2NieR(bpy.types.Operator, ExportHelper):
             util.show_message('Error: An unexpected error has occurred during export. Please check the console for more info.', 'WMB Export Error', 'ERROR')
             return {'CANCELLED'}
 
-class B2NObjectMenu(bpy.types.Menu):
-    bl_idname = 'OBJECT_MT_b2n'
-    bl_label = 'Nier2Blender2NieR'
+class NierObjectMenu(bpy.types.Menu):
+    bl_idname = 'OBJECT_MT_n2b2n'
+    bl_label = 'NieR Tools'
     def draw(self, context):
-        self.layout.operator(util.B2NRecalculateObjectIndices.bl_idname)
-        self.layout.operator(util.B2NRemoveUnusedVertexGroups.bl_idname)
-        self.layout.operator(util.B2NMergeVertexGroupCopies.bl_idname)
-        self.layout.operator(util.B2NDeleteLooseGeometrySelected.bl_idname)
-        self.layout.operator(util.B2NDeleteLooseGeometryAll.bl_idname)
-        self.layout.operator(util.B2NRipMeshByUVIslands.bl_idname)
-        pcoll = preview_collections["main"]
-        yorha_icon = pcoll["yorha"]
-        self.layout.menu(N2BLayoutObjectMenu.bl_idname, icon_value=yorha_icon.icon_id)
+        self.layout.operator(util.RecalculateObjectIndices.bl_idname)
+        self.layout.operator(util.RemoveUnusedVertexGroups.bl_idname)
+        self.layout.operator(util.MergeVertexGroupCopies.bl_idname)
+        self.layout.operator(util.DeleteLooseGeometrySelected.bl_idname)
+        self.layout.operator(util.DeleteLooseGeometryAll.bl_idname)
+        self.layout.operator(util.RipMeshByUVIslands.bl_idname)
+        self.layout.operator(CreateLayBoundingBox.bl_idname, icon="CUBE")
 
 
-class ImportNier2blender(bpy.types.Operator, ImportHelper):
+class ImportNierWmb(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata WMB File.'''
     bl_idname = "import_scene.wmb_data"
     bl_label = "Import WMB Data"
@@ -170,11 +170,11 @@ def importDat(only_extract, filepath):
     lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
     if os.path.isfile(lay_filepath):
         from .lay.importer import lay_importer
-        lay_importer.main(lay_filepath, __name__)
+        lay_importer.main(lay_filepath, __package__)
 
     return {'FINISHED'}
 
-class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
+class ImportNierDtt(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DTT (and DAT) File.'''
     bl_idname = "import_scene.dtt_data"
     bl_label = "Import DTT (and DAT) Data"
@@ -204,7 +204,7 @@ class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
         else:
             return importDat(self.only_extract, self.filepath)
 
-class ImportActualDATNier2blender(bpy.types.Operator, ImportHelper):
+class ImportNierDat(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DAT File.'''
     bl_idname = "import_scene.dat_data"
     bl_label = "Import DAT Data"
@@ -239,7 +239,7 @@ class ImportActualDATNier2blender(bpy.types.Operator, ImportHelper):
         lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
         if os.path.isfile(lay_filepath):
             from .lay.importer import lay_importer
-            lay_importer.main(lay_filepath, __name__)
+            lay_importer.main(lay_filepath, __package__)
 
         return {'FINISHED'}
 
@@ -261,7 +261,7 @@ class ImportActualDATNier2blender(bpy.types.Operator, ImportHelper):
         else:
             return self.doImport(self.only_extract, self.filepath)
 
-class ImportColNier2Blender(bpy.types.Operator, ImportHelper):
+class ImportNierCol(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata Col (Collision) File.'''
     bl_idname = "import_scene.col_data"
     bl_label = "Import Col Data"
@@ -273,7 +273,7 @@ class ImportColNier2Blender(bpy.types.Operator, ImportHelper):
         from .col.importer import col_importer
         return col_importer.main(self.filepath)
 
-class ImportLayNier2Blender(bpy.types.Operator, ImportHelper):
+class ImportNierLay(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata Lay (Layout) File.'''
     bl_idname = "import_scene.lay_data"
     bl_label = "Import Lay Data"
@@ -283,50 +283,9 @@ class ImportLayNier2Blender(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         from .lay.importer import lay_importer
-        return lay_importer.main(self.filepath, __name__)
+        return lay_importer.main(self.filepath, __package__)
 
-class SelectDirectory(bpy.types.Operator, ImportHelper):
-    '''Select Directory'''
-    bl_idname = "n2b.folder_select"
-    bl_label = "Select Directory"
-    filename_ext = ""
-    dirpath : StringProperty(name = "", description="Choose directory:", subtype='DIR_PATH')
-
-    target : bpy.props.StringProperty(options={'HIDDEN'})
-
-    def execute(self, context):
-        directory = os.path.dirname(self.filepath)
-        if self.target == "data005":
-            context.preferences.addons[__name__].preferences.data005_dir = directory
-        elif self.target == "data015":
-            context.preferences.addons[__name__].preferences.data015_dir = directory
-        else:
-            print("Invalid target", self.target)
-            return {"CANCELLED"}
-
-        return {'FINISHED'}
-
-class NieR2BlenderPreferences(bpy.types.AddonPreferences):
-    bl_idname = __package__
-    data005_dir : StringProperty(options={'HIDDEN'})
-    data015_dir : StringProperty(options={'HIDDEN'})
-
-    def draw(self, context):
-        layout = self.layout
-        
-        layout.label(text="Assign Directories Below If You Wish To Enable Bounding Box Visualization With Layout Import:")
-        box = layout.box()
-        box.label(text="Path To Extracted data005.cpk Directory:")
-        row = box.row(align=True)
-        row.prop(self, "data005_dir", text="")
-        row.operator("n2b.folder_select", icon="FILE_FOLDER", text="").target = "data005"
-
-        box.label(text="Path To Extracted data015.cpk Directory:")
-        row = box.row(align=True)
-        row.prop(self, "data015_dir", text="")
-        row.operator("n2b.folder_select", icon="FILE_FOLDER", text="").target = "data015"
-
-class NieR2BlenderCreateObjBBox(bpy.types.Operator):
+class CreateLayBoundingBox(bpy.types.Operator):
     """Create Layout Object Bounding Box"""
     bl_idname = "n2b.create_lay_bb"
     bl_label = "Create Layout Object Bounding Box"
@@ -335,59 +294,52 @@ class NieR2BlenderCreateObjBBox(bpy.types.Operator):
     def execute(self, context):
         from .lay.importer.lay_importer import getModelBoundingBox, createBoundingBoxObject
         for obj in bpy.context.selected_objects:
-            boundingBox = getModelBoundingBox(obj.name.split("_")[0], __name__)
+            boundingBox = getModelBoundingBox(obj.name.split("_")[0], __package__)
             if boundingBox:
                 createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
             else:
                 self.report({'WARNING'}, "Couldn't find dtt of " + obj.name)
         return {'FINISHED'}
 
-class N2BLayoutObjectMenu(bpy.types.Menu):
-    bl_idname = 'OBJECT_MT_n2blayout'
-    bl_label = 'NieR2Blender'
-    def draw(self, context):
-        self.layout.operator(NieR2BlenderCreateObjBBox.bl_idname, icon="CUBE")
-
 def menu_func_import(self, context):
     pcoll = preview_collections["main"]
     yorha_icon = pcoll["yorha"]
-    self.layout.operator(ImportDATNier2blender.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportNier2blender.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportActualDATNier2blender.bl_idname, text="DAT File for Nier:Automata (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportColNier2Blender.bl_idname, text="Collision File for Nier:Automata (.col)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportLayNier2Blender.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierWmb.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierDat.bl_idname, text="DAT File for Nier:Automata (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierCol.bl_idname, text="Collision File for Nier:Automata (.col)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierLay.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
 
 def menu_func_export(self, context):
     pcoll = preview_collections["main"]
     emil_icon = pcoll["emil"]
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(ExportBlender2NieR.bl_idname, text="WMB File for NieR:Automata (.wmb)", icon_value=emil_icon.icon_id)
-    self.layout.operator(ExportBlender2NieRCol.bl_idname, text="Collision File for NieR:Automata (.col)", icon_value=emil_icon.icon_id)
-    self.layout.operator(ExportBlender2NieRLay.bl_idname, text="Layout File for NieR:Automata (.lay)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierWmb.bl_idname, text="WMB File for NieR:Automata (.wmb)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierCol.bl_idname, text="Collision File for NieR:Automata (.col)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierLay.bl_idname, text="Layout File for NieR:Automata (.lay)", icon_value=emil_icon.icon_id)
 
 def menu_func_utils(self, context):
-    self.layout.menu(B2NObjectMenu.bl_idname)
+    pcoll = preview_collections["main"]
+    yorha_icon = pcoll["yorha"]
+    self.layout.menu(NierObjectMenu.bl_idname, icon_value=yorha_icon.icon_id)
 
 classes = (
-    ImportNier2blender,
-    ImportDATNier2blender,
-    ImportActualDATNier2blender,
-    ImportColNier2Blender,
-    ImportLayNier2Blender,
-    SelectDirectory,
-    NieR2BlenderPreferences,
-    NieR2BlenderCreateObjBBox,
-    N2BLayoutObjectMenu,
-    ExportBlender2NieR,
-    ExportBlender2NieRCol,
-    ExportBlender2NieRLay,
-    B2NObjectMenu,
-    util.B2NRecalculateObjectIndices,
-    util.B2NRemoveUnusedVertexGroups,
-    util.B2NMergeVertexGroupCopies,
-    util.B2NDeleteLooseGeometrySelected,
-    util.B2NDeleteLooseGeometryAll,
-    util.B2NRipMeshByUVIslands,
+    ImportNierWmb,
+    ImportNierDtt,
+    ImportNierDat,
+    ImportNierCol,
+    ImportNierLay,
+    CreateLayBoundingBox,
+    ExportNierWmb,
+    ExportNierCol,
+    ExportNierLay,
+    NierObjectMenu,
+    util.RecalculateObjectIndices,
+    util.RemoveUnusedVertexGroups,
+    util.MergeVertexGroupCopies,
+    util.DeleteLooseGeometrySelected,
+    util.DeleteLooseGeometryAll,
+    util.RipMeshByUVIslands,
 )
 
 preview_collections = {}
@@ -408,6 +360,7 @@ def register():
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
     col_ui_manager.register()
+    preferences.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.types.VIEW3D_MT_object.append(menu_func_utils)
@@ -428,6 +381,7 @@ def unregister():
     wta_wtp_ui_manager.unregister()
     dat_dtt_ui_manager.unregister()
     col_ui_manager.unregister()
+    preferences.unregister()
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
