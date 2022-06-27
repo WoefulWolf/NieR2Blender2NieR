@@ -3,10 +3,9 @@ from .lay import Lay
 from .util import *
 
 def main(layFilePath, addonName):
-    layFile = open(layFilePath, "rb")
-    print("Parsing Lay file...", layFilePath)
-    lay = Lay(layFile)
-    layFile.close()
+    with open(layFilePath, "rb") as layFile:
+        print("Parsing Lay file...", layFilePath)
+        lay = Lay(layFile)
 
     # Create LAY Collection
     layCollection = bpy.data.collections.get("LAY")
@@ -132,25 +131,24 @@ def getModelBoundingBox(modelName, addonName):
     if not fileFound:
         return None
 
-    modelDTTFile = open(filePath, "rb")
-    id = modelDTTFile.read(4)
-    numFiles = to_uint(modelDTTFile.read(4))
-    fileOffsetsOffset = to_uint(modelDTTFile.read(4))
-    fileExtensionsOffset = to_uint(modelDTTFile.read(4))
+    with open(filePath, "rb") as modelDTTFile:
+        id = modelDTTFile.read(4)
+        numFiles = to_uint(modelDTTFile.read(4))
+        fileOffsetsOffset = to_uint(modelDTTFile.read(4))
+        fileExtensionsOffset = to_uint(modelDTTFile.read(4))
 
-    fileOffsets = []
-    modelDTTFile.seek(fileOffsetsOffset)
-    for i in range(numFiles):
-        fileOffsets.append(to_uint(modelDTTFile.read(4)))
-    
-    fileExtensions = []
-    modelDTTFile.seek(fileExtensionsOffset)
-    for i in range(numFiles):
-        fileExtensions.append(to_string(modelDTTFile.read(4)))
+        fileOffsets = []
+        modelDTTFile.seek(fileOffsetsOffset)
+        for i in range(numFiles):
+            fileOffsets.append(to_uint(modelDTTFile.read(4)))
 
-    for i, ext in enumerate(fileExtensions):
-        if ext == "wmb":
-            modelDTTFile.seek(fileOffsets[i] + 16)
-            boundingBox = [to_float(modelDTTFile.read(4)) for val in range(6)]
-            modelDTTFile.close()
-            return boundingBox
+        fileExtensions = []
+        modelDTTFile.seek(fileExtensionsOffset)
+        for i in range(numFiles):
+            fileExtensions.append(to_string(modelDTTFile.read(4)))
+
+        for i, ext in enumerate(fileExtensions):
+            if ext == "wmb":
+                modelDTTFile.seek(fileOffsets[i] + 16)
+                boundingBox = [to_float(modelDTTFile.read(4)) for val in range(6)]
+                return boundingBox

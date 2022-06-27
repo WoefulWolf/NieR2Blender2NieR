@@ -67,10 +67,9 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 	create_dir(extract_dir)
 	fp.seek(FileOffset)
 	FileContent = fp.read(Size)
-	outfile = open(extract_dir + '/'+filename,'wb')
-	print("extracting file %s to %s/%s"%(filename,extract_dir,filename))
-	outfile.write(FileContent)
-	outfile.close()
+	with open(extract_dir + '/'+filename,'wb') as outfile:
+		print("extracting file %s to %s/%s"%(filename,extract_dir,filename))
+		outfile.write(FileContent)
 	if filename.find('wtp') > -1 and False:  # Removed due to not needed anymore when using Blender DTT import.
 		wtp_fp = open(extract_dir + '/'+filename,"rb")
 		content = wtp_fp.read(Size)
@@ -105,17 +104,15 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	# Extraction
 	filename = 'file_order.metadata'
 	extract_dir_sub = extract_dir + '\\' + filename
-	outfile = open(extract_dir_sub,'wb')
+	with open(extract_dir_sub,'wb') as outfile:
 
-	# Header
-	outfile.write(struct.pack('<i', FileCount))
-	outfile.write(struct.pack('<i', fileNameSize))
+		# Header
+		outfile.write(struct.pack('<i', FileCount))
+		outfile.write(struct.pack('<i', fileNameSize))
 
-	#Filenames
-	for fileName in fileNames:
-		outfile.write(fileName)
-
-	outfile.close()
+		#Filenames
+		for fileName in fileNames:
+			outfile.write(fileName)
 
 	# hash_data.metadata
 	# Header
@@ -146,45 +143,43 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	# Extraction
 	filename = 'hash_data.metadata'
 	extract_dir_sub = extract_dir + '\\' + filename
-	outfile = open(extract_dir_sub,'wb')
+	with open(extract_dir_sub,'wb') as outfile:
 
-		# Header
-	outfile.write(struct.pack('<i', preHashShift))
-	outfile.write(struct.pack('<i', bucketOffsetsOffset))
-	outfile.write(struct.pack('<i', hashesOffset))
-	outfile.write(struct.pack('<i', fileIndicesOffset))
+			# Header
+		outfile.write(struct.pack('<i', preHashShift))
+		outfile.write(struct.pack('<i', bucketOffsetsOffset))
+		outfile.write(struct.pack('<i', hashesOffset))
+		outfile.write(struct.pack('<i', fileIndicesOffset))
 
-		# Bucket Offsets
-	for i in bucketOffsets:
-		#print(bucketOffsets)
-		outfile.write(struct.pack('<H', i))
+			# Bucket Offsets
+		for i in bucketOffsets:
+			#print(bucketOffsets)
+			outfile.write(struct.pack('<H', i))
 
-		# Hashes
-	for i in hashes:
-		outfile.write(i)
+			# Hashes
+		for i in hashes:
+			outfile.write(i)
 
-		# File Indices
-	for i in fileIndices:
-		#print(i)
-		outfile.write(struct.pack('<H', i))
-
-	outfile.close()
+			# File Indices
+		for i in fileIndices:
+			#print(i)
+			outfile.write(struct.pack('<H', i))
 
 
 def main(filename, extract_dir, ROOT_DIR):
-	fp = open(filename,"rb")
-	headers = read_header(fp)
-	if headers:
-		FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset = headers
+	with open(filename,"rb") as fp:
+		headers = read_header(fp)
+		if headers:
+			FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset = headers
 
-		for i in range(FileCount):
-			extract_dir_sub = ''
-			index,Filename,FileOffset,Size,Extension = get_fileinfo(fp, i, FileTableOffset,ExtensionTableOffset, NameTableOffset,SizeTableOffset)
-			if extract_dir != '':
-				extract_dir_sub = extract_dir + '\\' + filename.replace(ROOT_DIR ,'') 
-				extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
-        
-		extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset)
+			for i in range(FileCount):
+				extract_dir_sub = ''
+				index,Filename,FileOffset,Size,Extension = get_fileinfo(fp, i, FileTableOffset,ExtensionTableOffset, NameTableOffset,SizeTableOffset)
+				if extract_dir != '':
+					extract_dir_sub = extract_dir + '\\' + filename.replace(ROOT_DIR ,'') 
+					extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
+			
+			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset)
 
 	return Filename
 

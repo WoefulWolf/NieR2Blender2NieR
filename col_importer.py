@@ -66,10 +66,9 @@ def main(colFilePath):
                         space.shading.color_type = "OBJECT"
                         space.shading.show_backface_culling = True
 
-    colFile = open(colFilePath, "rb")
-    print("Parsing Col file...", colFilePath)
-    col = Col(colFile)
-    colFile.close()
+    with open(colFilePath, "rb") as colFile:
+        print("Parsing Col file...", colFilePath)
+        col = Col(colFile)
 
     # Create COL Collection
     colCollection = bpy.data.collections.get("COL")
