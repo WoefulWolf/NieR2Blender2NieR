@@ -132,10 +132,11 @@ def makeWtaMaterial(matName, textures: List[Tuple[str, str, str]]):
 class GetMaterialsOperator(bpy.types.Operator):
     '''Fetch all NieR:Automata materials in scene'''
     bl_idname = "na.get_wta_materials"
-    bl_label = "Fetch NieR:Automata Materials"
+    bl_label = "Fetch All Materials"
     bl_options = {"UNDO"}
 
     def execute(self, context):
+        newMaterialsAdded = 0
         autoTextureWarnings = []
         context.scene.WTAMaterials.clear()
         for mat in getUsedMaterials():
@@ -145,6 +146,7 @@ class GetMaterialsOperator(bpy.types.Operator):
                     for mapType, id in mat.items()
                     if isTextureTypeSupported(mapType)
                 ]
+                newMaterialsAdded += 1
                 makeWtaMaterial(mat.name, wtaTextures)
 
                 autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
@@ -152,6 +154,8 @@ class GetMaterialsOperator(bpy.types.Operator):
                 print(f"Error fetching material {mat.name}: {e}")
 
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
+
+        self.report({"INFO"}, f"Fetched {newMaterialsAdded} material{'s' if newMaterialsAdded != 1 else ''}")
 
         return {'FINISHED'}
 
@@ -176,13 +180,13 @@ class GetNewMaterialsOperator(bpy.types.Operator):
                 continue
 
             try:
-                newMaterialsAdded += 1
                 wtaTextures: List[Tuple[str, str, str]] = [
                     (mapType, id, "None")
                     for mapType, id in mat.items()
                     if isTextureTypeSupported(mapType)
                 ]
                 makeWtaMaterial(mat.name, wtaTextures)
+                newMaterialsAdded += 1
                 autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
             except Exception as e:
                 print(f"Error fetching material {mat.name}: {e}")
@@ -433,7 +437,7 @@ class MassTextureReplacer(bpy.types.Operator):
         return{'FINISHED'}
 
 class WTA_WTP_PT_Export(bpy.types.Panel):
-    bl_label = "NieR:Automata WTP/WTA Export"
+    bl_label = "NieR:Automata WTP/WTA Textures"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "output"
@@ -442,26 +446,18 @@ class WTA_WTP_PT_Export(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        #row = layout.row()
-        #row.operator("na.purge_materials")
-
         row = layout.row()
-        row.scale_y = 2.0
+        row.ui_units_x = .5
+        row.scale_y = 1.5
         row.operator("na.get_wta_materials")
-        row = layout.row()
         row.operator("na.get_new_wta_materials")
 
         row = layout.row()
+        row.scale_y = 1.25
         row.operator("na.assign_original")
 
         row = layout.row()
-        row.operator("na.export_wtp")
-        row.operator("na.export_wta")
-
-        pad = layout.row()
-        row = layout.row()
-        row.label(text="Materials:")
-        row = layout.row()
+        row.scale_y = 1.5
         row.operator("na.sync_material_identifiers")
         row.operator("na.sync_blender_materials")
 

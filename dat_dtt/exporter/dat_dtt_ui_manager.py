@@ -61,7 +61,7 @@ class ExportDTTOperator(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
 class DAT_DTT_PT_Export(bpy.types.Panel):
-    bl_label = "NieR:Automata DAT/DTT Export"
+    bl_label = "NieR:Automata Export"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "output"
@@ -70,75 +70,56 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        row = layout.row()
-        box = row.box()
-        row = box.row()
+        box = layout.box()
+        row = box.row(align=True)
+        row.scale_y = 1.125
+        row.ui_units_y = 1.125
         row.label(text="DAT Directory:")
         row.prop(context.scene, "DatDir", text="")
         row.operator("na.folder_select", icon="FILE_FOLDER", text="").target = "dat"
 
-        row = layout.row()
-        box = row.box()
-        row = box.row()
+        row = box.row(align=True)
+        row.scale_y = 1.125
+        row.ui_units_y = 1.125
         row.label(text="DTT Directory:")
         row.prop(context.scene, "DttDir", text="")
         row.operator("na.folder_select", icon="FILE_FOLDER", text="").target = "dtt"
 
-        row = layout.row()
-        row.scale_y = 2.0
-        row.operator("na.export_dat")
-        row.operator("na.export_dtt")
-
-class DAT_DTT_PT_ExportAll(bpy.types.Panel):
-    bl_label = "One Click Export All"
-    bl_parent_id = "DAT_DTT_PT_Export"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "output"
-
-    def draw(self, context):
-        layout = self.layout
-        row = layout.row(align=True)
+        row = box.row(align=True)
+        row.scale_y = 1.125
+        row.ui_units_y = 1.125
         row.label(text="Base Name")
         row.prop(context.scene, "ExportFileName", text="")
         row.operator("na.get_base_name", icon="LOOP_BACK", text="")
-        row = layout.row(align=True)
+        row = box.row(align=True)
+        row.scale_y = 1.125
+        row.ui_units_y = 1.125
         row.label(text="DAT/DTT Export Directory")
         row.prop(context.scene, "DatDttExportDir", text="")
         row.operator("na.folder_select", icon="FILE_FOLDER", text="").target = "datdttdir"
-        
-        row = layout.row()
-        row.scale_y = 2.0
-        row.operator("na.export_all", text="One Click Export All", icon="EXPORT")
 
-        row = layout.row()
-        row.label(text="Select Export Steps")
-        row = layout.row(align=True)
+        box = layout.box()
+        row = box.row()
+        row.alignment = "CENTER"
+        row.label(text="Export Steps")
+        row = box.row(align=True)
         row.prop(context.scene.ExportAllSteps, "useWmbStep", text="WMB", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWmbStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtpStep", text="WTP", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtpStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtaStep", text="WTA", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtaStep else "ADD")
-        row = layout.row(align=True)
-        row.prop(context.scene.ExportAllSteps, "useColStep", text="COL", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useColStep else "ADD")
-        row.prop(context.scene.ExportAllSteps, "useLayStep", text="LAY", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useLayStep else "ADD")
+        row = box.row(align=True)
+        if context.scene.ExportAllSteps.useColStep or "COL" in bpy.data.collections:
+            row.prop(context.scene.ExportAllSteps, "useColStep", text="COL", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useColStep else "ADD")
+        if context.scene.ExportAllSteps.useLayStep or "LAY" in bpy.data.collections:
+            row.prop(context.scene.ExportAllSteps, "useLayStep", text="LAY", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useLayStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDatStep", text="DAT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDatStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDttStep", text="DTT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDttStep else "ADD")
 
         layout.separator()
-        col = layout.column()
-        self.label_multiline(
-            context,
-            "INFO: WMB Export will not center origins, triangulate meshes or delete loose geometry. If you want that," +
-            " export the WMB manually and uncheck \"WMB\" below.",
-            col
-        )
 
-    def label_multiline(self, context, text, parent):
-        '''Stolen from https://b3d.interplanety.org/en/multiline-text-in-blender-interface-panels/'''
-        chars = int(context.region.width / (6 *  bpy.context.preferences.system.ui_scale))   # 6 pix on 1 character
-        wrapper = textwrap.TextWrapper(width=chars)
-        text_lines = wrapper.wrap(text=text)
-        for text_line in text_lines:
-            parent.label(text=text_line)
+        row = layout.row()
+        row.scale_y = 2.0
+        row.operator("na.export_all", text="One Click Export All", icon="EXPORT")
+
 
 class SelectFolder(bpy.types.Operator, ImportHelper):
     '''Select Folder'''
@@ -224,7 +205,7 @@ class ExportAll(bpy.types.Operator):
             exportedFilesCount += 1
         from ...lay.exporter import lay_exporter
         if exportSteps.useLayStep:
-            print("Exporting COL")
+            print("Exporting LAY")
             lay_exporter.main(layFilePath)
             exportedFilesCount += 1
         from . import export_dat
@@ -262,7 +243,6 @@ class GetBaseName(bpy.types.Operator):
 def register():
     bpy.utils.register_class(ExportAllSteps)
     bpy.utils.register_class(DAT_DTT_PT_Export)
-    bpy.utils.register_class(DAT_DTT_PT_ExportAll)
     bpy.utils.register_class(SelectFolder)
     bpy.utils.register_class(ExportDATOperator)
     bpy.utils.register_class(ExportDTTOperator)
@@ -288,7 +268,6 @@ def register():
 def unregister():
     bpy.utils.unregister_class(ExportAllSteps)
     bpy.utils.unregister_class(DAT_DTT_PT_Export)
-    bpy.utils.unregister_class(DAT_DTT_PT_ExportAll)
     bpy.utils.unregister_class(SelectFolder)
     bpy.utils.unregister_class(ExportDATOperator)
     bpy.utils.unregister_class(ExportDTTOperator)
