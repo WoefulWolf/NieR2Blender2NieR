@@ -4,12 +4,32 @@ import struct
 
 import bmesh
 import bpy
+import numpy as np
 from mathutils import Vector
+
 
 def create_wmb(filepath):
     print('Creating wmb file: ', filepath)
     wmb_file = open(filepath, 'wb')
     return wmb_file
+
+def to_float(bs):
+	return struct.unpack("<f", bs)[0]
+
+def to_float16(bs):
+	return struct.unpack("<e", bs)[0]
+
+def to_uint(bs):
+	return (int.from_bytes(bs, byteorder='little', signed=False))
+
+def to_int(bs):
+	return (int.from_bytes(bs, byteorder='little', signed=True))
+
+def to_string(bs, encoding = 'utf8'):
+	return bs.split(b'\x00')[0].decode(encoding)
+
+def to_ushort(bs):
+	return struct.unpack("<H", bs)[0]
 
 def write_float(file, float):
     entry = struct.pack('<f', float)
@@ -162,7 +182,7 @@ class RemoveUnusedVertexGroups(bpy.types.Operator):
                 if g.weight > 0.0:
                     vgroup_used[g.group] = True
                     vgroup_name = vgroup_names[g.group]
-                    armatch = re.search('((.R|.L)(.(\d){1,}){0,1})(?!.)', vgroup_name)
+                    armatch = re.search('((.R|.L)(.(\d)+)?)(?!.)', vgroup_name)
                     if armatch != None:
                         tag = armatch.group()
                         mirror_tag =  tag.replace(".R", ".L") if armatch.group(2) == ".R" else tag.replace(".L", ".R")
@@ -332,23 +352,6 @@ def objectsInCollectionInOrder(collectionName):
 
 def allObjectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey) if collectionName in bpy.data.collections else []
-def to_float(bs):
-	return struct.unpack("<f", bs)[0]
-
-def to_float16(bs):
-	return struct.unpack("<e", bs)[0]
-
-def to_uint(bs):
-	return (int.from_bytes(bs, byteorder='little', signed=False))
-
-def to_int(bs):
-	return (int.from_bytes(bs, byteorder='little', signed=True))
-
-def to_string(bs, encoding = 'utf8'):
-	return bs.split(b'\x00')[0].decode(encoding)
-
-def to_ushort(bs):
-	return struct.unpack("<H", bs)[0]
 
 def create_dir(dirpath):
 	if not os.path.exists(dirpath):
@@ -370,3 +373,65 @@ def print_class(obj):
 
 def current_postion(fp):
 	print(hex(fp.tell()))
+
+def getObjectCenter(obj):
+    obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
+    #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
+    return obj_local_bbox_center
+
+def getObjectVolume(obj):
+    return np.prod(obj.dimensions)
+
+def volumeInsideOther(volumeCenter, volumeScale, otherVolumeCenter, otherVolumeScale):
+    xVals = [volumeCenter[0] - volumeScale[0]/2, volumeCenter[0] + volumeScale[0]/2]
+    yVals = [volumeCenter[1] - volumeScale[1]/2, volumeCenter[1] + volumeScale[1]/2]
+    zVals = [volumeCenter[2] - volumeScale[2]/2, volumeCenter[2] + volumeScale[2]/2]
+
+    other_xVals = [otherVolumeCenter[0] - otherVolumeScale[0]/2, otherVolumeCenter[0] + otherVolumeScale[0]/2]
+    other_yVals = [otherVolumeCenter[1] - otherVolumeScale[1]/2, otherVolumeCenter[1] + otherVolumeScale[1]/2]
+    other_zVals = [otherVolumeCenter[2] - otherVolumeScale[2]/2, otherVolumeCenter[2] + otherVolumeScale[2]/2]
+
+    if (max(xVals) <= max(other_xVals) and max(yVals) <= max(other_yVals) and max(zVals) <= max(other_zVals)):
+        if (min(xVals) >= min(other_xVals) and min(yVals) >= min(other_yVals) and min(zVals) >= min(other_zVals)):
+            return True
+    return False
+
+def getDistanceTo(pos, otherPos):
+    return np.linalg.norm(otherPos - pos)
+
+def getVolumeSurrounding(volumeCenter, volumeScale, otherVolumeCenter, otherVolumeScale):
+    xVals = [volumeCenter[0] - volumeScale[0]/2, volumeCenter[0] + volumeScale[0]/2, otherVolumeCenter[0] - otherVolumeScale[0]/2, otherVolumeCenter[0] + otherVolumeScale[0]/2]
+    yVals = [volumeCenter[1] - volumeScale[1]/2, volumeCenter[1] + volumeScale[1]/2, otherVolumeCenter[1] - otherVolumeScale[1]/2, otherVolumeCenter[1] + otherVolumeScale[1]/2]
+    zVals = [volumeCenter[2] - volumeScale[2]/2, volumeCenter[2] + volumeScale[2]/2, otherVolumeCenter[2] - otherVolumeScale[2]/2, otherVolumeCenter[2] + otherVolumeScale[2]/2]
+
+    minX = min(xVals)
+    maxX = max(xVals)
+    minY = min(yVals)
+    maxY = max(yVals)
+    minZ = min(zVals)
+    maxZ = max(zVals)
+
+    midPoint = [(minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2]
+    scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
+    return midPoint, scale
+
+class custom_ColTreeNode:
+    def __init__(self):
+        self.index = -1
+        self.bObj = None
+
+        self.position = [0, 0, 0]
+        self.scale = [1, 1, 1]
+
+        self.left = -1
+        self.right = -1
+
+        self.offsetMeshIndices = 0
+        self.meshIndexCount = 0
+        self.meshIndices = []
+
+        self.structSize = 12 + 12 + (4 * 4)
+
+    def getVolume(self):
+        return np.prod(self.scale)
+

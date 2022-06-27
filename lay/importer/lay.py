@@ -62,8 +62,8 @@ class Lay:
         for i in range(self.header.instancesCount):
             self.instances.append(Instance(layFile))
 
-        currentInstanceIndx = 0
+        currentInstanceIndex = 0
         for asset in self.assets:
             for i in range(asset.instanceCount):
-                asset.instances.append(self.instances[currentInstanceIndx])
-                currentInstanceIndx = currentInstanceIndx + 1
+                asset.instances.append(self.instances[currentInstanceIndex])
+                currentInstanceIndex = currentInstanceIndex + 1

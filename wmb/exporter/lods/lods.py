@@ -17,9 +17,9 @@ class c_lod(object):
 
                 for slot in batch.blenderObj.material_slots:
                     material = slot.material
-                for mat_indx, mat in enumerate(getUsedMaterials()):
+                for mat_index, mat in enumerate(getUsedMaterials()):
                     if mat == material:
-                        materialIndex = mat_indx
+                        materialIndex = mat_index
                         break
                 
                 colTreeNodeIndex = batch.blenderObj['colTreeNodeIndex']

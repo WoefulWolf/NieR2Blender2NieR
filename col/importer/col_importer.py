@@ -1,63 +1,11 @@
-import bpy
 import math
+
+import bpy
 
 from .col import Col
 
-collisionTypes = [
-    ("-1", "UNKNOWN", ""),
-    ("3", "Block Actors", "If modifier is enabled, this will not block players who are jumping (e.g. to prevent accidentally walking off ledges)."),
-    ("88", "Water", ""),
-    ("127", "Grabbable Block All", ""),
-    ("255", "Block All", "")
-]
-
-# Identified by NSA Cloud
-surfaceTypes = [
-    ("-1", "UNKNOWN", ""),
-    ("0", "Concrete1", ""),
-    ("1", "Dirt", ""),
-    ("2", "Concrete2", ""),
-    ("3", "Metal Floor", ""),
-    ("4", "Rubble", ""),
-    ("5", "Metal Grate", ""),
-    ("6", "Gravel", ""),
-    ("7", "Rope Bridge", ""),
-    ("8", "Grass", ""),
-    ("9", "Wood Plank", ""),
-    ("11", "Water", ""),
-    ("12", "Sand", ""),
-    ("13", "Rocky Gravel 1", ""),
-    ("15", "Mud", ""),
-    ("16", "Rocky Gravel 2", ""),
-    ("17", "Concrete 3", ""),
-    ("18", "Bunker Floor", ""),
-    ("22", "Concrete 4", ""),
-    ("23", "Car", ""),
-    ("24", "Flowers", "")
-]
-
-def setColourByCollisionType(obj):
-    opacity = 1.0
-    collisionType = int(obj.collisionType)
-    if collisionType == 127:
-        obj.color = [0.0, 1.0, 0.0, opacity]
-    elif collisionType == 88:
-        obj.color = [0.0, 0.5, 1.0, opacity]
-    elif collisionType == 3:
-        obj.color = [1.0, 0.5, 0.0, opacity]
-    elif collisionType == 255:
-        obj.color = [1.0, 0.0, 0.0, opacity]
-    else:
-        obj.color = [1.0, 0.45, 1.0, opacity]
-
-def updateCollisionType(self, context):
-    setColourByCollisionType(self)
 
 def main(colFilePath):
-    bpy.types.Object.collisionType = bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType)
-    bpy.types.Object.slidable = bpy.props.BoolProperty(name="Slidable/Modifier")
-    bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
-
     # Setup Viewport
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
@@ -96,7 +44,7 @@ def main(colFilePath):
             try:
                 obj.collisionType = str(mesh.collisionType)
             except:
-                print("[!] Collision mesh flagged with unknown collsionType:", mesh.collisionType)
+                print("[!] Collision mesh flagged with unknown collisionType:", mesh.collisionType)
                 obj.collisionType = "-1"
                 obj["UNKNOWN_collisionType"] = mesh.collisionType
 

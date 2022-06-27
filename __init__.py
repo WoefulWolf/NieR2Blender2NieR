@@ -7,15 +7,15 @@ bl_info = {
     "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL files.",
     "category": "Import-Export"}
 
+import os
 import traceback
 
 import bpy
-import os
-from bpy.props import StringProperty, CollectionProperty
+from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import util
 from . import preferences
+from . import util
 from .col.exporter import col_ui_manager, col_exporter
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .wta_wtp.exporter import wta_wtp_ui_manager
@@ -43,9 +43,9 @@ class ExportNierCol(bpy.types.Operator, ExportHelper):
     filename_ext = ".col"
     filter_glob: StringProperty(default="*.col", options={'HIDDEN'})
 
-    generateColTree: bpy.props.BoolProperty(name="Generate Collision Tree", description="This automatically generates colTreeNodes based on your geometry and assignes the right meshes to the right colTreeNodes. Only disable it if you are manually adjusting them", default=True)
+    generateColTree: bpy.props.BoolProperty(name="Generate Collision Tree", description="This automatically generates colTreeNodes based on your geometry and assigns the right meshes to the right colTreeNodes. Only disable it if you are manually adjusting them", default=True)
     centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended)", default=True)
-    triangluate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. (Slow)", default=True)
+    triangulate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. (Slow)", default=True)
 
     def execute(self, context):
 
@@ -53,7 +53,7 @@ class ExportNierCol(bpy.types.Operator, ExportHelper):
             print("Centering origins...")
             col_exporter.centre_origins()
 
-        if self.triangluate_meshes:
+        if self.triangulate_meshes:
             print("Triangulating meshes...")
             col_exporter.triangulate_meshes() 
 
@@ -70,7 +70,7 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
 
     centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended)", default=True)
     #purge_materials: bpy.props.BoolProperty(name="Purge Materials", description="This permanently removes all unused materials from the .blend file before exporting. Enable if you have invalid materials remaining in your project", default=False)
-    triangluate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times", default=True)
+    triangulate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times", default=True)
     delete_loose_geometry: bpy.props.BoolProperty(name="Delete Loose Geometry", description="This automatically runs the Blender2NieR 'Delete Loose Geometry (All)' operator before exporting. It deletes all loose vertices or edges that could result in unwanted results in-game", default=True)
 
     def execute(self, context):
@@ -89,7 +89,7 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
             wmb_exporter.purge_unused_materials()
         """
 
-        if self.triangluate_meshes:
+        if self.triangulate_meshes:
             print("Triangulating meshes...")
             wmb_exporter.triangulate_meshes() 
 

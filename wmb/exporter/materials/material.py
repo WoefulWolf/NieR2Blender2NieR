@@ -119,7 +119,7 @@ class c_material(object):
 
         self.offsetTechniqueName = self.offsetShaderName + len(self.b_material['Shader_Name']) + 1
 
-        self.unknown1 = 1                           # This proabably also the same mostly
+        self.unknown1 = 1                           # This probably also the same mostly
 
         self.offsetTextures = self.offsetTechniqueName + len(self.b_material['Technique_Name']) + 1
 

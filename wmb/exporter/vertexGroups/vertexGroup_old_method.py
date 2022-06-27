@@ -312,7 +312,7 @@ class c_vertexGroup(object):
 
         self.unknownOffset = [0, 0]                                      # Don't question it, it's unknown okay?
 
-        self.unknownSize = [0, 0]                                        # THIS IS UNKOWN TOO OKAY? LEAVE ME BE
+        self.unknownSize = [0, 0]                                        # THIS IS UNKNOWN TOO OKAY? LEAVE ME BE
 
         self.numVertexes = numVertices                                            
 

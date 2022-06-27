@@ -59,8 +59,8 @@ class c_b_boneSets(object):
                 if obj['boneSetIndex'] != -1:
                     for group in obj.vertex_groups:
                         boneID = int(group.name.replace("bone", ""))
-                        boneMapIndx = boneMap.index(boneID)
-                        vertex_group_bones.append(boneMapIndx)
+                        boneMapIndex = boneMap.index(boneID)
+                        vertex_group_bones.append(boneMapIndex)
                     if vertex_group_bones not in b_boneSets:
                         b_boneSets.append(vertex_group_bones)
                         obj["boneSetIndex"] = len(b_boneSets)-1

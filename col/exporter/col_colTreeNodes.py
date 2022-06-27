@@ -1,5 +1,5 @@
 import math
-import numpy as np
+
 
 def update_offsetMeshIndices(colTreeNodes, meshIndicesStartOffset):
     currentOffset = meshIndicesStartOffset
@@ -22,7 +22,7 @@ def inside_volume(obj, node, precision):
     node_y_min = round(node_center[1] - node_scale[1], precision)
     node_y_max = round(node_center[1] + node_scale[1], precision)
 
-    node_z_min = round(node_center[2] - node_scale[2], precisi`on)
+    node_z_min = round(node_center[2] - node_scale[2], precision)
     node_z_max = round(node_center[2] + node_scale[2], precision)
 
     obj_x_min = round(obj_global_bbox_center[0] - obj.dimensions.x/2, precision)
@@ -64,28 +64,6 @@ def calculate_meshIndices(colTreeNodes):
     else:
         print("[>] All meshes found appropriate nodes! :D")
 """
-def getObjectCenter(obj):
-    obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
-    #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
-    return obj_local_bbox_center
-
-def getObjectVolume(obj):
-    return np.prod(obj.dimensions)
-
-def volumeInsideOther(volumeCenter, volumeScale, otherVolumeCenter, otherVolumeScale):
-    xVals = [volumeCenter[0] - volumeScale[0]/2, volumeCenter[0] + volumeScale[0]/2]
-    yVals = [volumeCenter[1] - volumeScale[1]/2, volumeCenter[1] + volumeScale[1]/2]
-    zVals = [volumeCenter[2] - volumeScale[2]/2, volumeCenter[2] + volumeScale[2]/2]
-
-    other_xVals = [otherVolumeCenter[0] - otherVolumeScale[0]/2, otherVolumeCenter[0] + otherVolumeScale[0]/2]
-    other_yVals = [otherVolumeCenter[1] - otherVolumeScale[1]/2, otherVolumeCenter[1] + otherVolumeScale[1]/2]
-    other_zVals = [otherVolumeCenter[2] - otherVolumeScale[2]/2, otherVolumeCenter[2] + otherVolumeScale[2]/2]
-
-    if (max(xVals) <= max(other_xVals) and max(yVals) <= max(other_yVals) and max(zVals) <= max(other_zVals)):
-        if (min(xVals) >= min(other_xVals) and min(yVals) >= min(other_yVals) and min(zVals) >= min(other_zVals)):
-            return True
-    return False
-
 def getColMeshIndex(objToFind):
     colMeshObjs = [obj for obj in objectsInCollectionInOrder("COL") if obj.type == 'MESH']
     for i, obj in enumerate(colMeshObjs):
@@ -93,49 +71,10 @@ def getColMeshIndex(objToFind):
             return i
     return -1
 
-def getDistanceTo(pos, otherPos):
-    return np.linalg.norm(otherPos - pos)
-
-def getVolumeSurrounding(volumeCenter, volumeScale, otherVolumeCenter, otherVolumeScale):
-    xVals = [volumeCenter[0] - volumeScale[0]/2, volumeCenter[0] + volumeScale[0]/2, otherVolumeCenter[0] - otherVolumeScale[0]/2, otherVolumeCenter[0] + otherVolumeScale[0]/2]
-    yVals = [volumeCenter[1] - volumeScale[1]/2, volumeCenter[1] + volumeScale[1]/2, otherVolumeCenter[1] - otherVolumeScale[1]/2, otherVolumeCenter[1] + otherVolumeScale[1]/2]
-    zVals = [volumeCenter[2] - volumeScale[2]/2, volumeCenter[2] + volumeScale[2]/2, otherVolumeCenter[2] - otherVolumeScale[2]/2, otherVolumeCenter[2] + otherVolumeScale[2]/2]
-
-    minX = min(xVals)
-    maxX = max(xVals)
-    minY = min(yVals)
-    maxY = max(yVals)
-    minZ = min(zVals)
-    maxZ = max(zVals)
-
-    midPoint = [(minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2]
-    scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
-    return midPoint, scale
-
 # Basic generation algorithm:
-# 1. Find unassigned mesh with largest volume and create a volume for it.
+# 1. Find unassigned mesh with the largest volume and create a volume for it.
 # 2. Look for any other meshes that are also in aforementioned volume and assign to it.
 # 3. If no more meshes can be assigned to the volume, return to step 1 until all meshes are assigned to a volume.
-
-class custom_ColTreeNode:
-    def __init__(self):
-        self.index = -1
-        self.bObj = None
-
-        self.position = [0, 0, 0]
-        self.scale = [1, 1, 1]
-        
-        self.left = -1
-        self.right = -1
-
-        self.offsetMeshIndices = 0
-        self.meshIndexCount = 0
-        self.meshIndices = []
-
-        self.structSize = 12 + 12 + (4*4)
-
-    def getVolume(self):
-        return np.prod(self.scale)
 
 def generate_colTreeNodes():
     # Create and setup collection
@@ -267,7 +206,7 @@ def generate_colTreeNodes():
         deepest_nodes = new_nodes + unassigned_nodes
         #print("Number of nodes generated for this level...", len(deepest_nodes))
 
-    # Lets fix the ordering of the tree in Blender
+    # Let's fix the ordering of the tree in Blender
     indexOffset = len(nodes) - 1
     for node in nodes:
         node.index = indexOffset - node.index

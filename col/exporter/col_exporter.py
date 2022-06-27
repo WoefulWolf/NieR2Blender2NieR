@@ -26,7 +26,7 @@ def main(filepath, generateColTree):
     print("Writing ColTreeNodes...")
     write_col_colTreeNodes(col_file, data)
 
-    print("Finished exporting", filepath, "\nGoodluck! :S")
+    print("Finished exporting", filepath, "\nGood luck! :S")
 
     col_file.flush()
     col_file.close()
@@ -35,7 +35,7 @@ def triangulate_meshes():
     bpy.ops.object.mode_set(mode='OBJECT')
     for obj in bpy.data.collections['COL'].all_objects:
         if obj.type == 'MESH':
-            # Trangulate
+            # Triangulate
             me = obj.data
             bm = bmesh.new()
             bm.from_mesh(me)

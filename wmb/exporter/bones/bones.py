@@ -17,7 +17,7 @@ class c_bones(object):
             if numBones > 1:
                 for obj in bpy.data.collections['WMB'].all_objects:
                     if obj.type == 'ARMATURE':
-                        for indx, bone in enumerate(obj.data.bones):
+                        for bone in obj.data.bones:
                             ID = bone['ID']
 
                             if bone.parent:

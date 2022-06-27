@@ -22,7 +22,7 @@ def main(filepath):
     print("Writing Instances:")
     write_instances(lay_file, data)
 
-    print("Finished exporting", filepath, "\nGoodluck! :V")
+    print("Finished exporting", filepath, "\nGood luck! :V")
 
     lay_file.flush()
     lay_file.close()

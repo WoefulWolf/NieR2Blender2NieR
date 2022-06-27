@@ -43,7 +43,7 @@ def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTA
     # group blender textures by name
     def splitName(name: str, offset: int) -> Tuple[str, int]:
         """example: 'g_albedoMap1' -> ('g_albedoMap', 1 + offset)"""
-        nameParts = re.match(r"^([^\d]+)([\d]*)", name)
+        nameParts = re.match(r"^(\D+)(\d*)", name)
         if not nameParts:
             return None, -1
         baseName = nameParts.group(1)
@@ -88,7 +88,7 @@ def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTA
         if baseName in groupedTextures and len(groupedTextures[baseName]) > index:
             newTexPath = groupedTextures[baseName][index]
         # if out of range and multiple textures with same name, try previous
-        elif baseName in groupedTextures and index != -1 and len(groupedTextures[baseName]) > 0 and len(groupedTextures[baseName]) < index + 1:
+        elif baseName in groupedTextures and index != -1 and 0 < len(groupedTextures[baseName]) < index + 1:
             index = len(groupedTextures[baseName]) - 1
             newTexPath = groupedTextures[baseName][index]
         # search in texture directories

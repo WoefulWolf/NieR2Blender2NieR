@@ -1,5 +1,5 @@
-from ....util import getUsedMaterials
 from .material import c_material
+from ....util import getUsedMaterials
 
 
 class c_materials(object):

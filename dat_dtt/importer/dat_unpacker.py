@@ -189,10 +189,10 @@ def main(filename, extract_dir, ROOT_DIR):
 if __name__ == '__main__':
 	extract_dir = ''
 	dirname = ''
-	useage = "\nUseage:\npython dat_unpacker.py your_dat_path your_extract_path"
-	useage1 = "\nUseage:\nblender --background --python dat_unpacker.py your_dat_path your_extract_path"
+	usage = "\nUsage:\npython dat_unpacker.py your_dat_path your_extract_path"
+	usage1 = "\nUsage:\nblender --background --python dat_unpacker.py your_dat_path your_extract_path"
 	if len(sys.argv) < 3:
-		print(useage)
+		print(usage)
 		exit()
 	if len(sys.argv) > 2:
 		dir_name = sys.argv[1]
@@ -200,7 +200,7 @@ if __name__ == '__main__':
 		print()
 		if os.path.split(sys.argv[0])[-1].lower().find("blender") >-1:
 			if len(sys.argv) < 6:
-				print(useage1)
+				print(usage1)
 				exit()
 			dir_name = sys.argv[4]
 			extract_dir = sys.argv[5]

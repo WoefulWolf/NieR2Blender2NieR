@@ -1,7 +1,7 @@
 import math
 
-from ...util import *
 from .lay import Lay
+from ...util import *
 
 
 def main(layFilePath, addonName):
