@@ -82,8 +82,8 @@ def generate_colTreeNodes():
     custom_colTreeNodesCollection = bpy.data.collections.get("custom_col_colTreeNodes")
     if not custom_colTreeNodesCollection:
         custom_colTreeNodesCollection = bpy.data.collections.new("custom_col_colTreeNodes")
-        custom_colTreeNodesCollection.hide_viewport = True
         colCollection.children.link(custom_colTreeNodesCollection)
+        bpy.data.collections["custom_col_colTreeNodes"].hide_viewport = True
     for obj in [o for o in custom_colTreeNodesCollection.objects]:
         bpy.data.objects.remove(obj)
 

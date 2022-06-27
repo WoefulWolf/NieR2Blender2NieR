@@ -160,6 +160,10 @@ def importDat(only_extract, filepath):
     if only_extract:
         return {'FINISHED'}
 
+    bpy.context.scene.DatDir = extract_dir + '\\' + tailless_tail + '.dat'
+    bpy.context.scene.DttDir = extract_dir + '\\' + tailless_tail + '.dtt'
+    bpy.context.scene.ExportFileName = tailless_tail
+
     # COL
     col_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + tailless_tail + '.col'
     if os.path.isfile(col_filepath):
@@ -228,6 +232,10 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
 
         if onlyExtract:
             return {'FINISHED'}
+
+        bpy.context.scene.DatDir = extract_dir + '\\' + tailless_tail + '.dat'
+        bpy.context.scene.DttDir = extract_dir + '\\' + tailless_tail + '.dtt'
+        bpy.context.scene.ExportFileName = tailless_tail
 
         # COL
         col_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + tailless_tail + '.col'

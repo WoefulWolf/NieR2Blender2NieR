@@ -1,6 +1,5 @@
 import math
 
-from .dat_dtt_ui_manager import ShowMessageBox
 from ...util import *
 
 

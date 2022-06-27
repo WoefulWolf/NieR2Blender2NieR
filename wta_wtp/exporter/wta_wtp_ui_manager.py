@@ -9,12 +9,6 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 from ...util import getUsedMaterials
 
 
-def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
-
-    def draw(self, context):
-        self.layout.label(text=message)
-    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
-
 def generateID(context):
     if len(context.scene.WTAMaterials) != 0:
         return context.scene.WTAMaterials[-1].id + 1
@@ -188,7 +182,7 @@ class GetNewMaterialsOperator(bpy.types.Operator):
                 print(f"Error while setting texture paths for {mat.name}: {e}")
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
-        ShowMessageBox(f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
+        self.report({"INFO"}, f"{newMaterialsAdded} new material{'s' if newMaterialsAdded != 1 else ''} added")
 
         return {'FINISHED'}
 
@@ -213,7 +207,7 @@ class AssignBulkTextures(bpy.types.Operator, ImportHelper):
                     if filename not in assigned_textures:
                         assigned_textures.append(filename)
 
-        ShowMessageBox('Successfully assigned ' + str(len(assigned_textures)) + ' textures.', 'Assign Textures', 'INFO')
+        self.report({"INFO"}, f"Successfully assigned {len(assigned_textures)} textures.")
         return{'FINISHED'}
 
 class PurgeUnusedMaterials(bpy.types.Operator):
@@ -415,7 +409,7 @@ class MassTextureReplacer(bpy.types.Operator):
         replacePath = context.scene.ReplaceTexturePath
 
         if not searchId:
-            ShowMessageBox("Empty Search Identifier not allowed!")
+            self.report({"ERROR"}, "Empty Search Identifier not allowed!")
             return{"CANCELLED"}
 
         for item in context.scene.WTAMaterials:
@@ -428,7 +422,7 @@ class MassTextureReplacer(bpy.types.Operator):
             if replacePath:
                 item.texture_path = replacePath
 
-        ShowMessageBox(f"Replaced {replacedTextures} texture{'s' if replacedTextures != 1 else ''}")
+        self.report({"INFO"}, f"Replaced {replacedTextures} texture{'s' if replacedTextures != 1 else ''}")
         return{'FINISHED'}
 
 class WTA_WTP_PT_Export(bpy.types.Panel):

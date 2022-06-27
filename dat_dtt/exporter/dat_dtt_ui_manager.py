@@ -6,13 +6,6 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-
-def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
-
-    def draw(self, context):
-        self.layout.label(text=message)
-    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
-
 class ExportAllSteps(bpy.types.PropertyGroup):
     useWmbStep: bpy.props.BoolProperty(
         name = "Export WMB",
@@ -161,11 +154,11 @@ class SelectFolder(bpy.types.Operator, ImportHelper):
         if self.target == "dat":
             context.scene.DatDir = directory
             if directory.endswith(".dtt"):
-                ShowMessageBox("WARNING: DTT directory selected, this field is for the DAT directory")
+                self.report({'WARNING'}, "DTT directory selected, this field is for the DAT directory")
         elif self.target == "dtt":
             context.scene.DttDir = directory
             if directory.endswith(".dat"):
-                ShowMessageBox("WARNING: DAT directory selected, this field is for the DTT directory")
+                self.report({'WARNING'}, "DAT directory selected, this field is for the DTT directory")
         elif self.target == "datdttdir":
             context.scene.DatDttExportDir = directory
         else:
@@ -190,16 +183,16 @@ class ExportAll(bpy.types.Operator):
         datDttExportDir = context.scene.DatDttExportDir
 
         if not datDir and (exportSteps.useWtaStep or exportSteps.useColStep or exportSteps.useLayStep or exportSteps.useDatStep):
-            ShowMessageBox("Missing DAT Directory!")
+            self.report({"ERROR"}, "Missing DAT Directory!")
             return {"CANCELLED"}
         if not dttDir and (exportSteps.useWtpStep or exportSteps.useWmbStep or exportSteps.useDttStep):
-            ShowMessageBox("Missing DTT Directory!")
+            self.report({"ERROR"}, "Missing DTT Directory!")
             return {"CANCELLED"}
         if not datDttExportDir and (exportSteps.useDatStep or exportSteps.useDttStep):
-            ShowMessageBox("Missing DAT/DTT Export Directory!")
+            self.report({"ERROR"}, "Missing DAT/DTT Export Directory!")
             return {"CANCELLED"}
         if not baseFilename:
-            ShowMessageBox("Missing Base Name!")
+            self.report({"ERROR"}, "Missing Base Name!")
             return {"CANCELLED"}
         
         wmbFilePath = os.path.join(dttDir, baseFilename + ".wmb")
@@ -247,7 +240,7 @@ class ExportAll(bpy.types.Operator):
         tDiff = int(time.time() - t1)
 
         print(f"Exported {exportedFilesCount} files in {tDiff}s   :P")
-        ShowMessageBox(f"Exported {exportedFilesCount} files")
+        self.report({"INFO"}, f"Exported {exportedFilesCount} files")
 
         return {"FINISHED"}
 
@@ -260,6 +253,10 @@ class GetBaseName(bpy.types.Operator):
     def execute(self, context):
         if "WMB" in bpy.data.collections and len(bpy.data.collections["WMB"].children) > 0:
             context.scene.ExportFileName = bpy.data.collections["WMB"].children[0].name
+        elif context.scene.DatDir:
+            context.scene.ExportFileName = os.path.basename(context.scene.DatDir).replace(".dat", "")
+        elif context.scene.DttDir:
+            context.scene.ExportFileName = os.path.basename(context.scene.DttDir).replace(".dtt", "")
         return {"FINISHED"}
 
 def register():
