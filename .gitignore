@@ -3,3 +3,4 @@ blender2nier/.vscode/launch.json
 blender2nier/__pycache__/__init__.cpython-37.pyc
 blender2nier/__pycache__/wmb_exporter.cpython-37.pyc
 .idea
+.vscode
