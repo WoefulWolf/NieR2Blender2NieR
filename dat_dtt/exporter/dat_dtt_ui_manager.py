@@ -187,6 +187,9 @@ class ExportAll(bpy.types.Operator):
         from ...wmb.exporter import wmb_exporter
         if exportSteps.useWmbStep:
             print("Exporting WMB")
+            wmb_exporter.centre_origins()
+            wmb_exporter.triangulate_meshes()
+            bpy.ops.b2n.deleteloosegeometryall()
             wmb_exporter.main(wmbFilePath)
             exportedFilesCount += 1
         from ...wta_wtp.exporter import export_wta, export_wtp
@@ -201,6 +204,8 @@ class ExportAll(bpy.types.Operator):
         from ...col.exporter import col_exporter
         if exportSteps.useColStep:
             print("Exporting COL")
+            col_exporter.centre_origins()
+            col_exporter.triangulate_meshes()
             col_exporter.main(colFilePath, True)
             exportedFilesCount += 1
         from ...lay.exporter import lay_exporter
