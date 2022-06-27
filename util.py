@@ -329,10 +329,10 @@ def getObjKey(obj):
         return f"0000-{obj.name}"
 
 def objectsInCollectionInOrder(collectionName):
-    return sorted(bpy.data.collections[collectionName].objects, key=getObjKey)
+    return sorted(bpy.data.collections[collectionName].objects, key=getObjKey) if collectionName in bpy.data.collections else []
 
 def allObjectsInCollectionInOrder(collectionName):
-    return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey)
+    return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey) if collectionName in bpy.data.collections else []
 def to_float(bs):
 	return struct.unpack("<f", bs)[0]
 
