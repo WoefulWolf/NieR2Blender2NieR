@@ -440,3 +440,28 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
     def draw(self, context):
         self.layout.label(text=message)
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
+
+def triangulate_meshes(collection: str):
+    if bpy.context.object is not None:
+        bpy.ops.object.mode_set(mode='OBJECT')
+    for obj in bpy.data.collections[collection].all_objects:
+        if obj.type == 'MESH':
+            # Triangulate
+            me = obj.data
+            bm = bmesh.new()
+            bm.from_mesh(me)
+            bmesh.ops.triangulate(bm, faces=bm.faces[:])
+            bm.to_mesh(me)
+            bm.free()
+
+def centre_origins(collection: str):
+    if bpy.context.object is not None:
+        bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.scene.cursor.location = [0, 0, 0]
+    for obj in bpy.data.collections[collection].all_objects:
+        if obj.type == 'MESH':
+            obj.select_set(True)
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+            obj.select_set(False)

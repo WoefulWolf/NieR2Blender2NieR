@@ -1,10 +1,11 @@
 import os
-import textwrap
 import time
-
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
+
+from ...util import triangulate_meshes, centre_origins
+
 
 class ExportAllSteps(bpy.types.PropertyGroup):
     useWmbStep: bpy.props.BoolProperty(
@@ -33,6 +34,19 @@ class ExportAllSteps(bpy.types.PropertyGroup):
     )
     useDttStep: bpy.props.BoolProperty(
         name = "Export DTT",
+        default = True
+    )
+
+    triangulateMeshes: bpy.props.BoolProperty(
+        name = "Triangulate Meshes",
+        default = True
+    )
+    centerOrigins: bpy.props.BoolProperty(
+        name = "Center Origin",
+        default = True
+    )
+    deleteLoose: bpy.props.BoolProperty(
+        name = "Delete Loose Geometry",
         default = True
     )
 
@@ -103,16 +117,22 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
         row.alignment = "CENTER"
         row.label(text="Export Steps")
         row = box.row(align=True)
+        row.scale_y = 1.125
         row.prop(context.scene.ExportAllSteps, "useWmbStep", text="WMB", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWmbStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtpStep", text="WTP", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtpStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useWtaStep", text="WTA", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useWtaStep else "ADD")
         row = box.row(align=True)
+        row.scale_y = 1.125
         if context.scene.ExportAllSteps.useColStep or "COL" in bpy.data.collections:
             row.prop(context.scene.ExportAllSteps, "useColStep", text="COL", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useColStep else "ADD")
         if context.scene.ExportAllSteps.useLayStep or "LAY" in bpy.data.collections:
             row.prop(context.scene.ExportAllSteps, "useLayStep", text="LAY", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useLayStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDatStep", text="DAT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDatStep else "ADD")
         row.prop(context.scene.ExportAllSteps, "useDttStep", text="DTT", icon="PANEL_CLOSE" if context.scene.ExportAllSteps.useDttStep else "ADD")
+        row = box.row(align=True)
+        row.prop(context.scene.ExportAllSteps, "triangulateMeshes", text="Triangulate", icon="MOD_TRIANGULATE")
+        row.prop(context.scene.ExportAllSteps, "centerOrigins", text="Center Origins", icon="OBJECT_ORIGIN")
+        row.prop(context.scene.ExportAllSteps, "deleteLoose", text="Delete Loose", icon="SNAP_VERTEX")
 
         layout.separator()
 
@@ -165,7 +185,7 @@ class ExportAll(bpy.types.Operator):
     def execute(self, context):
         t1 = time.time()
         exportedFilesCount = 0
-        exportSteps = context.scene.ExportAllSteps
+        exportSteps: ExportAllSteps = context.scene.ExportAllSteps
         datDir = context.scene.DatDir
         dttDir = context.scene.DttDir
         baseFilename = context.scene.ExportFileName
@@ -195,9 +215,12 @@ class ExportAll(bpy.types.Operator):
         from ...wmb.exporter import wmb_exporter
         if exportSteps.useWmbStep:
             print("Exporting WMB")
-            wmb_exporter.centre_origins()
-            wmb_exporter.triangulate_meshes()
-            bpy.ops.b2n.deleteloosegeometryall()
+            if exportSteps.triangulateMeshes:
+                triangulate_meshes("WMB")
+            if exportSteps.centerOrigins:
+                centre_origins("WMB")
+            if exportSteps.deleteLoose:
+                bpy.ops.b2n.deleteloosegeometryall()
             wmb_exporter.main(wmbFilePath)
             exportedFilesCount += 1
         from ...wta_wtp.exporter import export_wta, export_wtp
@@ -212,8 +235,12 @@ class ExportAll(bpy.types.Operator):
         from ...col.exporter import col_exporter
         if exportSteps.useColStep:
             print("Exporting COL")
-            col_exporter.centre_origins()
-            col_exporter.triangulate_meshes()
+            if exportSteps.triangulateMeshes:
+                triangulate_meshes("COL")
+            if exportSteps.centerOrigins:
+                centre_origins("COL")
+            if exportSteps.deleteLoose:
+                bpy.ops.b2n.deleteloosegeometryall()
             col_exporter.main(colFilePath, True)
             exportedFilesCount += 1
         from ...lay.exporter import lay_exporter
