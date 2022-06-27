@@ -136,10 +136,18 @@ class SelectFolder(bpy.types.Operator, ImportHelper):
             context.scene.DatDir = directory
             if directory.endswith(".dtt"):
                 self.report({'WARNING'}, "DTT directory selected, this field is for the DAT directory")
+            elif not context.scene.DttDir:
+                context.scene.DttDir = directory.replace("dat", "dtt")
+            if not context.scene.ExportFileName:
+                bpy.ops.na.get_base_name()
         elif self.target == "dtt":
             context.scene.DttDir = directory
             if directory.endswith(".dat"):
                 self.report({'WARNING'}, "DAT directory selected, this field is for the DTT directory")
+            elif not context.scene.DatDir:
+                context.scene.DatDir = directory.replace("dtt", "dat")
+            if not context.scene.ExportFileName:
+                bpy.ops.na.get_base_name()
         elif self.target == "datdttdir":
             context.scene.DatDttExportDir = directory
         else:

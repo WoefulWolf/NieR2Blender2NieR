@@ -32,7 +32,8 @@ def main(filepath, generateColTree):
     col_file.close()
 
 def triangulate_meshes():
-    bpy.ops.object.mode_set(mode='OBJECT')
+    if bpy.context.object is not None:
+        bpy.ops.object.mode_set(mode='OBJECT')
     for obj in bpy.data.collections['COL'].all_objects:
         if obj.type == 'MESH':
             # Triangulate
@@ -44,7 +45,8 @@ def triangulate_meshes():
             bm.free()   
 
 def centre_origins():
-    bpy.ops.object.mode_set(mode='OBJECT')
+    if bpy.context.object is not None:
+        bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.scene.cursor.location = [0, 0, 0]
     for obj in bpy.data.collections['COL'].all_objects:
@@ -52,4 +54,3 @@ def centre_origins():
             obj.select_set(True)
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             obj.select_set(False)
-    bpy.data.objects[0].select_set(True)
