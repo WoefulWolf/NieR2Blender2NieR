@@ -5,9 +5,6 @@ import numpy as np
 from mathutils import Vector
 
 
-def uInt32_array_size(array):
-    return len(array) * 4
-
 class Vector3(object):
     def __init__(self, x, y, z):
         self.x = x
@@ -73,27 +70,9 @@ def create_dir(dirpath):
 	if not os.path.exists(dirpath):
 		os.makedirs(dirpath)
 
-def find_files(dir_name,ext):
-	filenameArray = []
-	for dirpath,dirnames,filename in os.walk(dir_name):
-		for file in filename:
-			filename = "%s\%s"%(dirpath,file)
-			#print(filename)
-			if filename.find(ext) > -1:
-				filenameArray.append(filename)
-	return filenameArray
-
 def print_class(obj):
 	print ('\n'.join(sorted(['%s:\t%s ' % item for item in obj.__dict__.items() if item[0].find('Offset') < 0 or item[0].find('unknown') < 0 ])))
 	print('\n')
-
-def current_postion(fp):
-	print(hex(fp.tell()))
-
-def getObjectCenter(obj):
-    obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
-    #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
-    return obj_local_bbox_center
 
 def getObjectVolume(obj):
     return np.prod(obj.dimensions)
