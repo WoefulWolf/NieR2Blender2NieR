@@ -1,6 +1,3 @@
-import bmesh
-import bpy
-
 from .col_colTreeNodes import write_col_colTreeNodes
 from .col_generate_data import COL_Data
 from .col_header import write_col_header

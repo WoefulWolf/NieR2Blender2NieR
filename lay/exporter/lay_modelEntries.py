@@ -1,6 +1,6 @@
 import binascii
 
-from ...util import *
+from ...utils.util import *
 
 
 class ModelEntries:

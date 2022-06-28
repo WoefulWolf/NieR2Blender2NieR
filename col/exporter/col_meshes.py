@@ -56,7 +56,7 @@ class Meshes:
 
         self.structSize = self.meshes[-1].batches[-1].offsetIndices + (self.meshes[-1].batches[-1].indexCount * 2) # I was lazy
 
-from ...util import *
+from ...utils.util import *
 
 def write_col_meshes(col_file, data):
     col_file.seek(data.offsetMeshes)

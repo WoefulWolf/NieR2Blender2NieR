@@ -1,4 +1,4 @@
-from ...util import *
+from ...utils.util import *
 
 def write_lay_header(lay_file, data):
     for char in 'LAY\x00':                                         # id

@@ -1,4 +1,4 @@
-from ....util import show_message
+from ....utils.util import show_message
 
 class c_material(object):
     def __init__(self, offsetMaterialName, material):

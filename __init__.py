@@ -7,17 +7,15 @@ bl_info = {
     "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL files.",
     "category": "Import-Export"}
 
-import os
 import traceback
 
-import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import preferences
-from . import util
 from .col.exporter import col_ui_manager, col_exporter
 from .dat_dtt.exporter import dat_dtt_ui_manager
+from .utils.util import *
 from .wta_wtp.exporter import wta_wtp_ui_manager
 
 
@@ -51,11 +49,11 @@ class ExportNierCol(bpy.types.Operator, ExportHelper):
 
         if self.centre_origins:
             print("Centering origins...")
-            col_exporter.centre_origins()
+            centre_origins("COL")
 
         if self.triangulate_meshes:
             print("Triangulating meshes...")
-            col_exporter.triangulate_meshes() 
+            triangulate_meshes("COL")
 
         col_exporter.main(self.filepath, self.generateColTree)
         return {'FINISHED'}
@@ -74,8 +72,7 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
         from .wmb.exporter import wmb_exporter
-        from . import util
-        
+
         bpy.data.collections['WMB'].all_objects[0].select_set(True)
 
         if self.centre_origins:
@@ -102,19 +99,19 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
             return wmb_exporter.restore_blend()
         except:
             print(traceback.format_exc())
-            util.show_message('Error: An unexpected error has occurred during export. Please check the console for more info.', 'WMB Export Error', 'ERROR')
+            self.report({'ERROR'}, "An unexpected error has occurred during export. Please check the console for more info.")
             return {'CANCELLED'}
 
 class NierObjectMenu(bpy.types.Menu):
     bl_idname = 'OBJECT_MT_n2b2n'
     bl_label = 'NieR Tools'
     def draw(self, context):
-        self.layout.operator(util.RecalculateObjectIndices.bl_idname)
-        self.layout.operator(util.RemoveUnusedVertexGroups.bl_idname)
-        self.layout.operator(util.MergeVertexGroupCopies.bl_idname)
-        self.layout.operator(util.DeleteLooseGeometrySelected.bl_idname)
-        self.layout.operator(util.DeleteLooseGeometryAll.bl_idname)
-        self.layout.operator(util.RipMeshByUVIslands.bl_idname)
+        self.layout.operator(RecalculateObjectIndices.bl_idname)
+        self.layout.operator(RemoveUnusedVertexGroups.bl_idname)
+        self.layout.operator(MergeVertexGroupCopies.bl_idname)
+        self.layout.operator(DeleteLooseGeometrySelected.bl_idname)
+        self.layout.operator(DeleteLooseGeometryAll.bl_idname)
+        self.layout.operator(RipMeshByUVIslands.bl_idname)
         self.layout.operator(CreateLayBoundingBox.bl_idname, icon="CUBE")
 
 
@@ -341,12 +338,12 @@ classes = (
     ExportNierCol,
     ExportNierLay,
     NierObjectMenu,
-    util.RecalculateObjectIndices,
-    util.RemoveUnusedVertexGroups,
-    util.MergeVertexGroupCopies,
-    util.DeleteLooseGeometrySelected,
-    util.DeleteLooseGeometryAll,
-    util.RipMeshByUVIslands,
+    RecalculateObjectIndices,
+    RemoveUnusedVertexGroups,
+    MergeVertexGroupCopies,
+    DeleteLooseGeometrySelected,
+    DeleteLooseGeometryAll,
+    RipMeshByUVIslands,
 )
 
 preview_collections = {}

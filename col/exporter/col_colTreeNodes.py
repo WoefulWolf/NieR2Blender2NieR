@@ -260,7 +260,7 @@ class ColTreeNodes:
             #calculate_meshIndices(self.colTreeNodes)
         update_offsetMeshIndices(self.colTreeNodes, colTreeNodesStartOffset + self.structSize)
 
-from ...util import *
+from ...utils.util import *
 
 def write_col_colTreeNodes(col_file, data):
     col_file.seek(data.offsetColTreeNodes)

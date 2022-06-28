@@ -1,10 +1,11 @@
 import os
 import time
+
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from ...util import triangulate_meshes, centre_origins
+from ...utils.util import triangulate_meshes, centre_origins
 
 
 class ExportAllSteps(bpy.types.PropertyGroup):

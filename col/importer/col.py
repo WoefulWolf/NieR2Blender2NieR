@@ -1,6 +1,6 @@
 # https://github.com/Kerilk/bayonetta_tools/blob/master/binary_templates/Nier%20Automata%20col.bt
 
-from ...util import *
+from ...utils.util import *
 
 class Header:
     def __init__(self, colFile):

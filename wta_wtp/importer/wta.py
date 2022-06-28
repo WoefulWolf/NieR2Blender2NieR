@@ -1,4 +1,4 @@
-from ...util import *
+from ...utils.util import *
 
 class WTA(object):
 	def __init__(self, wta_fp):

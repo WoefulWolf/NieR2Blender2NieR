@@ -1,4 +1,4 @@
-from ....util import getUsedMaterials
+from ....utils.util import getUsedMaterials
 
 class c_lod(object):
     def __init__(self, lodsStart, batches, lod_level):

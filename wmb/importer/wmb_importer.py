@@ -1,8 +1,8 @@
 import math
 from typing import List, Tuple
 
-from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 from .wmb import *
+from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
 
 def show_message(message = "", title = "Message Box", icon = 'INFO'):

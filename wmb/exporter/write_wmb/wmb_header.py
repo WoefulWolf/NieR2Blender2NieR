@@ -1,4 +1,4 @@
-from ....util import *
+from ....utils.util import *
 
 
 def create_wmb_header(wmb_file, data):

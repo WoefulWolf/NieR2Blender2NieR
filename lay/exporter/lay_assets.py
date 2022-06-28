@@ -1,4 +1,4 @@
-from ...util import *
+from ...utils.util import *
 
 class Asset:
     def __init__(self, bObj):

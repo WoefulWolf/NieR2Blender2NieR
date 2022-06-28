@@ -1,4 +1,4 @@
-from ....util import *
+from ....utils.util import *
 
 def create_wmb_lods(wmb_file, data):
     wmb_file.seek(data.lods_Offset)
