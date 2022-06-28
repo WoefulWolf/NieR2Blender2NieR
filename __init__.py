@@ -1,3 +1,5 @@
+from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
+    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands
 
 bl_info = {
     "name": "Nier2Blender2NieR (NieR:Automata Data Exporter)",
