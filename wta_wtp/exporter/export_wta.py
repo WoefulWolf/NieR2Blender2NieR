@@ -1,4 +1,4 @@
-from utils.ioUtils import read_int32
+from ...utils.ioUtils import read_int32
 from . import generate_wta_wtp_data
 from .wta_wtp_utils import *
 

@@ -1,14 +1,16 @@
 bl_info = {
-    "name": "Nier2Blender2NieR (NieR:Automata Data Exporter)",
+    "name": "Nier2Blender2NieR (NieR:Automata Data Importer/Exporter)",
     "author": "Woeful_Wolf & RaiderB",
     "version": (0, 3, 0),
     "blender": (2, 80, 0),
     "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL files.",
-    "category": "Import-Export"}
+    "category": "Import-Export"
+}
 
 
 from . import preferences
-from .col.exporter import col_ui_manager, col_exporter
+from .consts import ADDON_NAME
+from .col.exporter import col_ui_manager
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
@@ -48,7 +50,7 @@ class CreateLayBoundingBox(bpy.types.Operator):
     def execute(self, context):
         from .lay.importer.lay_importer import getModelBoundingBox, createBoundingBoxObject
         for obj in bpy.context.selected_objects:
-            boundingBox = getModelBoundingBox(obj.name.split("_")[0], __package__)
+            boundingBox = getModelBoundingBox(obj.name.split("_")[0], ADDON_NAME)
             if boundingBox:
                 createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
             else:
@@ -89,12 +91,12 @@ classes = (
     ImportNierLay,
     ImportNierSar,
     ImportNierGaArea,
-    CreateLayBoundingBox,
     ExportNierWmb,
     ExportNierCol,
     ExportNierSar,
     ExportNierLay,
     ExportNierGaArea,
+    CreateLayBoundingBox,
     NierObjectMenu,
     RecalculateObjectIndices,
     RemoveUnusedVertexGroups,

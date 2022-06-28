@@ -3,6 +3,7 @@ import os
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
+from ...consts import ADDON_NAME
 
 
 def importDat(only_extract, filepath):
@@ -44,7 +45,7 @@ def importDat(only_extract, filepath):
     lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
     if os.path.isfile(lay_filepath):
         from ...lay.importer import lay_importer
-        lay_importer.main(lay_filepath, __package__)
+        lay_importer.main(lay_filepath, ADDON_NAME)
 
     return {'FINISHED'}
 
@@ -117,7 +118,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
         if os.path.isfile(lay_filepath):
             from ...lay.importer import lay_importer
-            lay_importer.main(lay_filepath, __package__)
+            lay_importer.main(lay_filepath, ADDON_NAME)
 
         return {'FINISHED'}
 

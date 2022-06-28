@@ -2,7 +2,7 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
-
+from .consts import ADDON_NAME
 
 class DirectoryProperty(bpy.types.PropertyGroup):
     directory: bpy.props.StringProperty(name="", subtype='DIR_PATH')
@@ -16,7 +16,7 @@ class SelectDirectory(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
-        newDir = context.preferences.addons[__package__].preferences.assetDirs.add()
+        newDir = context.preferences.addons[ADDON_NAME].preferences.assetDirs.add()
         newDir.directory = directory
 
         return {'FINISHED'}
@@ -29,11 +29,11 @@ class RemoveDirectory(bpy.types.Operator):
     index : bpy.props.IntProperty()
 
     def execute(self, context):
-        context.preferences.addons[__package__].preferences.assetDirs.remove(self.index)
+        context.preferences.addons[ADDON_NAME].preferences.assetDirs.remove(self.index)
         return {'FINISHED'}
 
 class N2B2NPreferences(bpy.types.AddonPreferences):
-    bl_idname = __package__
+    bl_idname = ADDON_NAME
     assetDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
 
     def draw(self, context):
