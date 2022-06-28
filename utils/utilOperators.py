@@ -2,7 +2,7 @@ import re
 import bmesh
 import bpy
 
-from .util import show_message
+from .util import ShowMessageBox
 
 
 class RecalculateObjectIndices(bpy.types.Operator):
@@ -70,7 +70,7 @@ class RemoveUnusedVertexGroups(bpy.types.Operator):
                 v_unused_count += 1
                 ob.vertex_groups.remove(ob.vertex_groups[i])
 
-        show_message(str(v_unused_count) + ' vertex groups were unused and have been removed.', 'Blender2NieR: Tool Info')
+        ShowMessageBox(str(v_unused_count) + ' vertex groups were unused and have been removed.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
 
@@ -105,7 +105,7 @@ class MergeVertexGroupCopies(bpy.types.Operator):
                             bpy.ops.object.vertex_group_remove()
 
         bpy.context.view_layer.objects.active = last_active
-        show_message(str(v_merged_count) + ' vertex groups had name copies and have been merged.', 'Blender2NieR: Tool Info')
+        ShowMessageBox(str(v_merged_count) + ' vertex groups had name copies and have been merged.', 'Blender2NieR: Tool Info')
 
         return {'FINISHED'}
 
@@ -138,7 +138,7 @@ class DeleteLooseGeometrySelected(bpy.types.Operator):
             m.update()
             bm.clear()
 
-        show_message(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
+        ShowMessageBox(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
 
@@ -170,7 +170,7 @@ class DeleteLooseGeometryAll(bpy.types.Operator):
             m.update()
             bm.clear()
 
-        show_message(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
+        ShowMessageBox(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
 

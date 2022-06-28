@@ -15,7 +15,7 @@ class Vector3(object):
         self.z = z
         self.xyz = [x, y, z]
 
-def show_message(message = "", title = "Message Box", icon = 'INFO'):
+def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
     def draw(self, context):
         self.layout.label(text = message)
         self.layout.alignment = 'CENTER'
@@ -150,13 +150,6 @@ class custom_ColTreeNode:
 
     def getVolume(self):
         return np.prod(self.scale)
-
-def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
-
-    def draw(self, context):
-        self.layout.label(text=message)
-    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
-
 
 def triangulate_meshes(collection: str):
     if bpy.context.object is not None:

@@ -4,15 +4,10 @@ import math
 from typing import List, Tuple
 from mathutils import Vector
 
+from ...utils.util import ShowMessageBox
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
-
-def show_message(message = "", title = "Message Box", icon = 'INFO'):
-	def draw(self, context):
-		self.layout.label(text = message)
-		self.layout.alignment = 'CENTER'
-	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 def reset_blend():
 	#bpy.ops.object.mode_set(mode='OBJECT')
@@ -556,7 +551,7 @@ def get_wmb_material(wmb, texture_dir):
 
 	else:
 		print('Missing .wta')
-		show_message("Error: Could not open .wta file, textures not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
+		ShowMessageBox("Error: Could not open .wta file, textures not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
 		for materialIndex in range(len(wmb.materialArray)):
 			material = wmb.materialArray[materialIndex]
 			material_name = material.materialName
