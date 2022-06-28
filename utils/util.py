@@ -1,4 +1,6 @@
 import os
+from typing import List
+
 import bmesh
 import bpy
 import numpy as np
@@ -66,13 +68,16 @@ def objectsInCollectionInOrder(collectionName):
 def allObjectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey) if collectionName in bpy.data.collections else []
 
+def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
+    return sorted(obj.children, key=getObjKey)
+
 def create_dir(dirpath):
-	if not os.path.exists(dirpath):
-		os.makedirs(dirpath)
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
 
 def print_class(obj):
-	print ('\n'.join(sorted(['%s:\t%s ' % item for item in obj.__dict__.items() if item[0].find('Offset') < 0 or item[0].find('unknown') < 0 ])))
-	print('\n')
+    print ('\n'.join(sorted(['%s:\t%s ' % item for item in obj.__dict__.items() if item[0].find('Offset') < 0 or item[0].find('unknown') < 0 ])))
+    print('\n')
 
 def getObjectVolume(obj):
     return np.prod(obj.dimensions)
