@@ -1,6 +1,8 @@
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
+
+from ...utils.util import setExportFieldsFromImportFile
 from ...consts import ADDON_NAME
 
 
@@ -14,4 +16,7 @@ class ImportNierLay(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         from . import lay_importer
+
+        setExportFieldsFromImportFile(self.filepath)
+
         return lay_importer.main(self.filepath, ADDON_NAME)

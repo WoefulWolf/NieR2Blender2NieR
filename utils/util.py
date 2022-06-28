@@ -158,3 +158,13 @@ def centre_origins(collection: str):
             obj.select_set(True)
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             obj.select_set(False)
+
+def setExportFieldsFromImportFile(filepath: str) -> None:
+    head = os.path.split(filepath)[0]
+    tail = os.path.split(filepath)[1]
+    tailless_tail = tail[:-4]
+    extract_dir = head + '\\nier2blender_extracted'
+
+    bpy.context.scene.DatDir = extract_dir + '\\' + tailless_tail + '.dat'
+    bpy.context.scene.DttDir = extract_dir + '\\' + tailless_tail + '.dtt'
+    bpy.context.scene.ExportFileName = tailless_tail

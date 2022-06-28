@@ -3,6 +3,8 @@ import os
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
+
+from ...utils.util import setExportFieldsFromImportFile
 from ...consts import ADDON_NAME
 
 
@@ -31,9 +33,7 @@ def importDat(only_extract, filepath):
     if only_extract:
         return {'FINISHED'}
 
-    bpy.context.scene.DatDir = extract_dir + '\\' + tailless_tail + '.dat'
-    bpy.context.scene.DttDir = extract_dir + '\\' + tailless_tail + '.dtt'
-    bpy.context.scene.ExportFileName = tailless_tail
+    setExportFieldsFromImportFile(filepath)
 
     # COL
     col_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + tailless_tail + '.col'
@@ -104,9 +104,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         if onlyExtract:
             return {'FINISHED'}
 
-        bpy.context.scene.DatDir = extract_dir + '\\' + tailless_tail + '.dat'
-        bpy.context.scene.DttDir = extract_dir + '\\' + tailless_tail + '.dtt'
-        bpy.context.scene.ExportFileName = tailless_tail
+        setExportFieldsFromImportFile(filepath)
 
         # COL
         col_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + tailless_tail + '.col'

@@ -2,6 +2,8 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ...utils.util import setExportFieldsFromImportFile
+
 
 class ImportNierWmb(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata WMB File.'''
@@ -17,4 +19,7 @@ class ImportNierWmb(bpy.types.Operator, ImportHelper):
         from . import wmb_importer
         if self.reset_blend:
             wmb_importer.reset_blend()
+
+        setExportFieldsFromImportFile(self.filepath)
+
         return wmb_importer.main(False, self.filepath)

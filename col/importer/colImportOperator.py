@@ -2,6 +2,8 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ...utils.util import setExportFieldsFromImportFile
+
 
 class ImportNierCol(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata Col (Collision) File.'''
@@ -13,4 +15,7 @@ class ImportNierCol(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         from . import col_importer
+
+        setExportFieldsFromImportFile(self.filepath)
+
         return col_importer.main(self.filepath)
