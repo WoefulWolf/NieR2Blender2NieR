@@ -1,4 +1,5 @@
-from ....utils.util import *
+from ....utils.ioUtils import write_uInt32
+
 
 def create_wmb_meshMaterials(wmb_file, data):
     wmb_file.seek(data.meshMaterials_Offset)

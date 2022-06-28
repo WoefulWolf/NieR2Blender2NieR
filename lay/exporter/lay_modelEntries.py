@@ -1,5 +1,6 @@
 import binascii
 
+from ...utils.ioUtils import write_char
 from ...utils.util import *
 
 

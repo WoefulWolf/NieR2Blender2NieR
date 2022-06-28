@@ -1,4 +1,5 @@
-from ...utils.util import *
+from ...utils.ioUtils import write_float, write_char, write_uInt32
+
 
 def write_lay_header(lay_file, data):
     for char in 'LAY\x00':                                         # id

@@ -1,4 +1,5 @@
-from ....utils.util import *
+from ....utils.ioUtils import write_Int16, write_xyz
+
 
 def create_wmb_bones(wmb_file, data):
     wmb_file.seek(data.bones_Offset)

@@ -1,5 +1,8 @@
+import bpy
+import bmesh
 import math
 from typing import List, Tuple
+from mathutils import Vector
 
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial

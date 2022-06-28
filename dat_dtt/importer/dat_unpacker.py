@@ -3,7 +3,7 @@ import os
 import struct
 import sys
 
-from ...utils.util import to_uint
+from ...utils.ioUtils import to_uint
 
 
 def little_endian_to_float(bs):

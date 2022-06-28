@@ -1,3 +1,4 @@
+from ...utils.ioUtils import write_float, write_string, write_uInt32, write_byte
 from ...utils.util import *
 
 class Asset:

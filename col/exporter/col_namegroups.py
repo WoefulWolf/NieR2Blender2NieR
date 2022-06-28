@@ -1,3 +1,5 @@
+from ...utils.ioUtils import write_string, write_uInt32
+
 
 class NameGroup:
     def __init__(self, name, startOffset):

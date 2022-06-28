@@ -1,4 +1,5 @@
-from ...utils.util import *
+from ...utils.ioUtils import write_char, write_uInt32
+
 
 def write_col_header(col_file, data):
     for char in 'COL2':                                         # id

@@ -1,4 +1,5 @@
-from ....utils.util import *
+from ....utils.ioUtils import write_Int16
+
 
 def create_wmb_boneIndexTranslateTable(wmb_file, data):
     wmb_file.seek(data.boneIndexTranslateTable_Offset)
