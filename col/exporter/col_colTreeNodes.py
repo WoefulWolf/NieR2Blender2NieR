@@ -1,6 +1,6 @@
 import math
 
-from ...utils.ioUtils import write_float, write_Int32, write_uInt32
+from ...utils.ioUtils import write_Int32, write_uInt32, write_float
 
 
 def update_offsetMeshIndices(colTreeNodes, meshIndicesStartOffset):

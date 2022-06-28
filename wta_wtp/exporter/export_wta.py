@@ -1,3 +1,4 @@
+from utils.ioUtils import read_int32
 from . import generate_wta_wtp_data
 from .wta_wtp_utils import *
 
@@ -47,7 +48,7 @@ def main(context, export_filepath):
         dds_padding = 0
         if i != len(texture_paths_array)-1:
             dds_fp.seek(dds_paddedSize-4)
-            dds_padding = to_int(dds_fp.read(4))
+            dds_padding = read_int32(dds_fp)
         paddingAmountArray.append(dds_padding)
 
         #wtaTextureOffset

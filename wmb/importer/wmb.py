@@ -2,7 +2,7 @@ import os
 import json
 
 from ...utils.util import print_class, create_dir
-from ...utils.ioUtils import to_float, to_float16, to_string
+from ...utils.ioUtils import to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64
 from ...wta_wtp.importer.wta import *
 
 
@@ -12,81 +12,81 @@ class WMB_Header(object):
 		super(WMB_Header, self).__init__()
 		self.magicNumber = wmb_fp.read(4)										# ID
 		if self.magicNumber == b'WMB3':
-			self.version = "%08x" % (to_uint(wmb_fp.read(4)))					# Version
-			self.unknown08 = to_uint(wmb_fp.read(4))								# UnknownA
-			self.flags = to_uint(wmb_fp.read(4))									# flags & referenceBone
-			self.bounding_box1 = to_float(wmb_fp.read(4))						# bounding_box
-			self.bounding_box2 = to_float(wmb_fp.read(4))
-			self.bounding_box3 = to_float(wmb_fp.read(4))
-			self.bounding_box4 = to_float(wmb_fp.read(4))
-			self.bounding_box5 = to_float(wmb_fp.read(4))
-			self.bounding_box6 = to_float(wmb_fp.read(4))
-			self.boneArrayOffset = to_uint(wmb_fp.read(4))						# offsetBones
-			self.boneCount = to_uint(wmb_fp.read(4))								# numBones
-			self.offsetBoneIndexTranslateTable = to_uint(wmb_fp.read(4))			# offsetBoneIndexTranslateTable		
-			self.boneIndexTranslateTableSize = to_uint(wmb_fp.read(4)) 			# boneIndexTranslateTableSize
-			self.vertexGroupArrayOffset = to_uint(wmb_fp.read(4))				# offsetVertexGroups
-			self.vertexGroupCount = to_uint(wmb_fp.read(4))						# numVertexGroups
-			self.meshArrayOffset = to_uint(wmb_fp.read(4))						# offsetBatches
-			self.meshCount = to_uint(wmb_fp.read(4))								# numBatches
-			self.meshGroupInfoArrayHeaderOffset = to_uint(wmb_fp.read(4))		# offsetLODS
-			self.meshGroupInfoArrayCount = to_uint(wmb_fp.read(4))				# numLODS
-			self.colTreeNodesOffset = to_uint(wmb_fp.read(4))					# offsetColTreeNodes
-			self.colTreeNodesCount = to_uint(wmb_fp.read(4))						# numColTreeNodes
-			self.boneMapOffset = to_uint(wmb_fp.read(4))							# offsetBoneMap
-			self.boneMapCount = to_uint(wmb_fp.read(4))							# numBoneMap
-			self.bonesetOffset = to_uint(wmb_fp.read(4))							# offsetBoneSets
-			self.bonesetCount = to_uint(wmb_fp.read(4))							# numBoneSets
-			self.materialArrayOffset = to_uint(wmb_fp.read(4))					# offsetMaterials
-			self.materialCount = to_uint(wmb_fp.read(4))							# numMaterials
-			self.meshGroupOffset = to_uint(wmb_fp.read(4))						# offsetMeshes
-			self.meshGroupCount = to_uint(wmb_fp.read(4))						# numMeshes
-			self.offsetMeshMaterials = to_uint(wmb_fp.read(4))					# offsetMeshMaterials
-			self.numMeshMaterials = to_uint(wmb_fp.read(4))						# numMeshMaterials
-			self.unknownWorldDataArrayOffset = to_uint(wmb_fp.read(4))			# offsetUnknown0				World Model Stuff
-			self.unknownWorldDataArrayCount = to_uint(wmb_fp.read(4))			# numUnknown0					World Model Stuff
-			self.unknown8C = to_uint(wmb_fp.read(4))
+			self.version = "%08x" % (read_uint32(wmb_fp))					# Version
+			self.unknown08 = read_uint32(wmb_fp)								# UnknownA
+			self.flags = read_uint32(wmb_fp)									# flags & referenceBone
+			self.bounding_box1 = read_float(wmb_fp)						# bounding_box
+			self.bounding_box2 = read_float(wmb_fp)
+			self.bounding_box3 = read_float(wmb_fp)
+			self.bounding_box4 = read_float(wmb_fp)
+			self.bounding_box5 = read_float(wmb_fp)
+			self.bounding_box6 = read_float(wmb_fp)
+			self.boneArrayOffset = read_uint32(wmb_fp)						# offsetBones
+			self.boneCount = read_uint32(wmb_fp)								# numBones
+			self.offsetBoneIndexTranslateTable = read_uint32(wmb_fp)			# offsetBoneIndexTranslateTable		
+			self.boneIndexTranslateTableSize = read_uint32(wmb_fp) 			# boneIndexTranslateTableSize
+			self.vertexGroupArrayOffset = read_uint32(wmb_fp)				# offsetVertexGroups
+			self.vertexGroupCount = read_uint32(wmb_fp)						# numVertexGroups
+			self.meshArrayOffset = read_uint32(wmb_fp)						# offsetBatches
+			self.meshCount = read_uint32(wmb_fp)								# numBatches
+			self.meshGroupInfoArrayHeaderOffset = read_uint32(wmb_fp)		# offsetLODS
+			self.meshGroupInfoArrayCount = read_uint32(wmb_fp)				# numLODS
+			self.colTreeNodesOffset = read_uint32(wmb_fp)					# offsetColTreeNodes
+			self.colTreeNodesCount = read_uint32(wmb_fp)						# numColTreeNodes
+			self.boneMapOffset = read_uint32(wmb_fp)							# offsetBoneMap
+			self.boneMapCount = read_uint32(wmb_fp)							# numBoneMap
+			self.bonesetOffset = read_uint32(wmb_fp)							# offsetBoneSets
+			self.bonesetCount = read_uint32(wmb_fp)							# numBoneSets
+			self.materialArrayOffset = read_uint32(wmb_fp)					# offsetMaterials
+			self.materialCount = read_uint32(wmb_fp)							# numMaterials
+			self.meshGroupOffset = read_uint32(wmb_fp)						# offsetMeshes
+			self.meshGroupCount = read_uint32(wmb_fp)						# numMeshes
+			self.offsetMeshMaterials = read_uint32(wmb_fp)					# offsetMeshMaterials
+			self.numMeshMaterials = read_uint32(wmb_fp)						# numMeshMaterials
+			self.unknownWorldDataArrayOffset = read_uint32(wmb_fp)			# offsetUnknown0				World Model Stuff
+			self.unknownWorldDataArrayCount = read_uint32(wmb_fp)			# numUnknown0					World Model Stuff
+			self.unknown8C = read_uint32(wmb_fp)
 
 class wmb3_vertexHeader(object):
 	"""docstring for wmb3_vertexHeader"""
 	def __init__(self, wmb_fp):
 		super(wmb3_vertexHeader, self).__init__()
-		self.vertexArrayOffset = to_uint(wmb_fp.read(4))		
-		self.vertexExDataArrayOffset = to_uint(wmb_fp.read(4))	
-		self.unknown08 = to_uint(wmb_fp.read(4))				
-		self.unknown0C = to_uint(wmb_fp.read(4))				
-		self.vertexStride = to_uint(wmb_fp.read(4))			
-		self.vertexExDataStride = to_uint(wmb_fp.read(4))		
-		self.unknown18 = to_uint(wmb_fp.read(4))				
-		self.unknown1C = to_uint(wmb_fp.read(4))				
-		self.vertexCount = to_uint(wmb_fp.read(4))			
-		self.vertexFlags = to_uint(wmb_fp.read(4))
-		self.faceArrayOffset = to_uint(wmb_fp.read(4))		
-		self.faceCount = to_uint(wmb_fp.read(4))				
+		self.vertexArrayOffset = read_uint32(wmb_fp)		
+		self.vertexExDataArrayOffset = read_uint32(wmb_fp)	
+		self.unknown08 = read_uint32(wmb_fp)				
+		self.unknown0C = read_uint32(wmb_fp)				
+		self.vertexStride = read_uint32(wmb_fp)			
+		self.vertexExDataStride = read_uint32(wmb_fp)		
+		self.unknown18 = read_uint32(wmb_fp)				
+		self.unknown1C = read_uint32(wmb_fp)				
+		self.vertexCount = read_uint32(wmb_fp)			
+		self.vertexFlags = read_uint32(wmb_fp)
+		self.faceArrayOffset = read_uint32(wmb_fp)		
+		self.faceCount = read_uint32(wmb_fp)				
 
 class wmb3_vertex(object):
 	"""docstring for wmb3_vertex"""
 	def __init__(self, wmb_fp, vertex_flags):
 		super(wmb3_vertex, self).__init__()
-		self.positionX = to_float(wmb_fp.read(4))
-		self.positionY = to_float(wmb_fp.read(4))
-		self.positionZ = to_float(wmb_fp.read(4))
-		self.normalX = to_uint(wmb_fp.read(1)) * 2 / 255			
-		self.normalY = to_uint(wmb_fp.read(1)) * 2 / 255	
-		self.normalZ = to_uint(wmb_fp.read(1)) * 2 / 255	
+		self.positionX = read_float(wmb_fp)
+		self.positionY = read_float(wmb_fp)
+		self.positionZ = read_float(wmb_fp)
+		self.normalX = read_uint8(wmb_fp) * 2 / 255			
+		self.normalY = read_uint8(wmb_fp) * 2 / 255	
+		self.normalZ = read_uint8(wmb_fp) * 2 / 255	
 		wmb_fp.read(1)											
-		self.textureU = to_float16(wmb_fp.read(2))				
-		self.textureV = to_float16(wmb_fp.read(2))
+		self.textureU = read_float16(wmb_fp)				
+		self.textureV = read_float16(wmb_fp)
 		if vertex_flags in [0]:
-			self.normal = hex(to_uint(wmb_fp.read(8)))
+			self.normal = hex(read_uint64(wmb_fp))
 		if vertex_flags in [1, 4, 5, 12, 14]:
-			self.textureU2 = to_float16(wmb_fp.read(2))				
-			self.textureV2 = to_float16(wmb_fp.read(2))
+			self.textureU2 = read_float16(wmb_fp)				
+			self.textureV2 = read_float16(wmb_fp)
 		if vertex_flags in [7, 10, 11]:										
-			self.boneIndices = [to_uint(wmb_fp.read(1)) for i in range(4)]									
-			self.boneWeights = [to_uint(wmb_fp.read(1))/255 for i in range(4)]
+			self.boneIndices = [read_uint8(wmb_fp) for i in range(4)]									
+			self.boneWeights = [read_uint8(wmb_fp)/255 for i in range(4)]
 		if vertex_flags in [4, 5, 12, 14]:
-			self.color = [to_uint(wmb_fp.read(1)) for i in range(4)]
+			self.color = [read_uint8(wmb_fp) for i in range(4)]
 
 class wmb3_vertexExData(object):
 	"""docstring for wmb3_vertexExData"""
@@ -96,47 +96,47 @@ class wmb3_vertexExData(object):
 		#0x0 has no ExVertexData
 
 		if vertex_flags in [1, 4]: #0x1, 0x4
-			self.normal = hex(to_uint(wmb_fp.read(8)))
+			self.normal = hex(read_uint64(wmb_fp))
 
 		elif vertex_flags in [5]: #0x5
-			self.normal = hex(to_uint(wmb_fp.read(8)))
-			self.textureU3 = to_float16(wmb_fp.read(2))				
-			self.textureV3 = to_float16(wmb_fp.read(2))
+			self.normal = hex(read_uint64(wmb_fp))
+			self.textureU3 = read_float16(wmb_fp)				
+			self.textureV3 = read_float16(wmb_fp)
 
 		elif vertex_flags in [7]: #0x7
-			self.textureU2 = to_float16(wmb_fp.read(2))				
-			self.textureV2 = to_float16(wmb_fp.read(2))
-			self.normal = hex(to_uint(wmb_fp.read(8)))
+			self.textureU2 = read_float16(wmb_fp)				
+			self.textureV2 = read_float16(wmb_fp)
+			self.normal = hex(read_uint64(wmb_fp))
 
 		elif vertex_flags in [10]: #0xa
-			self.textureU2 = to_float16(wmb_fp.read(2))				
-			self.textureV2 = to_float16(wmb_fp.read(2))
-			self.color = [to_uint(wmb_fp.read(1)) for i in range(4)]
-			self.normal = hex(to_uint(wmb_fp.read(8)))
+			self.textureU2 = read_float16(wmb_fp)				
+			self.textureV2 = read_float16(wmb_fp)
+			self.color = [read_uint8(wmb_fp) for i in range(4)]
+			self.normal = hex(read_uint64(wmb_fp))
 
 		elif vertex_flags in [11]: #0xb
-			self.textureU2 = to_float16(wmb_fp.read(2))				
-			self.textureV2 = to_float16(wmb_fp.read(2))
-			self.color = [to_uint(wmb_fp.read(1)) for i in range(4)]
-			self.normal = hex(to_uint(wmb_fp.read(8)))
-			self.textureU3 = to_float16(wmb_fp.read(2))				
-			self.textureV3 = to_float16(wmb_fp.read(2))
+			self.textureU2 = read_float16(wmb_fp)				
+			self.textureV2 = read_float16(wmb_fp)
+			self.color = [read_uint8(wmb_fp) for i in range(4)]
+			self.normal = hex(read_uint64(wmb_fp))
+			self.textureU3 = read_float16(wmb_fp)				
+			self.textureV3 = read_float16(wmb_fp)
 		
 		elif vertex_flags in [12]: #0xc
-			self.normal = hex(to_uint(wmb_fp.read(8)))
-			self.textureU3 = to_float16(wmb_fp.read(2))				
-			self.textureV3 = to_float16(wmb_fp.read(2))
-			self.textureU4 = to_float16(wmb_fp.read(2))				
-			self.textureV4 = to_float16(wmb_fp.read(2))
-			self.textureU5 = to_float16(wmb_fp.read(2))				
-			self.textureV5 = to_float16(wmb_fp.read(2))
+			self.normal = hex(read_uint64(wmb_fp))
+			self.textureU3 = read_float16(wmb_fp)				
+			self.textureV3 = read_float16(wmb_fp)
+			self.textureU4 = read_float16(wmb_fp)				
+			self.textureV4 = read_float16(wmb_fp)
+			self.textureU5 = read_float16(wmb_fp)				
+			self.textureV5 = read_float16(wmb_fp)
 
 		elif vertex_flags in [14]: #0xe
-			self.normal = hex(to_uint(wmb_fp.read(8)))
-			self.textureU3 = to_float16(wmb_fp.read(2))				
-			self.textureV3 = to_float16(wmb_fp.read(2))
-			self.textureU4 = to_float16(wmb_fp.read(2))				
-			self.textureV4 = to_float16(wmb_fp.read(2))
+			self.normal = hex(read_uint64(wmb_fp))
+			self.textureU3 = read_float16(wmb_fp)				
+			self.textureV3 = read_float16(wmb_fp)
+			self.textureU4 = read_float16(wmb_fp)				
+			self.textureV4 = read_float16(wmb_fp)
 		
 class wmb3_vertexGroup(object):
 	"""docstring for wmb3_vertexGroup"""
@@ -162,57 +162,57 @@ class wmb3_vertexGroup(object):
 		wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
 		for face_index in range(self.vertexGroupHeader.faceCount):
 			if faceSize == 2:
-				self.faceRawArray.append(to_uint(wmb_fp.read(2)) + 1)
+				self.faceRawArray.append(read_uint16(wmb_fp) + 1)
 			else:
-				self.faceRawArray.append(to_uint(wmb_fp.read(4)) + 1)
+				self.faceRawArray.append(read_uint32(wmb_fp) + 1)
 
 class wmb3_mesh(object):
 	"""docstring for wmb3_mesh"""
 	def __init__(self, wmb_fp):
 		super(wmb3_mesh, self).__init__()
-		self.vertexGroupIndex = to_uint(wmb_fp.read(4))
-		self.bonesetIndex = to_uint(wmb_fp.read(4))					
-		self.vertexStart = to_uint(wmb_fp.read(4))				
-		self.faceStart = to_uint(wmb_fp.read(4))					
-		self.vertexCount = to_uint(wmb_fp.read(4))				
-		self.faceCount = to_uint(wmb_fp.read(4))					
-		self.unknown18 = to_uint(wmb_fp.read(4))
+		self.vertexGroupIndex = read_uint32(wmb_fp)
+		self.bonesetIndex = read_uint32(wmb_fp)					
+		self.vertexStart = read_uint32(wmb_fp)				
+		self.faceStart = read_uint32(wmb_fp)					
+		self.vertexCount = read_uint32(wmb_fp)				
+		self.faceCount = read_uint32(wmb_fp)					
+		self.unknown18 = read_uint32(wmb_fp)
 				
 class wmb3_bone(object):
 	"""docstring for wmb3_bone"""
 	def __init__(self, wmb_fp,index):
 		super(wmb3_bone, self).__init__()
 		self.boneIndex = index
-		self.boneNumber = to_uint(wmb_fp.read(2))				
-		self.parentIndex = to_uint(wmb_fp.read(2))
+		self.boneNumber = read_uint16(wmb_fp)				
+		self.parentIndex = read_uint16(wmb_fp)
 
-		local_positionX = to_float(wmb_fp.read(4))		 
-		local_positionY = to_float(wmb_fp.read(4))		
-		local_positionZ = to_float(wmb_fp.read(4))	
+		local_positionX = read_float(wmb_fp)		 
+		local_positionY = read_float(wmb_fp)		
+		local_positionZ = read_float(wmb_fp)	
 		
-		local_rotationX = to_float(wmb_fp.read(4))		 
-		local_rotationY = to_float(wmb_fp.read(4))		 
-		local_rotationZ = to_float(wmb_fp.read(4))		
+		local_rotationX = read_float(wmb_fp)		 
+		local_rotationY = read_float(wmb_fp)		 
+		local_rotationZ = read_float(wmb_fp)		
 
-		self.local_scaleX = to_float(wmb_fp.read(4))
-		self.local_scaleY = to_float(wmb_fp.read(4))
-		self.local_scaleZ = to_float(wmb_fp.read(4))
+		self.local_scaleX = read_float(wmb_fp)
+		self.local_scaleY = read_float(wmb_fp)
+		self.local_scaleZ = read_float(wmb_fp)
 
-		world_positionX = to_float(wmb_fp.read(4))
-		world_positionY = to_float(wmb_fp.read(4))
-		world_positionZ = to_float(wmb_fp.read(4))
+		world_positionX = read_float(wmb_fp)
+		world_positionY = read_float(wmb_fp)
+		world_positionZ = read_float(wmb_fp)
 		
-		world_rotationX = to_float(wmb_fp.read(4))
-		world_rotationY = to_float(wmb_fp.read(4))
-		world_rotationZ = to_float(wmb_fp.read(4))
+		world_rotationX = read_float(wmb_fp)
+		world_rotationY = read_float(wmb_fp)
+		world_rotationZ = read_float(wmb_fp)
 
-		world_scaleX = to_float(wmb_fp.read(4))
-		world_scaleY = to_float(wmb_fp.read(4))
-		world_scaleZ = to_float(wmb_fp.read(4))
+		world_scaleX = read_float(wmb_fp)
+		world_scaleY = read_float(wmb_fp)
+		world_scaleZ = read_float(wmb_fp)
 
-		world_position_tposeX = to_float(wmb_fp.read(4))
-		world_position_tposeY = to_float(wmb_fp.read(4))
-		world_position_tposeZ = to_float(wmb_fp.read(4))
+		world_position_tposeX = read_float(wmb_fp)
+		world_position_tposeY = read_float(wmb_fp)
+		world_position_tposeZ = read_float(wmb_fp)
 
 		self.local_position = (local_positionX, local_positionY, local_positionZ)
 		self.local_rotation = (local_rotationX, local_rotationY, local_rotationZ)
@@ -226,8 +226,8 @@ class wmb3_boneMap(object):
 	"""docstring for wmb3_boneMap"""
 	def __init__(self, wmb_fp):
 		super(wmb3_boneMap, self).__init__()
-		self.boneMapOffset = to_uint(wmb_fp.read(4))					
-		self.boneMapCount = to_uint(wmb_fp.read(4))	
+		self.boneMapOffset = read_uint32(wmb_fp)					
+		self.boneMapCount = read_uint32(wmb_fp)	
 
 class wmb3_boneSet(object):
 	"""docstring for wmb3_boneSet"""
@@ -237,34 +237,34 @@ class wmb3_boneSet(object):
 		self.boneSetCount = boneSetCount
 		boneSetInfoArray = []
 		for index in range(boneSetCount):
-			offset =  to_uint(wmb_fp.read(4))
-			count = to_uint(wmb_fp.read(4))
+			offset =  read_uint32(wmb_fp)
+			count = read_uint32(wmb_fp)
 			boneSetInfoArray.append([offset, count])
 		for boneSetInfo in boneSetInfoArray:
 			wmb_fp.seek(boneSetInfo[0])
 			boneSet = []
 			for index in range(boneSetInfo[1]):
-				boneSet.append(to_uint(wmb_fp.read(2)))
+				boneSet.append(read_uint16(wmb_fp))
 			self.boneSetArray.append(boneSet)
 
 class wmb3_material(object):
 	"""docstring for wmb3_material"""
 	def __init__(self, wmb_fp):
 		super(wmb3_material, self).__init__()
-		to_uint(wmb_fp.read(2))
-		to_uint(wmb_fp.read(2))
-		to_uint(wmb_fp.read(2))
-		to_uint(wmb_fp.read(2))
-		materialNameOffset = to_uint(wmb_fp.read(4))
-		effectNameOffset = to_uint(wmb_fp.read(4))
-		techniqueNameOffset = to_uint(wmb_fp.read(4))
-		to_uint(wmb_fp.read(4))
-		textureOffset = to_uint(wmb_fp.read(4))
-		textureNum = to_uint(wmb_fp.read(4))
-		paramterGroupsOffset = to_uint(wmb_fp.read(4))
-		numParameterGroups = to_uint(wmb_fp.read(4))
-		varOffset = to_uint(wmb_fp.read(4))
-		varNum = to_uint(wmb_fp.read(4))
+		read_uint16(wmb_fp)
+		read_uint16(wmb_fp)
+		read_uint16(wmb_fp)
+		read_uint16(wmb_fp)
+		materialNameOffset = read_uint32(wmb_fp)
+		effectNameOffset = read_uint32(wmb_fp)
+		techniqueNameOffset = read_uint32(wmb_fp)
+		read_uint32(wmb_fp)
+		textureOffset = read_uint32(wmb_fp)
+		textureNum = read_uint32(wmb_fp)
+		paramterGroupsOffset = read_uint32(wmb_fp)
+		numParameterGroups = read_uint32(wmb_fp)
+		varOffset = read_uint32(wmb_fp)
+		varNum = read_uint32(wmb_fp)
 		wmb_fp.seek(materialNameOffset)
 		self.materialName = to_string(wmb_fp.read(256))
 		wmb_fp.seek(effectNameOffset)
@@ -291,8 +291,8 @@ class wmb3_material(object):
 		# Append textures to materials in the dictionary
 		for i in range(textureNum):
 			wmb_fp.seek(textureOffset + i * 8)
-			offset = to_uint(wmb_fp.read(4))
-			identifier = "%08x"%to_uint(wmb_fp.read(4))
+			offset = read_uint32(wmb_fp)
+			identifier = "%08x"%read_uint32(wmb_fp)
 			wmb_fp.seek(offset)
 			textureTypeName = to_string(wmb_fp.read(256))
 			self.textureArray[textureTypeName] = identifier
@@ -308,12 +308,12 @@ class wmb3_material(object):
 		for i in range(numParameterGroups):
 			wmb_fp.seek(paramterGroupsOffset + i * 12)
 			parameters = []
-			index = to_uint(wmb_fp.read(4))
-			offset = to_uint(wmb_fp.read(4))
-			num = to_uint(wmb_fp.read(4))
+			index = read_uint32(wmb_fp)
+			offset = read_uint32(wmb_fp)
+			num = read_uint32(wmb_fp)
 			wmb_fp.seek(offset)
 			for k in range(num):
-				param = to_float(wmb_fp.read(4))
+				param = read_float(wmb_fp)
 				parameters.append(param)
 			self.parameterGroups.append(parameters)
 
@@ -321,8 +321,8 @@ class wmb3_material(object):
 		self.uniformArray = {}
 		for i in range(varNum):
 			wmb_fp.seek(varOffset + i * 8)
-			offset = to_uint(wmb_fp.read(4))
-			value = to_float(wmb_fp.read(4))
+			offset = read_uint32(wmb_fp)
+			value = read_float(wmb_fp)
 			wmb_fp.seek(offset)
 			self.uniformArray [to_string(wmb_fp.read(256))] = value
 			
@@ -331,38 +331,38 @@ class wmb3_meshGroup(object):
 	"""docstring for wmb3_meshGroupInfo"""
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroup, self).__init__()
-		nameOffset = to_uint(wmb_fp.read(4))
+		nameOffset = read_uint32(wmb_fp)
 		self.boundingBox = []
 		for i in range(6):
-			self.boundingBox.append(to_float(wmb_fp.read(4)))								
-		materialIndexArrayOffset = to_uint(wmb_fp.read(4))
-		materialIndexArrayCount =  to_uint(wmb_fp.read(4))
-		boneIndexArrayOffset =to_uint(wmb_fp.read(4))
-		boneIndexArrayCount =  to_uint(wmb_fp.read(4))
+			self.boundingBox.append(read_float(wmb_fp))								
+		materialIndexArrayOffset = read_uint32(wmb_fp)
+		materialIndexArrayCount =  read_uint32(wmb_fp)
+		boneIndexArrayOffset =read_uint32(wmb_fp)
+		boneIndexArrayCount =  read_uint32(wmb_fp)
 		wmb_fp.seek(nameOffset)
 		self.meshGroupname = to_string(wmb_fp.read(256))
 		self.materialIndexArray = []
 		self.boneIndexArray = []
 		wmb_fp.seek(materialIndexArrayOffset)
 		for i in range(materialIndexArrayCount):
-			self.materialIndexArray.append(to_uint(wmb_fp.read(2)))
+			self.materialIndexArray.append(read_uint16(wmb_fp))
 		wmb_fp.seek(boneIndexArrayOffset)
 		for i in range(boneIndexArrayCount):
-			self.boneIndexArray.append(to_uint(wmb_fp.read(2)))
+			self.boneIndexArray.append(read_uint16(wmb_fp))
 		
 
 class wmb3_groupedMesh(object):
 	"""docstring for wmb3_groupedMesh"""
 	def __init__(self, wmb_fp):
 		super(wmb3_groupedMesh, self).__init__()
-		self.vertexGroupIndex = to_uint(wmb_fp.read(4))
-		self.meshGroupIndex = to_uint(wmb_fp.read(4))
-		self.materialIndex = to_uint(wmb_fp.read(4))
-		self.colTreeNodeIndex = to_uint(wmb_fp.read(4)) 
+		self.vertexGroupIndex = read_uint32(wmb_fp)
+		self.meshGroupIndex = read_uint32(wmb_fp)
+		self.materialIndex = read_uint32(wmb_fp)
+		self.colTreeNodeIndex = read_uint32(wmb_fp) 
 		if self.colTreeNodeIndex == 4294967295:	
 			self.colTreeNodeIndex = -1					
-		self.meshGroupInfoMaterialPair = to_uint(wmb_fp.read(4))
-		self.unknownWorldDataIndex = to_uint(wmb_fp.read(4))
+		self.meshGroupInfoMaterialPair = read_uint32(wmb_fp)
+		self.unknownWorldDataIndex = read_uint32(wmb_fp)
 		if self.unknownWorldDataIndex == 4294967295:	
 			self.unknownWorldDataIndex = -1
 		
@@ -371,13 +371,13 @@ class wmb3_meshGroupInfo(object):
 	"""docstring for wmb3_meshGroupInfo"""
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroupInfo, self).__init__()
-		self.nameOffset = to_uint(wmb_fp.read(4))					
-		self.lodLevel = to_uint(wmb_fp.read(4))
+		self.nameOffset = read_uint32(wmb_fp)					
+		self.lodLevel = read_uint32(wmb_fp)
 		if self.lodLevel == 4294967295:	
 			self.lodLevel = -1				
-		self.meshStart = to_uint(wmb_fp.read(4))						
-		meshGroupInfoOffset = to_uint(wmb_fp.read(4))			
-		self.meshCount = to_uint(wmb_fp.read(4))						
+		self.meshStart = read_uint32(wmb_fp)						
+		meshGroupInfoOffset = read_uint32(wmb_fp)			
+		self.meshCount = read_uint32(wmb_fp)						
 		wmb_fp.seek(self.nameOffset)
 		self.meshGroupInfoname = to_string(wmb_fp.read(256))
 		wmb_fp.seek(meshGroupInfoOffset)
@@ -389,21 +389,21 @@ class wmb3_meshGroupInfo(object):
 class wmb3_colTreeNode(object):
 	"""docstring for colTreeNode"""
 	def __init__(self, wmb_fp):
-		p1_x = to_float(wmb_fp.read(4))
-		p1_y = to_float(wmb_fp.read(4))
-		p1_z = to_float(wmb_fp.read(4))
+		p1_x = read_float(wmb_fp)
+		p1_y = read_float(wmb_fp)
+		p1_z = read_float(wmb_fp)
 		self.p1 = (p1_x, p1_y, p1_z)
 
-		p2_x = to_float(wmb_fp.read(4))
-		p2_y = to_float(wmb_fp.read(4))
-		p2_z = to_float(wmb_fp.read(4))
+		p2_x = read_float(wmb_fp)
+		p2_y = read_float(wmb_fp)
+		p2_z = read_float(wmb_fp)
 		self.p2 = (p2_x, p2_y, p2_z)
 
-		self.left = to_uint(wmb_fp.read(4))
+		self.left = read_uint32(wmb_fp)
 		if self.left == 4294967295:
 			self.left = -1
 
-		self.right = to_uint(wmb_fp.read(4))
+		self.right = read_uint32(wmb_fp)
 		if self.right == 4294967295:
 			self.right = -1
 
@@ -462,7 +462,7 @@ class WMB3(object):
 		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
 		self.firstLevel = []
 		for entry in range(16):
-			self.firstLevel.append(to_uint(wmb_fp.read(2)))
+			self.firstLevel.append(read_uint16(wmb_fp))
 			if self.firstLevel[-1] == 65535:
 				self.firstLevel[-1] = -1
 
@@ -473,7 +473,7 @@ class WMB3(object):
 
 		self.secondLevel = []
 		for entry in range(firstLevel_Entry_Count * 16):
-			self.secondLevel.append(to_uint(wmb_fp.read(2)))
+			self.secondLevel.append(read_uint16(wmb_fp))
 			if self.secondLevel[-1] == 65535:
 				self.secondLevel[-1] = -1
 
@@ -484,7 +484,7 @@ class WMB3(object):
 
 		self.thirdLevel = []
 		for entry in range(secondLevel_Entry_Count * 16):
-			self.thirdLevel.append(to_uint(wmb_fp.read(2)))
+			self.thirdLevel.append(read_uint16(wmb_fp))
 			if self.thirdLevel[-1] == 65535:
 				self.thirdLevel[-1] = -1
 
@@ -492,7 +492,7 @@ class WMB3(object):
 		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
 		unknownData1Array = []
 		for i in range(self.wmb3_header.boneIndexTranslateTableSize):
-			unknownData1Array.append(to_uint(wmb_fp.read(1)))
+			unknownData1Array.append(read_uint8(wmb_fp))
 
 		self.vertexGroupArray = []
 		for vertexGroupIndex in range(self.wmb3_header.vertexGroupCount):
@@ -529,7 +529,7 @@ class WMB3(object):
 		wmb_fp.seek(self.wmb3_header.boneMapOffset)
 		self.boneMap = []
 		for index in range(self.wmb3_header.boneMapCount):
-			self.boneMap.append(to_uint(wmb_fp.read(4)))
+			self.boneMap.append(read_uint32(wmb_fp))
 		wmb_fp.seek(self.wmb3_header.bonesetOffset)
 		self.boneSetArray = wmb3_boneSet(wmb_fp, self.wmb3_header.bonesetCount).boneSetArray
 

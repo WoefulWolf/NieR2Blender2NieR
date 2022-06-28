@@ -1,50 +1,53 @@
 import struct
 
+# Little Endian
 
-def create_wmb(filepath):
-    print('Creating wmb file: ', filepath)
-    wmb_file = open(filepath, 'wb')
-    return wmb_file
+def read_int8(file) -> int:
+    entry = file.read(1)
+    return struct.unpack('<b', entry)[0]
 
+def read_uint8(file) -> int:
+    entry = file.read(1)
+    return struct.unpack('B', entry)[0]
 
-def to_float(bs):
-	return struct.unpack("<f", bs)[0]
+def read_int16(file) -> int:
+    entry = file.read(2)
+    return struct.unpack('<h', entry)[0]
 
+def read_uint16(file) -> int:
+    entry = file.read(2)
+    return struct.unpack('<H', entry)[0]
 
-def to_float16(bs):
-	return struct.unpack("<e", bs)[0]
+def read_int32(file) -> int:
+    entry = file.read(4)
+    return struct.unpack('<i', entry)[0]
 
+def read_uint32(file) -> int:
+    entry = file.read(4)
+    return struct.unpack('<I', entry)[0]
+
+def read_int64(file) -> int:
+    entry = file.read(8)
+    return struct.unpack('<q', entry)[0]
+
+def read_uint64(file) -> int:
+    entry = file.read(8)
+    return struct.unpack('<Q', entry)[0]
+
+def read_float16(file) -> float:
+    entry = file.read(2)
+    return struct.unpack('<e', entry)[0]
+
+def read_float(file) -> float:
+    entry = file.read(4)
+    return struct.unpack('<f', entry)[0]
 
 def to_uint(bs):
-	return (int.from_bytes(bs, byteorder='little', signed=False))
-
-
-def to_int(bs):
-	return (int.from_bytes(bs, byteorder='little', signed=True))
-
-
-def to_string(bs, encoding = 'utf8'):
-	return bs.split(b'\x00')[0].decode(encoding)
-
-
-def to_ushort(bs):
-	return struct.unpack("<H", bs)[0]
-
-
-def write_float(file, float):
-    entry = struct.pack('<f', float)
-    file.write(entry)
-
+	return int.from_bytes(bs, byteorder='little', signed=False)
 
 def write_char(file, char):
     entry = struct.pack('<s', bytes(char, 'utf-8'))
     file.write(entry)
-
-
-def write_string(file, str):
-    for char in str:
-        write_char(file, char)
-    write_buffer(file, 1)
 
 
 def write_Int32(file, int):
@@ -67,6 +70,11 @@ def write_uInt16(file, int):
     file.write(entry)
 
 
+def write_float(file, float):
+    entry = struct.pack('<f', float)
+    file.write(entry)
+
+
 def write_xyz(file, xyz):
     for val in xyz:
         write_float(file, val)
@@ -86,9 +94,62 @@ def write_float16(file, val):
     entry = struct.pack("<e", val)
     file.write(entry)
 
+# WMB
+
+def create_wmb(filepath):
+    print('Creating wmb file: ', filepath)
+    wmb_file = open(filepath, 'wb')
+    return wmb_file
+
 
 def close_wmb(wmb_file, generated_data):
     wmb_file.seek(generated_data.lods_Offset-52)
     write_string(wmb_file, 'WMB created with Blender2NieR v0.3.0 by Woeful_Wolf')
     wmb_file.flush()
     wmb_file.close()
+
+# String
+
+def to_string(bs, encoding = 'utf8'):
+    return bs.split(b'\x00')[0].decode(encoding)
+
+def read_string(file, maxBen = -1) -> str:
+    binaryString = b""
+    while maxBen == -1 or len(binaryString) > maxBen:
+        char = readBe_char(file)
+        if char == b'\x00':
+            break
+        binaryString += char
+    return binaryString.decode('utf-8')
+
+
+def write_string(file, str):
+    for char in str:
+        write_char(file, char)
+    write_buffer(file, 1)
+
+# Big Endian
+
+def readBe_int16(file) -> int:
+    entry = file.read(2)
+    return struct.unpack('>h', entry)[0]
+
+def readBe_int32(file) -> int:
+    entry = file.read(4)
+    return struct.unpack('>i', entry)[0]
+
+def readBe_char(file) -> str:
+    entry = file.read(1)
+    return struct.unpack('>c', entry)[0]
+
+def writeBe_char(file, char):
+    entry = struct.pack('>s', bytes(char, 'utf-8'))
+    file.write(entry)
+
+def writeBe_int32(file, int):
+    entry = struct.pack('>i', int)
+    file.write(entry)
+
+def writeBe_int16(file, int):
+    entry = struct.pack('>h', int)
+    file.write(entry)

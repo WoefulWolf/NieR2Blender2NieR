@@ -3,9 +3,6 @@ import os
 import struct
 
 
-def to_int(bs):
-	return (int.from_bytes(bs, byteorder='little'))
-
 def to_bytes(arg):
 	if type(arg) == int:
 		return struct.pack('<I', arg)
