@@ -2,6 +2,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ..exporter.col_ui_manager import enableCollisionTools
 from ...utils.util import setExportFieldsFromImportFile
 
 
@@ -17,5 +18,6 @@ class ImportNierCol(bpy.types.Operator, ImportHelper):
         from . import col_importer
 
         setExportFieldsFromImportFile(self.filepath)
+        enableCollisionTools()
 
         return col_importer.main(self.filepath)

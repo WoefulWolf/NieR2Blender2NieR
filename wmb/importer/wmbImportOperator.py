@@ -2,6 +2,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
 
 
@@ -21,5 +22,6 @@ class ImportNierWmb(bpy.types.Operator, ImportHelper):
             wmb_importer.reset_blend()
 
         setExportFieldsFromImportFile(self.filepath)
+        enableVisibilitySelector()
 
         return wmb_importer.main(False, self.filepath)

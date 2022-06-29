@@ -270,7 +270,19 @@ class Mesh_PT_GroupVisibilitySelector(bpy.types.Panel):
             groupOp.visibilityType = "focus"
             groupOp.collection = "WMB"
 
+def enableVisibilitySelector():
+    if hasattr(bpy.types, Mesh_PT_VisibilitySelectorToplevel.bl_idname):
+        return
+    register()
+
+def disableVisibilitySelector():
+    if not hasattr(bpy.types, Mesh_PT_VisibilitySelectorToplevel.bl_idname):
+        return
+    unregister()
+
 def register():
+    if hasattr(bpy.types, Mesh_PT_VisibilitySelectorToplevel.bl_idname):
+        return
     bpy.utils.register_class(MeshPartSetVisibility)
     bpy.utils.register_class(MeshPartSelect)
     bpy.utils.register_class(MeshGroupSetVisibility)
@@ -280,6 +292,8 @@ def register():
     bpy.utils.register_class(Mesh_PT_IndividualVisibilitySelector)
 
 def unregister():
+    if not hasattr(bpy.types, Mesh_PT_VisibilitySelectorToplevel.bl_idname):
+        return
     bpy.utils.unregister_class(MeshPartSetVisibility)
     bpy.utils.unregister_class(MeshPartSelect)
     bpy.utils.unregister_class(MeshGroupSetVisibility)

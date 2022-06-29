@@ -8,13 +8,17 @@ bl_info = {
 }
 
 
+import bpy
+from bpy.app.handlers import persistent
 from . import preferences
 from .consts import ADDON_NAME
 from .col.exporter import col_ui_manager
+from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionTools
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
     DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands
+from .utils.visibilitySwitcher import enableVisibilitySelector, disableVisibilitySelector
 from .utils import visibilitySwitcher
 from .wta_wtp.exporter import wta_wtp_ui_manager
 from .bxm.exporter.gaAreaExportOperator import ExportNierGaArea
@@ -109,6 +113,16 @@ classes = (
 
 preview_collections = {}
 
+@persistent
+def checkCustomPanelsEnableDisable(_, __):
+    if "WMB" in bpy.data.collections:
+        enableVisibilitySelector()
+    else:
+        disableVisibilitySelector()
+    if "COL" in bpy.data.collections:
+        enableCollisionTools()
+    else:
+        disableCollisionTools()
 
 def register():
     # Custom icons
@@ -124,8 +138,6 @@ def register():
 
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
-    col_ui_manager.register()
-    visibilitySwitcher.register()
     preferences.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
@@ -135,6 +147,8 @@ def register():
     bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
     bpy.types.Object.slidable = bpy.props.BoolProperty(name="Slidable/Modifier")
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
+
+    bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
 
 def unregister():
     for pcoll in preview_collections.values():
@@ -152,6 +166,8 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
+
+    bpy.app.handlers.load_post.remove(checkCustomPanelsEnableDisable)
 
 ## Collision Extras
 def setColourByCollisionType(obj):

@@ -4,6 +4,8 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ...col.exporter.col_ui_manager import enableCollisionTools
+from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
 from ...consts import ADDON_NAME
 
@@ -34,12 +36,14 @@ def importDat(only_extract, filepath):
         return {'FINISHED'}
 
     setExportFieldsFromImportFile(filepath)
+    enableVisibilitySelector()
 
     # COL
     col_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + tailless_tail + '.col'
     if os.path.isfile(col_filepath):
         from ...col.importer import col_importer
         col_importer.main(col_filepath)
+        enableCollisionTools()
 
     # LAY
     lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
@@ -111,6 +115,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         if os.path.isfile(col_filepath):
             from ...col.importer import col_importer
             col_importer.main(col_filepath)
+            enableCollisionTools()
 
         # LAY
         lay_filepath = extract_dir + '\\' + tailless_tail + '.dat\\' + 'Layout.lay'
