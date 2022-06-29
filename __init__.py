@@ -15,6 +15,7 @@ from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
     DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands
+from .utils import visibilitySwitcher
 from .wta_wtp.exporter import wta_wtp_ui_manager
 from .bxm.exporter.gaAreaExportOperator import ExportNierGaArea
 from .bxm.exporter.sarExportOperator import ExportNierSar
@@ -124,6 +125,7 @@ def register():
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
     col_ui_manager.register()
+    visibilitySwitcher.register()
     preferences.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
@@ -145,6 +147,7 @@ def unregister():
     wta_wtp_ui_manager.unregister()
     dat_dtt_ui_manager.unregister()
     col_ui_manager.unregister()
+    visibilitySwitcher.unregister()
     preferences.unregister()
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
