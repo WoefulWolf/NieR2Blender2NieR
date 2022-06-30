@@ -4,7 +4,7 @@ import math
 from typing import List, Tuple
 from mathutils import Vector
 
-from ...utils.util import ShowMessageBox
+from ...utils.util import ShowMessageBox, getPreferences
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -31,7 +31,9 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	amt = bpy.data.armatures.new(name +'Amt')
 	ob = bpy.data.objects.new(name, amt)
 	#ob = bpy.context.active_object
-	ob.show_in_front = False
+	if getPreferences().armatureDefaultDisplayType != "DEFAULT":
+		amt.display_type = getPreferences().armatureDefaultDisplayType
+	ob.show_in_front = getPreferences().armatureDefaultInFront
 	ob.name = name
 	bpy.data.collections.get(collection_name).objects.link(ob)
 

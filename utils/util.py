@@ -1,10 +1,12 @@
 import os
+import textwrap
 from typing import List
-
 import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
+
+from ..consts import ADDON_NAME
 
 
 class Vector3(object):
@@ -19,6 +21,16 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
         self.layout.label(text = message)
         self.layout.alignment = 'CENTER'
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
+
+def drawMultilineLabel(context, text, parent):
+    """Stolen from https://b3d.interplanety.org/en/multiline-text-in-blender-interface-panels/"""
+    chars = int(context.region.width / (6 *  bpy.context.preferences.system.ui_scale))   # 6 pix on 1 character
+    wrapper = textwrap.TextWrapper(width=chars)
+    text_lines = wrapper.wrap(text=text)
+    col = parent.column(align=True)
+    for text_line in text_lines:
+        col.label(text=text_line)
 
 def getUsedMaterials():
     materials = []
@@ -168,3 +180,6 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
     bpy.context.scene.DatDir = extract_dir + '\\' + tailless_tail + '.dat'
     bpy.context.scene.DttDir = extract_dir + '\\' + tailless_tail + '.dtt'
     bpy.context.scene.ExportFileName = tailless_tail
+
+def getPreferences():
+    return bpy.context.preferences.addons[ADDON_NAME].preferences

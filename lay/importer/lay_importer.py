@@ -102,7 +102,7 @@ def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
     return None
 
 def getModelBoundingBox(modelName, addonName):
-    searchDirs = bpy.context.preferences.addons[addonName].preferences.assetDirs
+    searchDirs = getPreferences().assetDirs
     searchDirs = [dir.directory for dir in searchDirs]
 
     filePath = ""
