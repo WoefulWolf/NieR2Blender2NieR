@@ -459,40 +459,41 @@ class WMB3(object):
 
 		
 		# indexBoneTranslateTable
-		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
 		self.firstLevel = []
-		for entry in range(16):
-			self.firstLevel.append(read_uint16(wmb_fp))
-			if self.firstLevel[-1] == 65535:
-				self.firstLevel[-1] = -1
-
-		firstLevel_Entry_Count = 0
-		for entry in self.firstLevel:
-			if entry != -1:
-				firstLevel_Entry_Count += 1
-
 		self.secondLevel = []
-		for entry in range(firstLevel_Entry_Count * 16):
-			self.secondLevel.append(read_uint16(wmb_fp))
-			if self.secondLevel[-1] == 65535:
-				self.secondLevel[-1] = -1
-
-		secondLevel_Entry_Count = 0
-		for entry in self.secondLevel:
-			if entry != -1:
-				secondLevel_Entry_Count += 1
-
 		self.thirdLevel = []
-		for entry in range(secondLevel_Entry_Count * 16):
-			self.thirdLevel.append(read_uint16(wmb_fp))
-			if self.thirdLevel[-1] == 65535:
-				self.thirdLevel[-1] = -1
+		if self.wmb3_header.offsetBoneIndexTranslateTable > 0:
+			wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
+			for entry in range(16):
+				self.firstLevel.append(read_uint16(wmb_fp))
+				if self.firstLevel[-1] == 65535:
+					self.firstLevel[-1] = -1
+
+			firstLevel_Entry_Count = 0
+			for entry in self.firstLevel:
+				if entry != -1:
+					firstLevel_Entry_Count += 1
+
+			for entry in range(firstLevel_Entry_Count * 16):
+				self.secondLevel.append(read_uint16(wmb_fp))
+				if self.secondLevel[-1] == 65535:
+					self.secondLevel[-1] = -1
+
+			secondLevel_Entry_Count = 0
+			for entry in self.secondLevel:
+				if entry != -1:
+					secondLevel_Entry_Count += 1
+
+			for entry in range(secondLevel_Entry_Count * 16):
+				self.thirdLevel.append(read_uint16(wmb_fp))
+				if self.thirdLevel[-1] == 65535:
+					self.thirdLevel[-1] = -1
 
 
-		wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
-		unknownData1Array = []
-		for i in range(self.wmb3_header.boneIndexTranslateTableSize):
-			unknownData1Array.append(read_uint8(wmb_fp))
+			wmb_fp.seek(self.wmb3_header.offsetBoneIndexTranslateTable)
+			unknownData1Array = []
+			for i in range(self.wmb3_header.boneIndexTranslateTableSize):
+				unknownData1Array.append(read_uint8(wmb_fp))
 
 		self.vertexGroupArray = []
 		for vertexGroupIndex in range(self.wmb3_header.vertexGroupCount):
