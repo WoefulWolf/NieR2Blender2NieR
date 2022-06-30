@@ -66,7 +66,10 @@ def main(colFilePath):
         colTreeNodesCollection = bpy.data.collections.new("col_colTreeNodes")
         colCollection.children.link(colTreeNodesCollection)
 
-    bpy.context.view_layer.active_layer_collection.children["COL"].children["col_colTreeNodes"].hide_viewport = True
+    try:
+        bpy.context.view_layer.active_layer_collection.children["COL"].children["col_colTreeNodes"].hide_viewport = True
+    except:
+        pass
     
     # Create colTreeNodes
     rootNode = bpy.data.objects.new("Root_col", None)

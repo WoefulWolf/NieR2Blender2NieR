@@ -124,6 +124,12 @@ def checkCustomPanelsEnableDisable(_, __):
     else:
         disableCollisionTools()
 
+def initialCheckCustomPanelsEnableDisable(_, __):
+    # during registration bpy.data is not yet available, so wait for first depsgraph update
+    if hasattr(bpy.data, "collections"):
+        checkCustomPanelsEnableDisable(_, __)
+        bpy.app.handlers.depsgraph_update_post.remove(initialCheckCustomPanelsEnableDisable)
+
 def register():
     # Custom icons
     import bpy.utils.previews
@@ -149,6 +155,7 @@ def register():
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
 
     bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
+    bpy.app.handlers.depsgraph_update_post.append(initialCheckCustomPanelsEnableDisable)
 
 def unregister():
     for pcoll in preview_collections.values():
@@ -168,6 +175,8 @@ def unregister():
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
 
     bpy.app.handlers.load_post.remove(checkCustomPanelsEnableDisable)
+    if initialCheckCustomPanelsEnableDisable in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(initialCheckCustomPanelsEnableDisable)
 
 ## Collision Extras
 def setColourByCollisionType(obj):
