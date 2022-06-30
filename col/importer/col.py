@@ -49,25 +49,19 @@ class Batch:
 
             colFile.seek(self.offsetVertices)
             self.vertices = []
-            self.vec4Vertices = []
             for i in range(self.vertexCount):
                 x = read_float(colFile)
                 y = read_float(colFile)
                 z = read_float(colFile)
                 w = read_float(colFile)
                 self.vertices.append([x, y, z])
-                self.vec4Vertices.append([x, y, z, w])
 
             colFile.seek(self.offsetIndices)
             self.indices = []
-            self.rawIndices = []
             for i in range(round(self.indexCount / 3)):
                 v0 = read_uint16(colFile)
                 v1 = read_uint16(colFile)
                 v2 = read_uint16(colFile)
-                self.rawIndices.append(v0)
-                self.rawIndices.append(v1)
-                self.rawIndices.append(v2)
                 self.indices.append([v2, v1, v0])
 
             colFile.seek(returnPos)
@@ -79,6 +73,44 @@ class Batch:
             self.indexCount = read_uint32(colFile)
 
             returnPos = colFile.tell()
+            self.vertices = []
+            self.boneWeights = []
+            self.bones = []
+            for i in range(self.vertexCount):
+                self.vertices.append([          # TODO origin at bone position
+                    read_float(colFile),
+                    read_float(colFile),
+                    read_float(colFile),
+                ])
+                read_float(colFile)     # w
+
+                self.boneWeights.append([
+                    read_float(colFile),
+                    read_float(colFile),
+                    read_float(colFile),
+                    read_float(colFile),
+                ])
+
+                self.bones.append([
+                    read_int32(colFile),
+                    read_int32(colFile),
+                    read_int32(colFile),
+                    read_int32(colFile),
+                ])
+
+            colFile.seek(self.offsetIndices)
+            self.indices = []
+            for i in range(round(self.indexCount / 3)):
+                v0 = read_uint16(colFile)
+                v1 = read_uint16(colFile)
+                v2 = read_uint16(colFile)
+                self.indices.append([v2, v1, v0])
+
+            colFile.seek(self.offsetVertices)
+
+            # TODO weight paint in col_importer
+
+            colFile.seek(returnPos)
         else:
             print("UNKNOWN BATCH TYPE!")
 

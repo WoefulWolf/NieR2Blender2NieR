@@ -2,7 +2,7 @@ import bmesh
 
 class Batch:
     def __init__(self, bObj, batchStartOffset):
-        self.boneIndex = -1
+        self.boneIndex = -1         # TODO actually set correct index
         self.offsetVertices = batchStartOffset + 5 * 4
         self.vertexCount = len(bObj.data.vertices)
         self.offsetIndices = self.offsetVertices + (self.vertexCount * 16)
