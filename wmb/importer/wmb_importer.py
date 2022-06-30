@@ -641,6 +641,7 @@ def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file_
 	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
+	bpy.context.scene.WTAMaterials.clear()
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
 		addWtaExportMaterial(texture_dir, material)
