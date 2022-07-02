@@ -73,6 +73,8 @@ class Batch:
             self.indexCount = read_uint32(colFile)
 
             returnPos = colFile.tell()
+
+            colFile.seek(self.offsetVertices)
             self.vertices = []
             self.boneWeights = []
             self.bones = []
@@ -92,10 +94,10 @@ class Batch:
                 ])
 
                 self.bones.append([
-                    read_int32(colFile),
-                    read_int32(colFile),
-                    read_int32(colFile),
-                    read_int32(colFile),
+                    read_uint32(colFile),
+                    read_uint32(colFile),
+                    read_uint32(colFile),
+                    read_uint32(colFile),
                 ])
 
             colFile.seek(self.offsetIndices)
@@ -105,10 +107,6 @@ class Batch:
                 v1 = read_uint16(colFile)
                 v2 = read_uint16(colFile)
                 self.indices.append([v2, v1, v0])
-
-            colFile.seek(self.offsetVertices)
-
-            # TODO weight paint in col_importer
 
             colFile.seek(returnPos)
         else:
