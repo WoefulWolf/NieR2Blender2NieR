@@ -238,8 +238,6 @@ class ExportAll(bpy.types.Operator):
             print("Exporting COL")
             if exportSteps.triangulateMeshes:
                 triangulate_meshes("COL")
-            if exportSteps.centerOrigins:
-                centre_origins("COL")
             if exportSteps.deleteLoose:
                 bpy.ops.b2n.deleteloosegeometryall()
             col_exporter.main(colFilePath, True)

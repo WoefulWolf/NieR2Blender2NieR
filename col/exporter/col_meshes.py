@@ -1,8 +1,13 @@
-from ...utils.ioUtils import write_float, write_Int32, write_uInt32, write_uInt16, write_byte
-from .col_batch import Batch
+import bpy
+
+from .col_batch import BatchT2, BatchT3
+from .col_boneMap import BoneMap
+from .col_namegroups import NameGroup
+from ...utils.ioUtils import write_uInt32, write_byte
+
 
 class Mesh:
-    def __init__(self, meshBlenderObject, nameGroups, batchOffset):
+    def __init__(self, meshBlenderObject: bpy.types.Object, nameGroups: NameGroup, batchOffset: int, boneMap: BoneMap):
         meshIndex = meshBlenderObject.name.split("-")[0]
 
         self.collisionType = int(meshBlenderObject.collisionType)
@@ -15,7 +20,7 @@ class Mesh:
             self.surfaceType = meshBlenderObject["UNKNOWN_surfaceType"]
 
         self.nameIndex = nameGroups.get_nameIndex(meshBlenderObject.name.split("-")[1])
-        self.batchType = 2
+        self.batchType = 2 if len(meshBlenderObject.vertex_groups) <= 1 else 3
         self.batchOffset = batchOffset
 
         self.totalBatchesStructSize = 0
@@ -26,7 +31,11 @@ class Mesh:
         for obj in objectsInCollectionInOrder("COL"):
             if obj.type == 'MESH':
                 if obj.name.split("-")[0] == meshIndex:
-                    newBatch = Batch(obj, currentBatchOffset)
+                    if self.batchType == 2:
+                        newBatch = BatchT2(obj, currentBatchOffset, boneMap)
+                    else:
+                        newBatch = BatchT3(obj, currentBatchOffset, boneMap)
+
                     self.batches.append(newBatch)
                     currentBatchOffset += newBatch.structSize
                     self.totalBatchesStructSize += newBatch.structSize
@@ -34,8 +43,8 @@ class Mesh:
         self.batchCount = len(self.batches)
 
 class Meshes:
-    def __init__(self, meshesStartOffset, nameGroups):
-        
+    def __init__(self, meshesStartOffset, nameGroups, boneMap: BoneMap, boneMap2: BoneMap):
+
         # Get all the mesh indices
         meshBlenderObjs = []
         meshIndices = []
@@ -51,7 +60,7 @@ class Meshes:
         currentBatchOffset = batchesStartOffset
         self.meshes = []
         for obj in meshBlenderObjs:
-            newMesh = Mesh(obj, nameGroups, currentBatchOffset)
+            newMesh = Mesh(obj, nameGroups, currentBatchOffset, boneMap if len(obj.vertex_groups) <= 1 else boneMap2)
             self.meshes.append(newMesh)
             currentBatchOffset += newMesh.totalBatchesStructSize
 
@@ -76,17 +85,4 @@ def write_col_meshes(col_file, data):
     for mesh in data.meshes.meshes:
         col_file.seek(mesh.batchOffset)
         for batch in mesh.batches:
-            write_Int32(col_file, batch.boneIndex)
-            write_uInt32(col_file, batch.offsetVertices)
-            write_uInt32(col_file, batch.vertexCount)
-            write_uInt32(col_file, batch.offsetIndices)
-            write_uInt32(col_file, batch.indexCount)
-
-            col_file.seek(batch.offsetVertices)
-            for vertex in batch.vertices:
-                for val in vertex:
-                    write_float(col_file, val)
-
-            col_file.seek(batch.offsetIndices)
-            for index in batch.indices:
-                write_uInt16(col_file, index)
+            batch.writeToFile(col_file)

@@ -79,7 +79,7 @@ class Batch:
             self.boneWeights = []
             self.bones = []
             for i in range(self.vertexCount):
-                self.vertices.append([          # TODO origin at bone position
+                self.vertices.append([
                     read_float(colFile),
                     read_float(colFile),
                     read_float(colFile),

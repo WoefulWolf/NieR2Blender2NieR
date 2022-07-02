@@ -19,6 +19,8 @@ def main(filepath, generateColTree):
 
     print("Writing Meshes & Batches...")
     write_col_meshes(col_file, data)
+    data.boneMap.writeToFile(data.offsetBoneMap, col_file)
+    data.boneMap2.writeToFile(data.offsetBoneMap2, col_file)
 
     print("Writing ColTreeNodes...")
     write_col_colTreeNodes(col_file, data)
