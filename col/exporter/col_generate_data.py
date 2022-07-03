@@ -1,3 +1,5 @@
+import bpy
+
 from .col_boneMap import BoneMap, BoneMap2
 from .col_colTreeNodes import ColTreeNodes
 from .col_meshes import Meshes
@@ -30,6 +32,16 @@ class COL_Data:
         self.meshCount = len(self.meshes.meshes)
         currentOffset += self.meshes.structSize
 
+        # MeshMap
+        if bpy.context.scene["exportColMeshMap"]:
+            self.meshMap = list(range(self.meshCount))
+            self.offsetMeshMap = currentOffset
+            self.meshMapCount = self.meshCount
+            currentOffset += self.meshMapCount * 4
+        else:
+            self.meshMap = []
+            self.offsetMeshMap = 0
+            self.meshMapCount = 0
         # BoneMap offsets
         self.boneMapCount = len(self.boneMap.map)
         self.offsetBoneMap = currentOffset if self.boneMapCount > 0 else 0
@@ -40,13 +52,13 @@ class COL_Data:
         self.offsetBoneMap2 = currentOffset if self.boneMap2Count > 0 else 0
         currentOffset += self.boneMap2.structSize
 
-        # MeshMap
-        self.offsetMeshMap = 0
-        self.meshMapCount = 0
-
         # ColTreeNodes
-        print("[>] Generating colTreeNodes...")
-        self.offsetColTreeNodes = currentOffset
-        self.colTreeNodes = ColTreeNodes(currentOffset, generateColTree)
-        self.colTreeNodeCount = len(self.colTreeNodes.colTreeNodes)
-        currentOffset += self.colTreeNodes.structSize
+        if bpy.context.scene["exportColTree"]:
+            print("[>] Generating colTreeNodes...")
+            self.offsetColTreeNodes = currentOffset
+            self.colTreeNodes = ColTreeNodes(currentOffset, generateColTree)
+            self.colTreeNodeCount = len(self.colTreeNodes.colTreeNodes)
+            currentOffset += self.colTreeNodes.structSize
+        else:
+            self.offsetColTreeNodes = 0
+            self.colTreeNodeCount = 0

@@ -265,6 +265,8 @@ class ColTreeNodes:
 from ...utils.util import *
 
 def write_col_colTreeNodes(col_file, data):
+    if data.colTreeNodeCount == 0:
+        return
     col_file.seek(data.offsetColTreeNodes)
 
     for colTreeNode in data.colTreeNodes.colTreeNodes:

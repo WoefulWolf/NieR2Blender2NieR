@@ -10,6 +10,12 @@ from .col_boneMap import BoneMap
 
 class Batch:
     def __init__(self, bObj: bpy.types.Object):
+        self.offsetVertices = -1
+        self.offsetIndices = -1
+        self.dataAlignmentPad = 0
+        self.headerStructSize = -1
+        self.vertexStructSize = -1
+        self.dataStructSize = -1
 
         self.vertexCount = len(bObj.data.vertices)
         self.indexCount = len(bObj.data.polygons) * 3
@@ -32,30 +38,41 @@ class Batch:
         bm.to_mesh(bObj.data)
         bm.free()
 
-    def writeToFile(self, file: BufferedWriter):
+    def setDataOffsets(self, startOffset: int):
+        # 16 byte aligned
+        self.dataAlignmentPad = (16 - (startOffset % 16)) % 16
+        self.offsetVertices = startOffset + self.dataAlignmentPad
+        self.offsetIndices = self.offsetVertices + self.vertexStructSize
+        self.dataStructSize += self.dataAlignmentPad
+
+    def writeHeaderToFile(self, file: BufferedWriter):
+        raise NotImplementedError()
+
+    def writeDataToFile(self, file: BufferedWriter):
         raise NotImplementedError()
 
 class BatchT2(Batch):
-    def __init__(self, bObj: bpy.types.Object, batchStartOffset: int, boneMap: BoneMap):
+    def __init__(self, bObj: bpy.types.Object, boneMap: BoneMap):
         super().__init__(bObj)
 
         if len(bObj.vertex_groups) == 0:
             self.boneIndex = -1
         else:
             self.boneIndex = boneMap.boneToMapIndex[bObj.vertex_groups[0].name]
-        self.offsetVertices = batchStartOffset + 5 * 4
-        self.offsetIndices = self.offsetVertices + (self.vertexCount * 16)
         self.vertices = self.vertexPositions
 
-        self.structSize = (5*4) + (self.vertexCount * 16) + (self.indexCount * 2)
+        self.headerStructSize = 5 * 4
+        self.vertexStructSize = self.vertexCount * 16
+        self.dataStructSize = self.vertexStructSize + self.indexCount * 2
 
-    def writeToFile(self, file: BufferedWriter):
+    def writeHeaderToFile(self, file: BufferedWriter):
         write_Int32(file, self.boneIndex)
         write_uInt32(file, self.offsetVertices)
         write_uInt32(file, self.vertexCount)
         write_uInt32(file, self.offsetIndices)
         write_uInt32(file, self.indexCount)
 
+    def writeDataToFile(self, file: BufferedWriter):
         file.seek(self.offsetVertices)
         for vertex in self.vertices:
             for coord in vertex:
@@ -72,12 +89,9 @@ class RiggedVertexData:
     bones: List[int]
 
 class BatchT3(Batch):
-    def __init__(self, bObj: bpy.types.Object, batchStartOffset: int, boneMap: BoneMap):
+    def __init__(self, bObj: bpy.types.Object, boneMap: BoneMap):
         super().__init__(bObj)
 
-        self.offsetVertices = batchStartOffset + 4 * 4
-        self.offsetIndices = self.offsetVertices + (self.vertexCount * 48)
-        
         self.vertices: List[RiggedVertexData] = []
         vertex: bpy.types.MeshVertex
         for i, vertex in enumerate(bObj.data.vertices):
@@ -98,14 +112,17 @@ class BatchT3(Batch):
 
             self.vertices.append(vData)
         
-        self.structSize = (4*4) + (self.vertexCount * 48) + (self.indexCount * 2)
+        self.headerStructSize = 4 * 4
+        self.vertexStructSize = self.vertexCount * 48
+        self.dataStructSize = self.vertexStructSize + self.indexCount * 2
 
-    def writeToFile(self, file: BufferedWriter):
+    def writeHeaderToFile(self, file: BufferedWriter):
         write_uInt32(file, self.offsetVertices)
         write_uInt32(file, self.vertexCount)
         write_uInt32(file, self.offsetIndices)
         write_uInt32(file, self.indexCount)
 
+    def writeDataToFile(self, file: BufferedWriter):
         file.seek(self.offsetVertices)
         for vertex in self.vertices:
             for coord in vertex.position:

@@ -1,3 +1,4 @@
+from ...utils.ioUtils import write_uInt32
 from .col_colTreeNodes import write_col_colTreeNodes
 from .col_generate_data import COL_Data
 from .col_header import write_col_header
@@ -19,6 +20,12 @@ def main(filepath, generateColTree):
 
     print("Writing Meshes & Batches...")
     write_col_meshes(col_file, data)
+
+    print("Writing Mesh & Bone Maps...")
+    if data.meshMapCount > 0:
+        col_file.seek(data.offsetMeshMap)
+        for num in data.meshMap:
+            write_uInt32(col_file, num)
     data.boneMap.writeToFile(data.offsetBoneMap, col_file)
     data.boneMap2.writeToFile(data.offsetBoneMap2, col_file)
 

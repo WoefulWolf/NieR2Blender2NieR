@@ -21,6 +21,9 @@ def main(colFilePath):
         print("Parsing Col file...", colFilePath)
         col = Col(colFile)
 
+    bpy.context.scene["exportColTree"] = len(col.colTreeNodes) > 0
+    bpy.context.scene["exportColMeshMap"] = len(col.meshMaps) > 0
+
     # Create COL Collection
     colCollection = bpy.data.collections.get("COL")
     if not colCollection:

@@ -171,7 +171,8 @@ class DeleteLooseGeometryAll(bpy.types.Operator):
             m.update()
             bm.clear()
 
-        ShowMessageBox(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
+        if v_delete_count > 0:
+            ShowMessageBox(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
 
