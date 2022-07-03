@@ -12,8 +12,12 @@ class BoneMap:
     type = 1
 
     def __init__(self):
-        allBones = []
         armature = getArmature()
+        if not armature:
+            self.map = []
+            self.structSize = 0
+            return
+        allBones = []
         for obj in bpy.data.collections["COL"].objects:
             if not self.isObjPartOfMap(obj):
                 continue
@@ -55,4 +59,4 @@ def getArmature() -> bpy.types.Armature:
         for armObj in bpy.data.collections["WMB"].all_objects:
             if armObj.type == "ARMATURE":
                 return armObj
-        raise "No armature found in WMB collection"
+    return None
