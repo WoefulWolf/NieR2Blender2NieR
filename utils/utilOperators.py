@@ -74,6 +74,14 @@ class RemoveUnusedVertexGroups(bpy.types.Operator):
         return {'FINISHED'}
 
 
+def merge_vertex_group_weights(obj, base, other):
+    mix_modifier = obj.modifiers.new("MergeWeights", "VERTEX_WEIGHT_MIX")
+    mix_modifier.vertex_group_a = base.name
+    mix_modifier.vertex_group_b = other.name
+    mix_modifier.mix_mode = "ADD"
+    mix_modifier.mix_set = "B"
+    mix_modifier.normalize = True
+
 class MergeVertexGroupCopies(bpy.types.Operator):
     """Merge vertex groups by name copies (etc. bone69 & bone69.001)"""
     bl_idname = "b2n.mergevertexgroupcopies"
@@ -90,19 +98,20 @@ class MergeVertexGroupCopies(bpy.types.Operator):
             v_groups = obj.vertex_groups
             for group1 in v_groups:
                 if "." not in group1.name:
-                    print(group1.name)
                     for group2 in v_groups:
-                        if (group2.name.split(".")[0] == group1.name) and (group2 != group1):
+                        if (group2 == group1):
+                            continue
+                        if (group2.name.split(".")[0] == group1.name):
                             v_merged_count += 1
-                            bpy.ops.object.modifier_add(type="VERTEX_WEIGHT_MIX")
-                            mix_modifier = bpy.context.object.modifiers["VertexWeightMix"]
-                            mix_modifier.vertex_group_a = group1.name
-                            mix_modifier.vertex_group_b = group2.name
-                            mix_modifier.mix_mode = "ADD"
-                            mix_modifier.mix_set = "B"
-                            bpy.ops.object.modifier_apply(modifier="VertexWeightMix")
-                            bpy.ops.object.vertex_group_set_active(group=group2.name)
-                            bpy.ops.object.vertex_group_remove()
+                            merge_vertex_group_weights(obj, group1, group2)
+
+            for mod in obj.modifiers:
+                if ("MergeWeights" in mod.name):
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
+
+            for vg in obj.vertex_groups:
+                if ("." in vg.name):
+                    obj.vertex_groups.remove(vg)
 
         bpy.context.view_layer.objects.active = last_active
         ShowMessageBox(str(v_merged_count) + ' vertex groups had name copies and have been merged.', 'Blender2NieR: Tool Info')
