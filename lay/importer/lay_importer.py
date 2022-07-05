@@ -1,7 +1,8 @@
 import math
 
+from ...utils.ioUtils import to_string, read_float, read_uint32
 from .lay import Lay
-from ...util import *
+from ...utils.util import *
 
 
 def main(layFilePath, addonName):
@@ -101,7 +102,7 @@ def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
     return None
 
 def getModelBoundingBox(modelName, addonName):
-    searchDirs = bpy.context.preferences.addons[addonName].preferences.assetDirs
+    searchDirs = getPreferences().assetDirs
     searchDirs = [dir.directory for dir in searchDirs]
 
     filePath = ""
@@ -119,14 +120,14 @@ def getModelBoundingBox(modelName, addonName):
 
     with open(filePath, "rb") as modelDTTFile:
         id = modelDTTFile.read(4)
-        numFiles = to_uint(modelDTTFile.read(4))
-        fileOffsetsOffset = to_uint(modelDTTFile.read(4))
-        fileExtensionsOffset = to_uint(modelDTTFile.read(4))
+        numFiles = read_uint32(modelDTTFile)
+        fileOffsetsOffset = read_uint32(modelDTTFile)
+        fileExtensionsOffset = read_uint32(modelDTTFile)
 
         fileOffsets = []
         modelDTTFile.seek(fileOffsetsOffset)
         for i in range(numFiles):
-            fileOffsets.append(to_uint(modelDTTFile.read(4)))
+            fileOffsets.append(read_uint32(modelDTTFile))
 
         fileExtensions = []
         modelDTTFile.seek(fileExtensionsOffset)
@@ -136,5 +137,5 @@ def getModelBoundingBox(modelName, addonName):
         for i, ext in enumerate(fileExtensions):
             if ext == "wmb":
                 modelDTTFile.seek(fileOffsets[i] + 16)
-                boundingBox = [to_float(modelDTTFile.read(4)) for val in range(6)]
+                boundingBox = [read_float(modelDTTFile) for val in range(6)]
                 return boundingBox

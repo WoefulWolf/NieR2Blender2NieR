@@ -1,15 +1,13 @@
+import bpy
+import bmesh
 import math
 from typing import List, Tuple
+from mathutils import Vector
 
-from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
+from ...utils.util import ShowMessageBox, getPreferences
 from .wmb import *
+from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
-
-def show_message(message = "", title = "Message Box", icon = 'INFO'):
-	def draw(self, context):
-		self.layout.label(text = message)
-		self.layout.alignment = 'CENTER'
-	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 def reset_blend():
 	#bpy.ops.object.mode_set(mode='OBJECT')
@@ -33,7 +31,9 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	amt = bpy.data.armatures.new(name +'Amt')
 	ob = bpy.data.objects.new(name, amt)
 	#ob = bpy.context.active_object
-	ob.show_in_front = False
+	if getPreferences().armatureDefaultDisplayType != "DEFAULT":
+		amt.display_type = getPreferences().armatureDefaultDisplayType
+	ob.show_in_front = getPreferences().armatureDefaultInFront
 	ob.name = name
 	bpy.data.collections.get(collection_name).objects.link(ob)
 
@@ -553,7 +553,7 @@ def get_wmb_material(wmb, texture_dir):
 
 	else:
 		print('Missing .wta')
-		show_message("Error: Could not open .wta file, textures not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
+		ShowMessageBox("Error: Could not open .wta file, textures not imported. Is it missing? (Maybe DAT not extracted?)", 'Could Not Open .wta File', 'ERROR')
 		for materialIndex in range(len(wmb.materialArray)):
 			material = wmb.materialArray[materialIndex]
 			material_name = material.materialName
@@ -643,6 +643,7 @@ def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file_
 	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
+	bpy.context.scene.WTAMaterials.clear()
 	for materialIndex in range(len(wmb_materials)):
 		material = wmb_materials[materialIndex]
 		addWtaExportMaterial(texture_dir, material)

@@ -1,5 +1,6 @@
 import time
 
+from ...utils.ioUtils import create_wmb, close_wmb
 from .generate_data import *
 from .write_wmb import *
 
@@ -18,30 +19,6 @@ def purge_unused_materials():
             print('Purging unused material:', material)
             bpy.data.materials.remove(material)
 
-def triangulate_meshes():
-    if bpy.context.object is not None:
-        bpy.ops.object.mode_set(mode='OBJECT')
-    for obj in bpy.data.collections['WMB'].all_objects:
-        if obj.type == 'MESH':
-            # Triangulate
-            me = obj.data
-            bm = bmesh.new()
-            bm.from_mesh(me)
-            bmesh.ops.triangulate(bm, faces=bm.faces[:])
-            bm.to_mesh(me)
-            bm.free()
-
-def centre_origins():
-    if bpy.context.object is not None:
-        bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-    bpy.context.scene.cursor.location = [0, 0, 0]
-    for obj in bpy.data.collections['WMB'].all_objects:
-        if obj.type == 'MESH':
-            obj.select_set(True)
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-            obj.select_set(False)
-
 def prepare_blend():
     print('Preparing .blend File:')
     for obj in bpy.data.collections['WMB'].all_objects:
@@ -49,7 +26,6 @@ def prepare_blend():
             print(obj.type, obj.name)
             print('[-] Removed ', obj)
             bpy.data.objects.remove(obj)
-
 
 def restore_blend():
     print('Restoring .blend File:')

@@ -1,4 +1,5 @@
-from ....util import *
+from ....utils.ioUtils import write_float, write_Int32
+
 
 def create_wmb_colTreeNodes(wmb_file, data):
     wmb_file.seek(data.colTreeNodes_Offset)

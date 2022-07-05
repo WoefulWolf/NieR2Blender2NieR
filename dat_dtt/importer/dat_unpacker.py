@@ -3,14 +3,8 @@ import os
 import struct
 import sys
 
-from ...util import to_uint
+from ...utils.ioUtils import read_int32, read_uint32, read_uint16
 
-
-def little_endian_to_float(bs):
-    return struct.unpack("<f", bs)[0]
-
-def little_endian_to_int(bs):
-    return int.from_bytes(bs, byteorder='little')
 
 def create_dir(dirpath):
 	if not os.path.exists(dirpath):
@@ -19,12 +13,12 @@ def create_dir(dirpath):
 def read_header(fp):
 	Magic = fp.read(4)
 	if list(Magic) == [68, 65, 84, 0]:
-		FileCount = little_endian_to_int(fp.read(4))
-		FileTableOffset = little_endian_to_int(fp.read(4))
-		ExtensionTableOffset = little_endian_to_int(fp.read(4))
-		NameTableOffset = little_endian_to_int(fp.read(4))
-		SizeTableOffset = little_endian_to_int(fp.read(4))
-		hashMapOffset = little_endian_to_int(fp.read(4))
+		FileCount = read_int32(fp)
+		FileTableOffset = read_int32(fp)
+		ExtensionTableOffset = read_int32(fp)
+		NameTableOffset = read_int32(fp)
+		SizeTableOffset = read_int32(fp)
+		hashMapOffset = read_int32(fp)
 		print(
 '''FileCount: %08x
 FileTableOffset: %08x
@@ -42,13 +36,13 @@ hashMapOffset:%08x
 
 def get_fileinfo(fp, index, FileTableOffset, ExtensionTableOffset, NameTableOffset, SizeTableOffset):
 	fp.seek(FileTableOffset + index * 4)
-	FileOffset = little_endian_to_int(fp.read(4))
+	FileOffset = read_int32(fp)
 	fp.seek(ExtensionTableOffset + index * 4)
 	Extension = fp.read(4).decode('utf-8')
 	fp.seek(SizeTableOffset + index * 4)
-	Size = little_endian_to_int(fp.read(4))
+	Size = read_int32(fp)
 	fp.seek(NameTableOffset)
-	FilenameAlignment = little_endian_to_int(fp.read(4))
+	FilenameAlignment = read_int32(fp)
 	i = 0
 	while i < index:
 		if list(fp.read(FilenameAlignment))[FilenameAlignment-1] == 0:
@@ -96,7 +90,7 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	# file_order.metadata
 	# Filename Size
 	fp.seek(fileNamesOffset)
-	fileNameSize = little_endian_to_int(fp.read(4))
+	fileNameSize = read_int32(fp)
 
 	# Filenames
 	fileNames = []
@@ -119,16 +113,16 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	# hash_data.metadata
 	# Header
 	fp.seek(hashMapOffset)
-	preHashShift = to_uint(fp.read(4))
-	bucketOffsetsOffset = to_uint(fp.read(4))
-	hashesOffset = to_uint(fp.read(4))
-	fileIndicesOffset = to_uint(fp.read(4))
+	preHashShift = read_uint32(fp)
+	bucketOffsetsOffset = read_uint32(fp)
+	hashesOffset = read_uint32(fp)
+	fileIndicesOffset = read_uint32(fp)
 
 	# Bucket Offsets
 	fp.seek(hashMapOffset + bucketOffsetsOffset)
 	bucketOffsets = []
 	while fp.tell() < (hashMapOffset + hashesOffset):
-		bucketOffsets.append(to_uint(fp.read(2)))
+		bucketOffsets.append(read_uint16(fp))
 
 	# Hashes
 	fp.seek(hashMapOffset + hashesOffset)
@@ -140,7 +134,7 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	fp.seek(hashMapOffset + fileIndicesOffset)
 	fileIndices = []
 	for i in range(FileCount):
-		fileIndices.append(to_uint(fp.read(2)))
+		fileIndices.append(read_uint16(fp))
  
 	# Extraction
 	filename = 'hash_data.metadata'

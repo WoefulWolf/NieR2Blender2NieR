@@ -1,5 +1,7 @@
 import math
 
+from ...utils.ioUtils import write_Int32, write_uInt32, write_float
+
 
 def update_offsetMeshIndices(colTreeNodes, meshIndicesStartOffset):
     currentOffset = meshIndicesStartOffset
@@ -260,9 +262,11 @@ class ColTreeNodes:
             #calculate_meshIndices(self.colTreeNodes)
         update_offsetMeshIndices(self.colTreeNodes, colTreeNodesStartOffset + self.structSize)
 
-from ...util import *
+from ...utils.util import *
 
 def write_col_colTreeNodes(col_file, data):
+    if data.colTreeNodeCount == 0:
+        return
     col_file.seek(data.offsetColTreeNodes)
 
     for colTreeNode in data.colTreeNodes.colTreeNodes:

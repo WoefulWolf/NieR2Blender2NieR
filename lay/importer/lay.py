@@ -1,20 +1,21 @@
-from ...util import *
+from ...utils.ioUtils import to_string, read_float, read_uint32, read_uint8
+
 
 # Based on binary template by NSA Cloud
 
 class Header:
     def __init__(self, layFile):
         self.id = layFile.read(4)
-        self.unknownVer = to_float(layFile.read(4))
+        self.unknownVer = read_float(layFile)
 
-        self.modelListOffset = to_uint(layFile.read(4))
-        self.modelListCount = to_uint(layFile.read(4))
+        self.modelListOffset = read_uint32(layFile)
+        self.modelListCount = read_uint32(layFile)
 
-        self.assetsOffset = to_uint(layFile.read(4))
-        self.assetsCount = to_uint(layFile.read(4))
+        self.assetsOffset = read_uint32(layFile)
+        self.assetsCount = read_uint32(layFile)
 
-        self.instancesOffset = to_uint(layFile.read(4))
-        self.instancesCount = to_uint(layFile.read(4))
+        self.instancesOffset = read_uint32(layFile)
+        self.instancesCount = read_uint32(layFile)
 
 class ModelEntry:
     def __init__(self, layFile):
@@ -25,23 +26,23 @@ class Asset:
     def __init__(self, layFile):
         self.name = to_string(layFile.read(32))
 
-        self.position = [to_float(layFile.read(4)) for val in range(3)]
-        self.rotation = [to_float(layFile.read(4)) for val in range(3)]
-        self.scale = [to_float(layFile.read(4)) for val in range(3)]
+        self.position = [read_float(layFile) for val in range(3)]
+        self.rotation = [read_float(layFile) for val in range(3)]
+        self.scale = [read_float(layFile) for val in range(3)]
 
-        self.null0 = to_uint(layFile.read(4))
-        self.unknownIndex = to_uint(layFile.read(4))
-        self.null1 = [to_uint(layFile.read(1)) for val in range(32)]
+        self.null0 = read_uint32(layFile)
+        self.unknownIndex = read_uint32(layFile)
+        self.null1 = [read_uint8(layFile) for val in range(32)]
 
-        self.instanceCount = to_uint(layFile.read(4))
+        self.instanceCount = read_uint32(layFile)
 
         self.instances = []
 
 class Instance:
     def __init__(self, layFile):
-        self.position = [to_float(layFile.read(4)) for val in range(3)]
-        self.rotation = [to_float(layFile.read(4)) for val in range(3)]
-        self.scale = [to_float(layFile.read(4)) for val in range(3)]
+        self.position = [read_float(layFile) for val in range(3)]
+        self.rotation = [read_float(layFile) for val in range(3)]
+        self.scale = [read_float(layFile) for val in range(3)]
 
 class Lay:
     def __init__(self, layFile):

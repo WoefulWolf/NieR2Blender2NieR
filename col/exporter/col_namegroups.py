@@ -1,3 +1,5 @@
+from ...utils.ioUtils import write_string, write_uInt32
+
 
 class NameGroup:
     def __init__(self, name, startOffset):
@@ -29,7 +31,7 @@ class NameGroups:
             if name == nameGroup.name:
                 return idx
 
-from ...util import *
+from ...utils.util import *
 
 def write_col_namegroups(col_file, data):
     col_file.seek(data.offsetNameGroups)

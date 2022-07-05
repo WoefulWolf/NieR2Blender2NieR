@@ -6,7 +6,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from ...util import getUsedMaterials
+from ...utils.util import getUsedMaterials
 
 
 def generateID(context):
@@ -146,9 +146,8 @@ class GetMaterialsOperator(bpy.types.Operator):
                     for mapType, id in mat.items()
                     if isTextureTypeSupported(mapType)
                 ]
-                newMaterialsAdded += 1
                 makeWtaMaterial(mat.name, wtaTextures)
-
+                newMaterialsAdded += 1
                 autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
             except Exception as e:
                 print(f"Error fetching material {mat.name}: {e}")
@@ -156,9 +155,6 @@ class GetMaterialsOperator(bpy.types.Operator):
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         self.report({"INFO"}, f"Fetched {newMaterialsAdded} material{'s' if newMaterialsAdded != 1 else ''}")
-
-        autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
-        handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         return {'FINISHED'}
 

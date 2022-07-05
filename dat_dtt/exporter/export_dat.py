@@ -1,10 +1,8 @@
 import math
 
-from ...util import *
+from ...utils.ioUtils import write_string, write_Int32, write_buffer, read_int32
+from ...utils.util import *
 
-
-def to_int(bs):
-	return (int.from_bytes(bs, byteorder='little'))
 
 def to_string(bs, encoding = 'utf8'):
 	return bs.split(b'\x00')[0].decode(encoding)
@@ -26,8 +24,8 @@ def main(dat_dir, export_filepath):
     # Get files and their order
     if os.path.isfile(dat_dir + '\\' + 'file_order.metadata'):
         file_orderFile = open(dat_dir + '\\' + 'file_order.metadata', 'rb')
-        fileCount = to_int(file_orderFile.read(4))
-        fileNameSize = to_int(file_orderFile.read(4))
+        fileCount = read_int32(file_orderFile)
+        fileNameSize = read_int32(file_orderFile)
 
         for i in range(fileCount):
             fileName = to_string(file_orderFile.read(fileNameSize))

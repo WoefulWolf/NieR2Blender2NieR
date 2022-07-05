@@ -1,7 +1,7 @@
 import bpy
 from mathutils import Vector
 
-from ....util import getUsedMaterials
+from ....utils.util import getUsedMaterials
 
 
 def getObjectCenter(obj):

@@ -1,6 +1,6 @@
 import math
 
-from ....util import *
+from ....utils.util import *
 
 
 def getColMeshIndex(objToFind):

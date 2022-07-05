@@ -1,5 +1,5 @@
 from .batch import c_batch
-from ....util import allObjectsInCollectionInOrder
+from ....utils.util import allObjectsInCollectionInOrder
 
 
 class c_batches(object):

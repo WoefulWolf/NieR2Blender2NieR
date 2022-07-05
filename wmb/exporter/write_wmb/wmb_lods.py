@@ -1,4 +1,5 @@
-from ....util import *
+from ....utils.ioUtils import write_string, write_Int32, write_uInt32
+
 
 def create_wmb_lods(wmb_file, data):
     wmb_file.seek(data.lods_Offset)

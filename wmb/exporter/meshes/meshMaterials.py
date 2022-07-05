@@ -1,4 +1,4 @@
-from ....util import getUsedMaterials
+from ....utils.util import getUsedMaterials
 
 class c_meshMaterials(object):
     def __init__(self, meshes, lods):

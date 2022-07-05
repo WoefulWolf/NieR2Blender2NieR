@@ -1,6 +1,6 @@
 import bpy
 
-from ....util import Vector3
+from ....utils.util import Vector3
 
 
 class c_bones(object):

@@ -1,35 +1,35 @@
 # https://github.com/Kerilk/bayonetta_tools/blob/master/binary_templates/Nier%20Automata%20col.bt
+from ...utils.ioUtils import to_string, read_uint32, read_int32, read_uint16, read_float, read_uint8
 
-from ...util import *
 
 class Header:
     def __init__(self, colFile):
         self.id = colFile.read(4)
-        self.version = "%08x" % (to_uint(colFile.read(4)))
+        self.version = "%08x" % (read_uint32(colFile))
 
-        self.offsetNames = to_uint(colFile.read(4))
-        self.nameCount = to_uint(colFile.read(4))
+        self.offsetNames = read_uint32(colFile)
+        self.nameCount = read_uint32(colFile)
 
-        self.offsetMeshes = to_uint(colFile.read(4))
-        self.meshCount = to_uint(colFile.read(4))
+        self.offsetMeshes = read_uint32(colFile)
+        self.meshCount = read_uint32(colFile)
 
-        self.offsetBoneMap = to_uint(colFile.read(4))
-        self.boneMapCount = to_uint(colFile.read(4))
+        self.offsetBoneMap = read_uint32(colFile)
+        self.boneMapCount = read_uint32(colFile)
 
-        self.offsetBoneMap2 = to_uint(colFile.read(4))
-        self.boneMap2Count = to_uint(colFile.read(4))
+        self.offsetBoneMap2 = read_uint32(colFile)
+        self.boneMap2Count = read_uint32(colFile)
 
-        self.offsetMeshMap = to_uint(colFile.read(4))
-        self.meshMapCount = to_uint(colFile.read(4))
+        self.offsetMeshMap = read_uint32(colFile)
+        self.meshMapCount = read_uint32(colFile)
 
-        self.offsetColTreeNodes = to_uint(colFile.read(4))
-        self.colTreeNodesCount = to_uint(colFile.read(4))
+        self.offsetColTreeNodes = read_uint32(colFile)
+        self.colTreeNodesCount = read_uint32(colFile)
 
 class NameGroups:
     def __init__(self, colFile, header):
         self.offsetNames = []
         for i in range(header.nameCount):
-            self.offsetNames.append(to_uint(colFile.read(4)))
+            self.offsetNames.append(read_uint32(colFile))
 
         self.names = []
         for offsetName in self.offsetNames:
@@ -39,60 +39,90 @@ class NameGroups:
 class Batch:
     def __init__(self, colFile, batchType):
         if batchType == 2:
-            self.boneIndex = to_int(colFile.read(4))
-            self.offsetVertices = to_uint(colFile.read(4))
-            self.vertexCount = to_uint(colFile.read(4))
-            self.offsetIndices = to_uint(colFile.read(4))
-            self.indexCount = to_uint(colFile.read(4))
+            self.boneIndex = read_int32(colFile)
+            self.offsetVertices = read_uint32(colFile)
+            self.vertexCount = read_uint32(colFile)
+            self.offsetIndices = read_uint32(colFile)
+            self.indexCount = read_uint32(colFile)
 
             returnPos = colFile.tell()
 
             colFile.seek(self.offsetVertices)
             self.vertices = []
-            self.vec4Vertices = []
             for i in range(self.vertexCount):
-                x = to_float(colFile.read(4))
-                y = to_float(colFile.read(4))
-                z = to_float(colFile.read(4))
-                w = to_float(colFile.read(4))
+                x = read_float(colFile)
+                y = read_float(colFile)
+                z = read_float(colFile)
+                w = read_float(colFile)
                 self.vertices.append([x, y, z])
-                self.vec4Vertices.append([x, y, z, w])
 
             colFile.seek(self.offsetIndices)
             self.indices = []
-            self.rawIndices = []
             for i in range(round(self.indexCount / 3)):
-                v0 = to_ushort(colFile.read(2))
-                v1 = to_ushort(colFile.read(2))
-                v2 = to_ushort(colFile.read(2))
-                self.rawIndices.append(v0)
-                self.rawIndices.append(v1)
-                self.rawIndices.append(v2)
+                v0 = read_uint16(colFile)
+                v1 = read_uint16(colFile)
+                v2 = read_uint16(colFile)
                 self.indices.append([v2, v1, v0])
 
             colFile.seek(returnPos)
 
         elif batchType == 3:
-            self.offsetVertices = to_uint(colFile.read(4))
-            self.vertexCount = to_uint(colFile.read(4))
-            self.offsetIndices = to_uint(colFile.read(4))
-            self.indexCount = to_uint(colFile.read(4))
+            self.offsetVertices = read_uint32(colFile)
+            self.vertexCount = read_uint32(colFile)
+            self.offsetIndices = read_uint32(colFile)
+            self.indexCount = read_uint32(colFile)
 
             returnPos = colFile.tell()
+
+            colFile.seek(self.offsetVertices)
+            self.vertices = []
+            self.boneWeights = []
+            self.bones = []
+            for i in range(self.vertexCount):
+                self.vertices.append([
+                    read_float(colFile),
+                    read_float(colFile),
+                    read_float(colFile),
+                ])
+                read_float(colFile)     # w
+
+                self.boneWeights.append([
+                    read_float(colFile),
+                    read_float(colFile),
+                    read_float(colFile),
+                    read_float(colFile),
+                ])
+
+                self.bones.append([
+                    read_uint32(colFile),
+                    read_uint32(colFile),
+                    read_uint32(colFile),
+                    read_uint32(colFile),
+                ])
+
+            colFile.seek(self.offsetIndices)
+            self.indices = []
+            for i in range(round(self.indexCount / 3)):
+                v0 = read_uint16(colFile)
+                v1 = read_uint16(colFile)
+                v2 = read_uint16(colFile)
+                self.indices.append([v2, v1, v0])
+
+            colFile.seek(returnPos)
         else:
             print("UNKNOWN BATCH TYPE!")
 
 class Mesh:
     def __init__(self, colFile):
-        self.collisionType = to_uint(colFile.read(1))
-        self.slidable = to_uint(colFile.read(1))
-        self.unknownByte = to_uint(colFile.read(1))
-        self.surfaceType = to_uint(colFile.read(1))
+        self.collisionType = read_uint8(colFile)
+        self.slidable = read_uint8(colFile)
+        self.unknownByte = read_uint8(colFile)
+        self.surfaceType = read_uint8(colFile)
         
-        self.nameIndex = to_uint(colFile.read(4))
-        self.batchType = to_uint(colFile.read(4))
-        self.offsetBatches = to_uint(colFile.read(4))
-        self.batchCount = to_uint(colFile.read(4))
+        self.nameIndex = read_uint32(colFile)
+        self.batchType = read_uint32(colFile)
+        self.offsetBatches = read_uint32(colFile)
+        self.batchCount = read_uint32(colFile)
 
         returnPos = colFile.tell()
 
@@ -105,21 +135,21 @@ class Mesh:
 
 class ColTreeNode:
     def __init__(self, colFile):
-        self.p1 = [to_float(colFile.read(4)), to_float(colFile.read(4)), to_float(colFile.read(4))]
-        self.p2 = [to_float(colFile.read(4)), to_float(colFile.read(4)), to_float(colFile.read(4))]
+        self.p1 = [read_float(colFile), read_float(colFile), read_float(colFile)]
+        self.p2 = [read_float(colFile), read_float(colFile), read_float(colFile)]
 
-        self.left = to_int(colFile.read(4))
-        self.right = to_int(colFile.read(4))
+        self.left = read_int32(colFile)
+        self.right = read_int32(colFile)
 
-        self.offsetMeshIndices = to_uint(colFile.read(4))
-        self.meshIndexCount = to_uint(colFile.read(4))
+        self.offsetMeshIndices = read_uint32(colFile)
+        self.meshIndexCount = read_uint32(colFile)
 
         self.meshIndices = []
         if self.offsetMeshIndices != 0 and self.meshIndexCount != 0:
             returnPos = colFile.tell()
             colFile.seek(self.offsetMeshIndices)
             for i in range(self.meshIndexCount):
-                self.meshIndices.append(to_uint(colFile.read(4)))
+                self.meshIndices.append(read_uint32(colFile))
             colFile.seek(returnPos)
 
 class Col:
@@ -138,19 +168,19 @@ class Col:
         if self.header.meshMapCount > 0:
             colFile.seek(self.header.offsetMeshMap)
             for i in range(self.header.meshMapCount):
-                self.meshMaps.append(to_uint(colFile.read(4)))
+                self.meshMaps.append(read_uint32(colFile))
 
         self.boneMaps = []
         if self.header.boneMapCount > 0:
             colFile.seek(self.header.offsetBoneMap)
             for i in range(self.header.boneMapCount):
-                self.boneMaps.append(to_uint(colFile.read(4)))
+                self.boneMaps.append(read_uint32(colFile))
 
         self.boneMaps2 = []
         if self.header.boneMap2Count > 0:
             colFile.seek(self.header.offsetBoneMap2)
             for i in range(self.header.boneMap2Count):
-                self.boneMaps2.append(to_uint(colFile.read(4)))
+                self.boneMaps2.append(read_uint32(colFile))
 
         self.colTreeNodes = []
         if self.header.colTreeNodesCount > 0:

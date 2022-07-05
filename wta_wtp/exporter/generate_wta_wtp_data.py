@@ -1,6 +1,7 @@
 import string
 
-from ...util import ShowMessageBox
+from ...utils.util import ShowMessageBox
+
 
 def generate(context):
     wta_data = context.scene.WTAMaterials

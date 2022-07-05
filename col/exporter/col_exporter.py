@@ -1,6 +1,4 @@
-import bmesh
-import bpy
-
+from ...utils.ioUtils import write_uInt32
 from .col_colTreeNodes import write_col_colTreeNodes
 from .col_generate_data import COL_Data
 from .col_header import write_col_header
@@ -23,6 +21,14 @@ def main(filepath, generateColTree):
     print("Writing Meshes & Batches...")
     write_col_meshes(col_file, data)
 
+    print("Writing Mesh & Bone Maps...")
+    if data.meshMapCount > 0:
+        col_file.seek(data.offsetMeshMap)
+        for num in data.meshMap:
+            write_uInt32(col_file, num)
+    data.boneMap.writeToFile(data.offsetBoneMap, col_file)
+    data.boneMap2.writeToFile(data.offsetBoneMap2, col_file)
+
     print("Writing ColTreeNodes...")
     write_col_colTreeNodes(col_file, data)
 
@@ -30,27 +36,3 @@ def main(filepath, generateColTree):
 
     col_file.flush()
     col_file.close()
-
-def triangulate_meshes():
-    if bpy.context.object is not None:
-        bpy.ops.object.mode_set(mode='OBJECT')
-    for obj in bpy.data.collections['COL'].all_objects:
-        if obj.type == 'MESH':
-            # Triangulate
-            me = obj.data
-            bm = bmesh.new()
-            bm.from_mesh(me)
-            bmesh.ops.triangulate(bm, faces=bm.faces[:])
-            bm.to_mesh(me)
-            bm.free()   
-
-def centre_origins():
-    if bpy.context.object is not None:
-        bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-    bpy.context.scene.cursor.location = [0, 0, 0]
-    for obj in bpy.data.collections['COL'].all_objects:
-        if obj.type == 'MESH':
-            obj.select_set(True)
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-            obj.select_set(False)

@@ -1,4 +1,5 @@
-from ....util import *
+from ....utils.ioUtils import write_Int32, write_uInt32, write_xyz, write_byte, write_float16
+
 
 def create_wmb_vertexGroups(wmb_file, data):
     wmb_file.seek(data.vertexGroups_Offset)

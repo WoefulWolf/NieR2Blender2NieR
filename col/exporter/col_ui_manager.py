@@ -17,7 +17,7 @@ class B2NCollisionToolsPanel(bpy.types.Panel):
     bl_idname = "B2N_PT_COLLISION_TOOLS"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Collision Tools"
+    bl_category = "NA: Collision Tools"
 
     def draw(self, context):
         layout = self.layout
@@ -163,7 +163,19 @@ class B2NSelectEmptyCollisionObjects(bpy.types.Operator):
 
         return {'FINISHED'}
 
+def enableCollisionTools():
+    if hasattr(bpy.types, B2NCollisionToolsPanel.bl_idname):
+        return
+    register()
+
+def disableCollisionTools():
+    if not hasattr(bpy.types, B2NCollisionToolsPanel.bl_idname):
+        return
+    unregister()
+
 def register():
+    if hasattr(bpy.types, B2NCollisionToolsPanel.bl_idname):
+        return
     bpy.utils.register_class(CollisionToolsData)
     bpy.utils.register_class(B2NCollisionToolsPanel)
     bpy.utils.register_class(B2NApplyCollisionToAllSelected)
@@ -174,11 +186,11 @@ def register():
     bpy.types.Scene.collisionTools = bpy.props.PointerProperty(type=CollisionToolsData)
 
 def unregister():
+    if not hasattr(bpy.types, B2NCollisionToolsPanel.bl_idname):
+        return
     bpy.utils.unregister_class(CollisionToolsData)
     bpy.utils.unregister_class(B2NCollisionToolsPanel)
     bpy.utils.unregister_class(B2NApplyCollisionToAllSelected)
     bpy.utils.unregister_class(B2NJoinCollisionObjects)
     bpy.utils.unregister_class(B2NFixCollisionObjectsOrder)
     bpy.utils.unregister_class(B2NSelectEmptyCollisionObjects)
-
-    del bpy.types.Scene.collisionTools

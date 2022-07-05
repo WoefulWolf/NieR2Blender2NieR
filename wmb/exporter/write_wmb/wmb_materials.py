@@ -1,4 +1,5 @@
-from ....util import *
+from ....utils.ioUtils import write_float, write_string, write_Int32, write_uInt32, write_uInt16
+
 
 def create_wmb_materials(wmb_file, data):
     wmb_file.seek(data.materials_Offset)

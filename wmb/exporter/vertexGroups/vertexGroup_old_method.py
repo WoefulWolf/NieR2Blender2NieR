@@ -3,7 +3,7 @@ import math
 import bpy
 import numpy as np
 
-from ....util import Vector3
+from ....utils.util import Vector3
 
 
 class c_vertexGroup(object):

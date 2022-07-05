@@ -1,6 +1,7 @@
 import binascii
 
-from ...util import *
+from ...utils.ioUtils import write_char
+from ...utils.util import *
 
 
 class ModelEntries:

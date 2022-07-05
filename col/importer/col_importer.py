@@ -1,8 +1,9 @@
 import math
+from typing import List, Dict
 
 import bpy
 
-from .col import Col
+from .col import Col, Batch
 
 
 def main(colFilePath):
@@ -19,6 +20,9 @@ def main(colFilePath):
     with open(colFilePath, "rb") as colFile:
         print("Parsing Col file...", colFilePath)
         col = Col(colFile)
+
+    bpy.context.scene["exportColTree"] = len(col.colTreeNodes) > 0
+    bpy.context.scene["exportColMeshMap"] = len(col.meshMaps) > 0
 
     # Create COL Collection
     colCollection = bpy.data.collections.get("COL")
@@ -40,6 +44,9 @@ def main(colFilePath):
             obj.show_wire = True
             objMesh.from_pydata(batch.vertices, [], batch.indices)
             objMesh.update(calc_edges=True)
+
+            if mesh.batchType == 2 and batch.boneIndex != -1 or mesh.batchType == 3:
+                bindBones(obj, mesh.batchType, batch, col.boneMaps, col.boneMaps2)
 
             try:
                 obj.collisionType = str(mesh.collisionType)
@@ -66,7 +73,10 @@ def main(colFilePath):
         colTreeNodesCollection = bpy.data.collections.new("col_colTreeNodes")
         colCollection.children.link(colTreeNodesCollection)
 
-    bpy.context.view_layer.active_layer_collection.children["COL"].children["col_colTreeNodes"].hide_viewport = True
+    try:
+        bpy.context.view_layer.active_layer_collection.children["COL"].children["col_colTreeNodes"].hide_viewport = True
+    except:
+        pass
     
     # Create colTreeNodes
     rootNode = bpy.data.objects.new("Root_col", None)
@@ -88,3 +98,56 @@ def main(colFilePath):
     
     print('Importing finished. ;)')
     return {'FINISHED'}
+
+def bindBones(obj: bpy.types.Object, batchType: int, batch: Batch, boneMap: List[int], boneMap2: List[int]):
+    armature: bpy.types.Armature = None
+    if "WMB" in bpy.data.collections:
+        for armObj in bpy.data.collections["WMB"].all_objects:
+            if armObj.type == "ARMATURE":
+                armature = armObj
+                break
+    if not armature:
+        raise "No armature found in WMB collection"
+
+    def getBoneI(boneId: int):
+        if batchType == 2:
+            boneIndex = boneMap[boneId]
+        elif batchType == 3:
+            boneIndex = boneMap2[boneId]
+        else:
+            raise "Unknown batchType"
+
+        for bone in armature.data.bones:
+            if int(bone["ID"]) == boneIndex:
+                return int(bone.name[4:])
+        raise "Bone not found"
+
+    # parent obj to armature
+    bpy.context.view_layer.objects.active = armature
+    armature.select_set(True)
+    obj.select_set(True)
+    bpy.ops.object.parent_set(type="ARMATURE")
+    armature.select_set(False)
+    obj.select_set(False)
+
+    # make vertex groups
+    if batchType == 2:
+        vertexGroup = obj.vertex_groups.new(name=f"bone{getBoneI(batch.boneIndex)}")
+        for i in range(batch.vertexCount):
+            vertexGroup.add([i], 1.0, "REPLACE")
+    elif batchType == 3:
+        vertexGroups: Dict[int: bpy.types.VertexGroup] = {}
+        for vertI in range(batch.vertexCount):
+            for i in range(4):
+                if batch.bones[vertI][i] == 0 and batch.boneWeights[vertI][i] == 0.0:
+                    continue
+                if batch.bones[vertI][i] not in vertexGroups:
+                    vertexGroups[batch.bones[vertI][i]] = obj.vertex_groups.new(name=f"bone{getBoneI(batch.bones[vertI][i])}")
+                vertexGroups[batch.bones[vertI][i]].add([vertI], batch.boneWeights[vertI][i], "REPLACE")
+
+    # move obj to bone location (first non 0 bone?)
+    if batchType == 2:
+        firstBone = batch.boneIndex
+        bone = armature.pose.bones[f"bone{getBoneI(firstBone)}"]
+        boneGlobalLoc = armature.matrix_world @ bone.matrix @ bone.location
+        obj.location = boneGlobalLoc

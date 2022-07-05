@@ -1,17 +1,18 @@
-from ...util import *
+from ...utils.ioUtils import read_uint32, to_uint
+
 
 class WTA(object):
 	def __init__(self, wta_fp):
 		super(WTA, self).__init__()
 		self.magicNumber = wta_fp.read(4)
 		if self.magicNumber == b'WTB\x00':
-			self.unknown04 = to_uint(wta_fp.read(4))
-			self.textureCount = to_uint(wta_fp.read(4))
-			self.textureOffsetArrayOffset = to_uint(wta_fp.read(4))
-			self.textureSizeArrayOffset = to_uint(wta_fp.read(4))
-			self.unknownArrayOffset1 = to_uint(wta_fp.read(4))
-			self.textureIdentifierArrayOffset = to_uint(wta_fp.read(4))
-			self.unknownArrayOffset2 = to_uint(wta_fp.read(4))
+			self.unknown04 = read_uint32(wta_fp)
+			self.textureCount = read_uint32(wta_fp)
+			self.textureOffsetArrayOffset = read_uint32(wta_fp)
+			self.textureSizeArrayOffset = read_uint32(wta_fp)
+			self.unknownArrayOffset1 = read_uint32(wta_fp)
+			self.textureIdentifierArrayOffset = read_uint32(wta_fp)
+			self.unknownArrayOffset2 = read_uint32(wta_fp)
 			self.wtaTextureOffset = [0] * self.textureCount
 			self.wtaTextureSize = [0] * self.textureCount
 			self.wtaTextureIdentifier = [0] * self.textureCount
@@ -19,13 +20,13 @@ class WTA(object):
 			self.unknownArray2 = [] 
 			for i in range(self.textureCount):
 				wta_fp.seek(self.textureOffsetArrayOffset + i * 4)
-				self.wtaTextureOffset[i] = to_uint(wta_fp.read(4))
+				self.wtaTextureOffset[i] = read_uint32(wta_fp)
 				wta_fp.seek(self.textureSizeArrayOffset + i * 4)
-				self.wtaTextureSize[i] =  to_uint(wta_fp.read(4)) 
+				self.wtaTextureSize[i] =  read_uint32(wta_fp) 
 				wta_fp.seek(self.textureIdentifierArrayOffset + i * 4)
-				self.wtaTextureIdentifier[i] = "%08x"%to_uint(wta_fp.read(4))
+				self.wtaTextureIdentifier[i] = "%08x"%read_uint32(wta_fp)
 				wta_fp.seek(self.unknownArrayOffset1 + i * 4)
-				self.unknownArray1[i] = "%08x"%to_uint(wta_fp.read(4))
+				self.unknownArray1[i] = "%08x"%read_uint32(wta_fp)
 			wta_fp.seek(self.unknownArrayOffset2 )
 			unknownval =  (wta_fp.read(4))
 			while unknownval:
