@@ -35,7 +35,7 @@ class B2NCollisionToolsPanel(bpy.types.Panel):
             row.label(text="Surface Type")
             row.prop(context.object, "surfaceType", text="")
             row = layout.row()
-            row.label(text="Slidable")
+            row.label(text="Slidable/Modifier")
             row.prop(context.object, "slidable", text="")
 
             if len(bpy.context.selected_objects) > 1:

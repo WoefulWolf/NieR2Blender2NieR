@@ -157,7 +157,7 @@ class GetMaterialsOperator(bpy.types.Operator):
 
         self.report({"INFO"}, f"Fetched {newMaterialsAdded} material{'s' if newMaterialsAdded != 1 else ''}")
 
-            autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
+        autoSetWtaTexPathsForMat(mat, context.scene.WTAMaterials, autoTextureWarnings)
         handleAutoSetTextureWarnings(self, autoTextureWarnings)
 
         return {'FINISHED'}
