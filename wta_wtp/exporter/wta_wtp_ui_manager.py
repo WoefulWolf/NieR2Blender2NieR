@@ -125,7 +125,6 @@ def makeWtaMaterial(matName, textures: List[Tuple[str, str, str]]):
         newTex.parent_mat = matName
         newTex.texture_map_type = tex[0]
         newTex.texture_identifier = tex[1]
-        print(newTex.id)
         if tex[2] is not None and tex[2] != "None" and os.path.exists(tex[2]):
             newTex.texture_path = tex[2]
         else:
