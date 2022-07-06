@@ -119,8 +119,9 @@ def isTextureTypeSupported(textureType: str) -> bool:
 
 def makeWtaMaterial(matName, textures: List[Tuple[str, str, str]]):
     for tex in textures:
+        newID = generateID(bpy.context)
         newTex: WTAItems = bpy.context.scene.WTAMaterials.add()
-        newTex.id = generateID(bpy.context)
+        newTex.id = newID
         newTex.parent_mat = matName
         newTex.texture_map_type = tex[0]
         newTex.texture_identifier = tex[1]
