@@ -47,7 +47,7 @@ def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTA
     texturesInMat = [
         { "name": node.label, "path": node.image.filepath_from_user() }
         for node in blendMat.node_tree.nodes
-        if node.type == "TEX_IMAGE"
+        if node.type == "TEX_IMAGE" and node.image is not None
     ]
     groupedTextures = {}    # { baseName: list[paths] }
     for tex in texturesInMat:
