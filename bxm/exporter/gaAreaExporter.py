@@ -31,7 +31,7 @@ def cubeToXml(cube: bpy.types.Object, primitiveInfo: ET.Element) -> None:
 
 
 def exportGaArea(file: str):
-	print("Exporting sar")
+	print("Exporting GAArea")
 
 	if "GA_ALL" not in bpy.data.objects:
 		raise "No GA_ALL in scene"
