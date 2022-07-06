@@ -112,23 +112,6 @@ classes = (
 
 preview_collections = {}
 
-@persistent
-def checkCustomPanelsEnableDisable(_, __):
-    if "WMB" in bpy.data.collections:
-        enableVisibilitySelector()
-    else:
-        disableVisibilitySelector()
-    if "COL" in bpy.data.collections:
-        enableCollisionTools()
-    else:
-        disableCollisionTools()
-
-def initialCheckCustomPanelsEnableDisable(_, __):
-    # during registration bpy.data is not yet available, so wait for first depsgraph update
-    if hasattr(bpy.data, "collections"):
-        checkCustomPanelsEnableDisable(_, __)
-        bpy.app.handlers.depsgraph_update_post.remove(initialCheckCustomPanelsEnableDisable)
-
 def register():
     # Custom icons
     import bpy.utils.previews
@@ -154,6 +137,7 @@ def register():
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
 
     bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
+    bpy.app.handlers.load_post.append(checkOldVersionMigration)
     bpy.app.handlers.depsgraph_update_post.append(initialCheckCustomPanelsEnableDisable)
 
 def unregister():
@@ -174,8 +158,58 @@ def unregister():
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
 
     bpy.app.handlers.load_post.remove(checkCustomPanelsEnableDisable)
+    bpy.app.handlers.load_post.remove(checkOldVersionMigration)
     if initialCheckCustomPanelsEnableDisable in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(initialCheckCustomPanelsEnableDisable)
+
+@persistent
+def checkCustomPanelsEnableDisable(_, __):
+    if "WMB" in bpy.data.collections:
+        enableVisibilitySelector()
+    else:
+        disableVisibilitySelector()
+    if "COL" in bpy.data.collections:
+        enableCollisionTools()
+    else:
+        disableCollisionTools()
+
+def initialCheckCustomPanelsEnableDisable(_, __):
+    # during registration bpy.data is not yet available, so wait for first depsgraph update
+    if hasattr(bpy.data, "collections"):
+        checkCustomPanelsEnableDisable(_, __)
+        bpy.app.handlers.depsgraph_update_post.remove(initialCheckCustomPanelsEnableDisable)
+
+@persistent
+def checkOldVersionMigration(_, __):
+    # check if current file is an old wmb import
+    if "hasMigratedToN2B2N" in bpy.context.scene:
+        return
+    if "WMB" in bpy.data.collections:
+        return
+    if "boundingBoxUVW" not in bpy.context.scene or "boundingBoxXYZ" not in bpy.context.scene:
+        return
+    if not any(["LOD_Level" not in obj for obj in bpy.data.objects]):
+        return
+
+    # migrate
+    # find collection with WMB objects
+    oldWmbColl: bpy.types.Collection = None
+    for collection in bpy.context.scene.collection.children:
+        if not any(["LOD_Level" in obj for obj in collection.all_objects]):
+            continue
+        oldWmbColl = collection
+        break
+    if oldWmbColl is None:
+        return
+
+    bpy.context.scene.collection.children.unlink(oldWmbColl)
+    parentWmbColl = bpy.data.collections.new("WMB")
+    bpy.context.scene.collection.children.link(parentWmbColl)
+    parentWmbColl.children.link(oldWmbColl)
+    
+    bpy.context.scene["hasMigratedToN2B2N"] = True
+
+    print("Migrated scene to new version")
 
 ## Collision Extras
 def setColourByCollisionType(obj):
