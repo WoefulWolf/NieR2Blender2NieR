@@ -176,8 +176,9 @@ def main(filename, extract_dir, ROOT_DIR):
 					extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
 			
 			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset)
-
-	return Filename
+	if (FileCount):
+		return Filename
+	return False
 
 
 if __name__ == '__main__':
