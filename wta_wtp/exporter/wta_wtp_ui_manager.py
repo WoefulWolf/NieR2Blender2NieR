@@ -1,6 +1,7 @@
 import os
 import re
 from typing import List, Tuple
+from itertools import count, filterfalse
 
 import bpy
 from bpy.props import StringProperty
@@ -14,6 +15,11 @@ def generateID(context):
         return context.scene.WTAMaterials[-1].id + 1
     else:
         return 0
+        
+def getWTAItemByID(context, id):
+    for item in context.scene.WTAMaterials:
+        if item.id == id:
+            return item
 
 def getManualTextureItems(context):
     manual_items = []
@@ -112,7 +118,7 @@ def handleAutoSetTextureWarnings(operatorSelf, warnings: List[str]):
     print("\n".join(warnings))
 
 def isTextureTypeSupported(textureType: str) -> bool:
-    for supportedTex in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap']:
+    for supportedTex in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap', 'g_ParallaxMap']:
         if supportedTex in textureType:
             return True
     return False
@@ -293,7 +299,7 @@ class FilepathSelector(bpy.types.Operator, ImportHelper):
     id : bpy.props.IntProperty(options={'HIDDEN'})
 
     def execute(self, context):
-        changed_identifier = context.scene.WTAMaterials[self.id].texture_identifier
+        changed_identifier = getWTAItemByID(context, self.id).texture_identifier
 
         fdir = self.properties.filepath
         for item in context.scene.WTAMaterials:
