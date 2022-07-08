@@ -80,7 +80,6 @@ def merge_vertex_group_weights(obj, base, other):
     mix_modifier.vertex_group_b = other.name
     mix_modifier.mix_mode = "ADD"
     mix_modifier.mix_set = "B"
-    mix_modifier.normalize = True
 
 class MergeVertexGroupCopies(bpy.types.Operator):
     """Merge vertex groups by name copies (etc. bone69 & bone69.001)"""
