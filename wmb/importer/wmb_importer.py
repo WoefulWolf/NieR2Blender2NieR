@@ -231,6 +231,7 @@ def construct_materials(texture_dir, material):
 	albedo_maps = {}
 	normal_maps = {}
 	mask_maps = {}
+	curvature_maps = {}
 
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower()
@@ -243,8 +244,8 @@ def construct_materials(texture_dir, material):
 				normal_maps[textures_type] = textures.get(texturesType)
 			elif textures_type.find('mask') > -1:
 				mask_maps[textures_type] = textures.get(texturesType)
-
-	
+			elif textures_type.find('curvature') > -1:
+				curvature_maps[textures_type] = textures.get(texturesType)	
 
 	# Albedo Nodes
 	albedo_nodes = []
@@ -355,11 +356,46 @@ def construct_materials(texture_dir, material):
 			normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
 			for i in range(len(normal_mixRGB_nodes)):
 				normal_link = links.new(normal_nodes[i+1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color1'])
-				if i < len(albedo_nodes):
-					n_alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], normal_mixRGB_nodes[i].inputs['Fac'])
 				if i > 0:
 					n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color2'])
 			mixRGB_link = links.new(normal_mixRGB_nodes[-1].outputs['Color'], normalmap_shader.inputs['Color'])
+
+	# Curvature Nodes
+	curvature_nodes = []
+	curvature_sepRGB_nodes = []
+	curvature_mul_nodes = []
+	for i, textureID in enumerate(curvature_maps.values()):
+		texture_file = "%s/%s.dds" % (texture_dir, textureID)
+		if os.path.exists(texture_file):
+			curvature_image = nodes.new(type='ShaderNodeTexImage')
+			curvature_nodes.append(curvature_image)
+			curvature_image.location = -600, ((len(albedo_maps)+1)*-60)-i*60+50
+			curvature_image.image = bpy.data.images.load(texture_file)
+			curvature_image.hide = True
+			if i > 0:
+				curvature_image.label = "g_CurvatureMap" + str(i-1)
+			else:
+				curvature_image.label = "g_CurvatureMap"
+			sepRGB_shader = nodes.new(type="ShaderNodeSeparateRGB")
+			curvature_sepRGB_nodes.append(sepRGB_shader)
+			sepRGB_shader.location = -350, ((len(albedo_maps)+1)*-60)-i*60+50
+			sepRGB_shader.hide = True
+			
+			multiply_shader = nodes.new(type="ShaderNodeMath")
+			mask_invert_nodes.append(multiply_shader)
+			multiply_shader.location = -200, ((len(albedo_maps)+1)*-60)-i*60+50
+			multiply_shader.hide = True
+			multiply_shader.operation = "MULTIPLY"
+			curvature_mul_nodes.append(multiply_shader)
+	# Curvature Links
+	if len(curvature_nodes) > 0:
+		curvature_link = links.new(curvature_nodes[0].outputs['Color'], curvature_sepRGB_nodes[0].inputs['Image'])
+		r_link = links.new(curvature_sepRGB_nodes[0].outputs['R'], curvature_mul_nodes[0].inputs[0])
+		g_link = links.new(curvature_sepRGB_nodes[0].outputs['G'], curvature_mul_nodes[0].inputs[1])
+		mul_link = links.new(curvature_mul_nodes[0].outputs['Value'], principled.inputs['Subsurface'])
+		principled.inputs[2].default_value[0] = 0.6
+		principled.inputs[2].default_value[1] = 0.2
+		principled.inputs[2].default_value[2] = 0.2
 
 	return material
 
