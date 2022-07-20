@@ -1,10 +1,11 @@
+from time import time
 import bpy
 import bmesh
 import math
 from typing import List, Tuple
 from mathutils import Vector
 
-from ...utils.util import ShowMessageBox, getPreferences
+from ...utils.util import ShowMessageBox, getPreferences, printTimings
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -106,6 +107,7 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
+@timing(["main", "format_wmb_mesh", "construct_mesh"])
 def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
@@ -126,6 +128,7 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	objmesh.from_pydata(vertices, [], faces)
 	objmesh.update(calc_edges=True)
 
+	t1 = time()
 	if len(mesh_data[7]) != 0:
 		if objmesh.vertex_colors:
 			vcol_layer = objmesh.vertex_colors.active
@@ -133,10 +136,16 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 			vcol_layer = objmesh.vertex_colors.new()
 
 		for loop_idx, loop in enumerate(objmesh.loops):	
-			vcol_layer.data[loop_idx].color[0] = mesh_data[7][loop.vertex_index][0]/255
-			vcol_layer.data[loop_idx].color[1] = mesh_data[7][loop.vertex_index][1]/255
-			vcol_layer.data[loop_idx].color[2] = mesh_data[7][loop.vertex_index][2]/255
-			vcol_layer.data[loop_idx].color[3] = mesh_data[7][loop.vertex_index][3]/255
+			meshColor = vcol_layer.data[loop_idx]
+			dataColor = mesh_data[7][loop.vertex_index]
+			meshColor.color = [
+				dataColor[0]/255,
+				dataColor[1]/255,
+				dataColor[2]/255,
+				dataColor[3]/255
+			]
+	tD = time() - t1
+	setTiming(["main", "format_wmb_mesh", "construct_mesh", "3"], tD)
 
 	if has_bone:
 		weight_infos = mesh_data[4]
@@ -170,6 +179,7 @@ def set_partent(parent, child):
 	child.select_set(False)
 	parent.select_set(False)
 
+@timing(["main", "addWtaExportMaterial"])
 def addWtaExportMaterial(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
@@ -180,6 +190,7 @@ def addWtaExportMaterial(texture_dir, material):
 	]
 	makeWtaMaterial(material_name, wtaTextures)
 
+@timing(["main", "construct_materials"])
 def construct_materials(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
@@ -399,6 +410,7 @@ def construct_materials(texture_dir, material):
 
 	return material
 
+@timing(["main", "add_material_to_mesh"])
 def add_material_to_mesh(mesh, materials , uvs):
 	for material in materials:
 		#print('linking material %s to mesh object %s' % (material.name, mesh.name))
@@ -431,6 +443,7 @@ def add_material_to_mesh(mesh, materials , uvs):
 	#mesh.hide = True
 	mesh.select_set(False)
 	
+@timing(["main", "format_wmb_mesh"])
 def format_wmb_mesh(wmb, collection_name):
 	meshes = []
 	uvMaps = [[], [], [], [], []]
@@ -440,7 +453,7 @@ def format_wmb_mesh(wmb, collection_name):
 	for vertexGroupIndex in range(wmb.wmb3_header.vertexGroupCount):
 		vertex_flags = wmb.vertexGroupArray[vertexGroupIndex].vertexFlags
 
-		if vertex_flags in [0]:
+		if vertex_flags == 0:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
@@ -449,7 +462,7 @@ def format_wmb_mesh(wmb, collection_name):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
-		if vertex_flags in [1, 4]:
+		if vertex_flags in {1, 4}:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
@@ -458,7 +471,7 @@ def format_wmb_mesh(wmb, collection_name):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
-		if vertex_flags in [5]:
+		if vertex_flags == 5:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
@@ -468,7 +481,7 @@ def format_wmb_mesh(wmb, collection_name):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
-		if vertex_flags in [7, 10]:
+		if vertex_flags in {7, 10}:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
@@ -477,7 +490,7 @@ def format_wmb_mesh(wmb, collection_name):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
-		if vertex_flags in [11]:
+		if vertex_flags == 11:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
@@ -487,7 +500,7 @@ def format_wmb_mesh(wmb, collection_name):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
-		if vertex_flags in [12]:
+		if vertex_flags == 12:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
@@ -499,7 +512,7 @@ def format_wmb_mesh(wmb, collection_name):
 			uv = [(vertexExData.textureU5, 1 - vertexExData.textureV5) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
 			uvMaps[4].append(uv)
 
-		if vertex_flags in [14]:
+		if vertex_flags == 14:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
@@ -546,6 +559,7 @@ def format_wmb_mesh(wmb, collection_name):
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
+@timing(["main", "get_wmb_material"])
 def get_wmb_material(wmb, texture_dir):
 	materials = []
 	if wmb.wta:
@@ -648,6 +662,7 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
+@timing(["main"])
 def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
 	wmb = WMB3(wmb_file)
@@ -669,6 +684,7 @@ def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file_
 	col = bpy.data.collections.new(collection_name)
 	wmbCollection.children.link(col)
 	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
+	
 	texture_dir = wmb_file.replace(wmbname, '\\textures\\')
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]

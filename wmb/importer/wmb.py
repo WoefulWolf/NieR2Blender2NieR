@@ -1,8 +1,9 @@
 import os
 import json
+from time import time
 
-from ...utils.util import print_class, create_dir
-from ...utils.ioUtils import to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64
+from ...utils.util import print_class, create_dir, setTiming, timing
+from ...utils.ioUtils import SmartRead, read_uint8_x4, to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64
 from ...wta_wtp.importer.wta import *
 
 
@@ -49,6 +50,7 @@ class WMB_Header(object):
 
 class wmb3_vertexHeader(object):
 	"""docstring for wmb3_vertexHeader"""
+	@timing(["main", "WMB", "wmb3_vertexGroup", "vertexHeader"])
 	def __init__(self, wmb_fp):
 		super(wmb3_vertexHeader, self).__init__()
 		self.vertexArrayOffset = read_uint32(wmb_fp)		
@@ -65,81 +67,204 @@ class wmb3_vertexHeader(object):
 		self.faceCount = read_uint32(wmb_fp)				
 
 class wmb3_vertex(object):
+	smartRead = SmartRead.makeFormat(
+		SmartRead.float,
+		SmartRead.float,
+		SmartRead.float,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.float16,
+		SmartRead.float16,
+	)
+	smartReadUV2 = SmartRead.makeFormat(
+		SmartRead.float16,
+		SmartRead.float16,
+	)
+
 	"""docstring for wmb3_vertex"""
+	@timing(["main", "WMB", "wmb3_vertexGroup", "vertex"])
 	def __init__(self, wmb_fp, vertex_flags):
 		super(wmb3_vertex, self).__init__()
-		self.positionX = read_float(wmb_fp)
-		self.positionY = read_float(wmb_fp)
-		self.positionZ = read_float(wmb_fp)
-		self.normalX = read_uint8(wmb_fp) * 2 / 255			
-		self.normalY = read_uint8(wmb_fp) * 2 / 255	
-		self.normalZ = read_uint8(wmb_fp) * 2 / 255	
-		wmb_fp.read(1)											
-		self.textureU = read_float16(wmb_fp)				
-		self.textureV = read_float16(wmb_fp)
-		if vertex_flags in [0]:
+		# self.positionX = read_float(wmb_fp)
+		# self.positionY = read_float(wmb_fp)
+		# self.positionZ = read_float(wmb_fp)
+		# self.normalX = read_uint8(wmb_fp) * 2 / 255			
+		# self.normalY = read_uint8(wmb_fp) * 2 / 255	
+		# self.normalZ = read_uint8(wmb_fp) * 2 / 255	
+		# wmb_fp.read(1)											
+		# self.textureU = read_float16(wmb_fp)				
+		# self.textureV = read_float16(wmb_fp)
+		self.positionX, \
+		self.positionY, \
+		self.positionZ, \
+		self.normalX, \
+		self.normalY, \
+		self.normalZ, \
+		_, \
+		self.textureU, \
+		self.textureV = wmb3_vertex.smartRead.read(wmb_fp)
+		self.normalX = self.normalX * 2 / 255
+		self.normalY = self.normalY * 2 / 255
+		self.normalZ = self.normalZ * 2 / 255
+
+		if vertex_flags == 0:
 			self.normal = hex(read_uint64(wmb_fp))
-		if vertex_flags in [1, 4, 5, 12, 14]:
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-		if vertex_flags in [7, 10, 11]:										
+		if vertex_flags in {1, 4, 5, 12, 14}:
+			# self.textureU2 = read_float16(wmb_fp)				
+			# self.textureV2 = read_float16(wmb_fp)
+			self.textureU2, \
+			self.textureV2 = wmb3_vertex.smartReadUV2.read(wmb_fp)
+		if vertex_flags in {7, 10, 11}:
 			self.boneIndices = read_uint8_x4(wmb_fp)
 			self.boneWeights = [x / 255 for x in read_uint8_x4(wmb_fp)]
-		if vertex_flags in [4, 5, 12, 14]:
+		if vertex_flags in {4, 5, 12, 14}:
 			self.color = read_uint8_x4(wmb_fp)
 
 class wmb3_vertexExData(object):
+	smartRead5 = SmartRead.makeFormat(
+		SmartRead.uint64,
+		SmartRead.float16,
+		SmartRead.float16,
+	)
+	smartRead7 = SmartRead.makeFormat(
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.uint64,
+	)
+	smartRead10 = SmartRead.makeFormat(
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint64,
+	)
+	smartRead11 = SmartRead.makeFormat(
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint8,
+		SmartRead.uint64,
+		SmartRead.float16,
+		SmartRead.float16,
+	)
+	smartRead12 = SmartRead.makeFormat(
+		SmartRead.uint64,
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.float16,
+	)
+	smartRead14 = SmartRead.makeFormat(
+		SmartRead.uint64,
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.float16,
+		SmartRead.float16,
+	)
+
 	"""docstring for wmb3_vertexExData"""
+	@timing(["main", "WMB", "wmb3_vertexGroup", "vertexExData"])
 	def __init__(self, wmb_fp, vertex_flags):
 		super(wmb3_vertexExData, self).__init__()
 		
 		#0x0 has no ExVertexData
 
-		if vertex_flags in [1, 4]: #0x1, 0x4
+		if vertex_flags in {1, 4}: #0x1, 0x4
 			self.normal = hex(read_uint64(wmb_fp))
 
-		elif vertex_flags in [5]: #0x5
-			self.normal = hex(read_uint64(wmb_fp))
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
+		elif vertex_flags == 5: #0x5
+			# self.normal = hex(read_uint64(wmb_fp))
+			# self.textureU3 = read_float16(wmb_fp)				
+			# self.textureV3 = read_float16(wmb_fp)
+			self.normal, \
+			self.textureU3, \
+			self.textureV3 = wmb3_vertexExData.smartRead5.read(wmb_fp)
+			self.normal = hex(self.normal)
 
-		elif vertex_flags in [7]: #0x7
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.normal = hex(read_uint64(wmb_fp))
+		elif vertex_flags == 7: #0x7
+			# self.textureU2 = read_float16(wmb_fp)				
+			# self.textureV2 = read_float16(wmb_fp)
+			# self.normal = hex(read_uint64(wmb_fp))
+			self.textureU2, \
+			self.textureV2, \
+			self.normal = wmb3_vertexExData.smartRead7.read(wmb_fp)
+			self.normal = hex(self.normal)
 
-		elif vertex_flags in [10]: #0xa
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.color = read_uint8_x4(wmb_fp)
-			self.normal = hex(read_uint64(wmb_fp))
+		elif vertex_flags == 10: #0xa
+			# self.textureU2 = read_float16(wmb_fp)				
+			# self.textureV2 = read_float16(wmb_fp)
+			# self.color = read_uint8_x4(wmb_fp)
+			# self.normal = hex(read_uint64(wmb_fp))
+			self.color = [0, 0, 0, 0]
+			self.textureU2, \
+			self.textureV2, \
+			self.color[0], \
+			self.color[1], \
+			self.color[2], \
+			self.color[3], \
+			self.normal = wmb3_vertexExData.smartRead10.read(wmb_fp)
+			self.normal = hex(self.normal)
 
-		elif vertex_flags in [11]: #0xb
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.color = read_uint8_x4(wmb_fp)
-			self.normal = hex(read_uint64(wmb_fp))
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-		
-		elif vertex_flags in [12]: #0xc
-			self.normal = hex(read_uint64(wmb_fp))
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-			self.textureU4 = read_float16(wmb_fp)				
-			self.textureV4 = read_float16(wmb_fp)
-			self.textureU5 = read_float16(wmb_fp)				
-			self.textureV5 = read_float16(wmb_fp)
+		elif vertex_flags == 11: #0xb
+			# self.textureU2 = read_float16(wmb_fp)				
+			# self.textureV2 = read_float16(wmb_fp)
+			# self.color = read_uint8_x4(wmb_fp)
+			# self.normal = hex(read_uint64(wmb_fp))
+			# self.textureU3 = read_float16(wmb_fp)				
+			# self.textureV3 = read_float16(wmb_fp)
+			self.color = [0, 0, 0, 0]
+			self.textureU2, \
+			self.textureV2, \
+			self.color[0], \
+			self.color[1], \
+			self.color[2], \
+			self.color[3], \
+			self.normal, \
+			self.textureU3, \
+			self.textureV3 = wmb3_vertexExData.smartRead11.read(wmb_fp)
+			self.normal = hex(self.normal)
 
-		elif vertex_flags in [14]: #0xe
-			self.normal = hex(read_uint64(wmb_fp))
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-			self.textureU4 = read_float16(wmb_fp)				
-			self.textureV4 = read_float16(wmb_fp)
-		
+		elif vertex_flags == 12: #0xc
+			# self.normal = hex(read_uint64(wmb_fp))
+			# self.textureU3 = read_float16(wmb_fp)				
+			# self.textureV3 = read_float16(wmb_fp)
+			# self.textureU4 = read_float16(wmb_fp)				
+			# self.textureV4 = read_float16(wmb_fp)
+			# self.textureU5 = read_float16(wmb_fp)				
+			# self.textureV5 = read_float16(wmb_fp)
+			self.normal, \
+			self.textureU3, \
+			self.textureV3, \
+			self.textureU4, \
+			self.textureV4, \
+			self.textureU5, \
+			self.textureV5 = wmb3_vertexExData.smartRead12.read(wmb_fp)
+			self.normal = hex(self.normal)
+
+		elif vertex_flags == 14: #0xe
+			# self.normal = hex(read_uint64(wmb_fp))
+			# self.textureU3 = read_float16(wmb_fp)				
+			# self.textureV3 = read_float16(wmb_fp)
+			# self.textureU4 = read_float16(wmb_fp)				
+			# self.textureV4 = read_float16(wmb_fp)
+			self.normal, \
+			self.textureU3, \
+			self.textureV3, \
+			self.textureU4, \
+			self.textureV4 = wmb3_vertexExData.smartRead14.read(wmb_fp)
+			self.normal = hex(self.normal)
+	
 class wmb3_vertexGroup(object):
 	"""docstring for wmb3_vertexGroup"""
+	@timing(["main", "WMB", "wmb3_vertexGroup"])
 	def __init__(self, wmb_fp, faceSize):
 		super(wmb3_vertexGroup, self).__init__()
 		self.faceSize = faceSize
@@ -147,27 +272,37 @@ class wmb3_vertexGroup(object):
 
 		self.vertexFlags = self.vertexGroupHeader.vertexFlags	
 		
-		self.vertexArray = []
+		t1 = time()
+		self.vertexArray = [None] * self.vertexGroupHeader.vertexCount
 		wmb_fp.seek(self.vertexGroupHeader.vertexArrayOffset)
 		for vertex_index in range(self.vertexGroupHeader.vertexCount):
 			vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexFlags)
-			self.vertexArray.append(vertex)
+			self.vertexArray[vertex_index] = vertex
+		tD = time() - t1
+		setTiming(["main", "WMB", "wmb3_vertexGroup", "vertex__"], tD)
 
-		self.vertexesExDataArray = []
+		t1 = time()
+		self.vertexesExDataArray = [None] * self.vertexGroupHeader.vertexCount
 		wmb_fp.seek(self.vertexGroupHeader.vertexExDataArrayOffset)
 		for vertexIndex in range(self.vertexGroupHeader.vertexCount):
-			self.vertexesExDataArray.append(wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags))
+			self.vertexesExDataArray[vertexIndex] = wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags)
+		tD = time() - t1
+		setTiming(["main", "WMB", "wmb3_vertexGroup", "vertexExData__"], tD)
 
-		self.faceRawArray = []
+		t1 = time()
+		self.faceRawArray = [None] * self.vertexGroupHeader.faceCount
 		wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
 		for face_index in range(self.vertexGroupHeader.faceCount):
 			if faceSize == 2:
-				self.faceRawArray.append(read_uint16(wmb_fp) + 1)
+				self.faceRawArray[face_index] = read_uint16(wmb_fp) + 1
 			else:
-				self.faceRawArray.append(read_uint32(wmb_fp) + 1)
+				self.faceRawArray[face_index] = read_uint32(wmb_fp) + 1
+		tD = time() - t1
+		setTiming(["main", "WMB", "wmb3_vertexGroup", "faceRawArray"], tD)
 
 class wmb3_mesh(object):
 	"""docstring for wmb3_mesh"""
+	@timing(["main", "WMB", "wmb3_mesh"])
 	def __init__(self, wmb_fp):
 		super(wmb3_mesh, self).__init__()
 		self.vertexGroupIndex = read_uint32(wmb_fp)
@@ -231,6 +366,7 @@ class wmb3_boneMap(object):
 
 class wmb3_boneSet(object):
 	"""docstring for wmb3_boneSet"""
+	@timing(["main", "WMB", "wmb3_boneSet"])
 	def __init__(self, wmb_fp, boneSetCount):
 		super(wmb3_boneSet, self).__init__()
 		self.boneSetArray = []
@@ -249,6 +385,7 @@ class wmb3_boneSet(object):
 
 class wmb3_material(object):
 	"""docstring for wmb3_material"""
+	@timing(["main", "WMB", "wmb3_material"])
 	def __init__(self, wmb_fp):
 		super(wmb3_material, self).__init__()
 		read_uint16(wmb_fp)
@@ -329,6 +466,7 @@ class wmb3_material(object):
 
 class wmb3_meshGroup(object):
 	"""docstring for wmb3_meshGroupInfo"""
+	@timing(["main", "WMB", "wmb3_meshGroup"])
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroup, self).__init__()
 		nameOffset = read_uint32(wmb_fp)
@@ -369,6 +507,7 @@ class wmb3_groupedMesh(object):
 		
 class wmb3_meshGroupInfo(object):
 	"""docstring for wmb3_meshGroupInfo"""
+	@timing(["main", "WMB", "wmb3_meshGroupInfo"])
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroupInfo, self).__init__()
 		self.nameOffset = read_uint32(wmb_fp)					
@@ -417,6 +556,7 @@ class wmb3_worldData(object):
 		
 class WMB3(object):
 	"""docstring for WMB3"""
+	@timing(["main", "WMB"])
 	def __init__(self, wmb_file):
 		super(WMB3, self).__init__()
 		wmb_fp = 0
@@ -553,7 +693,7 @@ class WMB3(object):
 				self.unknownWorldDataArray.append(wmb3_worldData(wmb_fp))
 				
 
-		
+	@timing(["main", "format_wmb_mesh", "clear_unused_vertex"])
 	def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex):
 		mesh = self.meshArray[meshArrayIndex]
 		faceRawStart = mesh.faceStart
@@ -589,10 +729,10 @@ class WMB3(object):
 			usedVertices[newIndex] = (meshVertices[i].positionX, meshVertices[i].positionY, meshVertices[i].positionZ)
 
 			# Vertex_Colors are stored in VertexData
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in [4, 5, 12, 14]:
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {4, 5, 12, 14}:
 				vertex_colors.append(meshVertices[i].color)
 			# Vertex_Colors are stored in VertexExData
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in [10, 11]:
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {10, 11}:
 				vertex_colors.append(vertexesExData[i].color)
 
 			if self.hasBone:

@@ -6,7 +6,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
-from ...utils.util import setExportFieldsFromImportFile
+from ...utils.util import printTimings, resetTimings, setExportFieldsFromImportFile
 from ...consts import ADDON_NAME
 
 
@@ -30,7 +30,9 @@ def importDat(only_extract, filepath):
 
     # WMB
     from ...wmb.importer import wmb_importer
+    resetTimings()
     wmb_importer.main(only_extract, wmb_filepath)
+    printTimings()
 
     if only_extract:
         return {'FINISHED'}

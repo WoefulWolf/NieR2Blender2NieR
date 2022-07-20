@@ -1,6 +1,10 @@
+from __future__ import annotations
+from functools import wraps
+import json
 import os
 import textwrap
-from typing import List
+from time import time
+from typing import Dict, List
 import bmesh
 import bpy
 import numpy as np
@@ -183,3 +187,49 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
 
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
+
+timings: Dict[str, Dict|float] = {}
+
+def setTiming(path: List[str], time: float, inner: Dict|None = None):
+    if inner is None:
+        inner = timings
+    if len(path) == 1 and type(inner.get(path[0])) is dict:
+        path.append("_TOTAL")
+    if len(path) == 1:
+        if path[0] not in inner:
+            inner[path[0]] = 0
+        inner[path[0]] += time
+    else:
+        if path[0] not in inner:
+            inner[path[0]] = {}
+        setTiming(path[1:], time, inner[path[0]])
+
+def resetTimings():
+    global timings
+    timings = {}
+
+def timing(path: List[str]):
+    def decorator(f):
+        @wraps(f)
+        def wrap(*args, **kw):
+            t1 = time()
+            result = f(*args, **kw)
+            t2 = time()
+            setTiming(path, t2 - t1)
+            return result
+        return wrap
+    return decorator
+
+def printTimingsSection(total: float, inner: Dict, indent: int = 0):
+    for key in inner:
+        if type(inner[key]) is dict:
+            print(" " * indent + key + ":")
+            printTimingsSection(total, inner[key], indent + 4)
+        else:
+            print(f" {' ' * indent}{key}: {inner[key]/total:.1%}")
+
+def printTimings():
+    print("Timings:")
+    print(json.dumps(timings, indent=4))
+    total = timings["main"]["_TOTAL"]
+    printTimingsSection(total, timings)

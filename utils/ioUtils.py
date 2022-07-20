@@ -1,5 +1,6 @@
+from __future__ import annotations
 import struct
-from typing import List
+from typing import Any, List, Tuple
 
 # Little Endian
 
@@ -11,7 +12,7 @@ def read_uint8(file) -> int:
     entry = file.read(1)
     return struct.unpack('B', entry)[0]
 
-def read_uint8_x4(file) -> List[int]:
+def read_uint8_x4(file) -> Tuple[int]:
     entry = file.read(4)
     return struct.unpack('BBBB', entry)
 
@@ -46,6 +47,32 @@ def read_float16(file) -> float:
 def read_float(file) -> float:
     entry = file.read(4)
     return struct.unpack('<f', entry)[0]
+
+class SmartRead:
+    int8 = "b"
+    uint8 = "B"
+    int16 = "h"
+    uint16 = "H"
+    int32 = "i"
+    uint32 = "I"
+    int64 = "q"
+    uint64 = "Q"
+    float16 = "e"
+    float = "f"
+
+    format: str
+    count: int
+
+    def __init__(self, format: str):
+        self.format = format
+        self.count = struct.calcsize(format)
+
+    @classmethod
+    def makeFormat(cls, *formats: List[str]) -> SmartRead:
+        return SmartRead("<" + "".join(formats))
+    
+    def read(self, file) -> Tuple[Any]:
+        return struct.unpack(self.format, file.read(self.count))
 
 def to_uint(bs):
 	return int.from_bytes(bs, byteorder='little', signed=False)
