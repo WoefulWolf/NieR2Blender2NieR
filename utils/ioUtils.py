@@ -1,4 +1,5 @@
 import struct
+from typing import List
 
 # Little Endian
 
@@ -9,6 +10,10 @@ def read_int8(file) -> int:
 def read_uint8(file) -> int:
     entry = file.read(1)
     return struct.unpack('B', entry)[0]
+
+def read_uint8_x4(file) -> List[int]:
+    entry = file.read(4)
+    return struct.unpack('BBBB', entry)
 
 def read_int16(file) -> int:
     entry = file.read(2)

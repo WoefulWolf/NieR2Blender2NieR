@@ -83,10 +83,10 @@ class wmb3_vertex(object):
 			self.textureU2 = read_float16(wmb_fp)				
 			self.textureV2 = read_float16(wmb_fp)
 		if vertex_flags in [7, 10, 11]:										
-			self.boneIndices = [read_uint8(wmb_fp) for i in range(4)]									
-			self.boneWeights = [read_uint8(wmb_fp)/255 for i in range(4)]
+			self.boneIndices = read_uint8_x4(wmb_fp)
+			self.boneWeights = [x / 255 for x in read_uint8_x4(wmb_fp)]
 		if vertex_flags in [4, 5, 12, 14]:
-			self.color = [read_uint8(wmb_fp) for i in range(4)]
+			self.color = read_uint8_x4(wmb_fp)
 
 class wmb3_vertexExData(object):
 	"""docstring for wmb3_vertexExData"""
@@ -111,13 +111,13 @@ class wmb3_vertexExData(object):
 		elif vertex_flags in [10]: #0xa
 			self.textureU2 = read_float16(wmb_fp)				
 			self.textureV2 = read_float16(wmb_fp)
-			self.color = [read_uint8(wmb_fp) for i in range(4)]
+			self.color = read_uint8_x4(wmb_fp)
 			self.normal = hex(read_uint64(wmb_fp))
 
 		elif vertex_flags in [11]: #0xb
 			self.textureU2 = read_float16(wmb_fp)				
 			self.textureV2 = read_float16(wmb_fp)
-			self.color = [read_uint8(wmb_fp) for i in range(4)]
+			self.color = read_uint8_x4(wmb_fp)
 			self.normal = hex(read_uint64(wmb_fp))
 			self.textureU3 = read_float16(wmb_fp)				
 			self.textureV3 = read_float16(wmb_fp)
