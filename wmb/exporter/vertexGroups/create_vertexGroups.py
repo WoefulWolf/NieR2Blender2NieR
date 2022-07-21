@@ -1,11 +1,9 @@
 import bpy
-from ....utils.util import timing
 
 from .vertexGroup import c_vertexGroup
 
 
 class c_vertexGroups(object):
-    @timing(["main", "c_generate_data", "c_vertexGroup"])
     def __init__(self, offsetVertexGroups):
         self.offsetVertexGroups = offsetVertexGroups
 

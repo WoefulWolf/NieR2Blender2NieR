@@ -34,7 +34,6 @@ def restore_blend():
     return {'FINISHED'}
 
 
-@timing(["main"])
 def main(filepath):
     start_time = int(time.time())
     prepare_blend()

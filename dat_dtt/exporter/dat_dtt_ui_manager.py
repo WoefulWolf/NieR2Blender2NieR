@@ -5,7 +5,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from ...utils.util import printTimings, resetTimings, triangulate_meshes, centre_origins
+from ...utils.util import triangulate_meshes, centre_origins
 
 
 class ExportAllSteps(bpy.types.PropertyGroup):
@@ -246,9 +246,7 @@ class ExportAll(bpy.types.Operator):
                 centre_origins("WMB")
             if exportSteps.deleteLoose:
                 bpy.ops.b2n.deleteloosegeometryall()
-            resetTimings()
             wmb_exporter.main(wmbFilePath)
-            printTimings()
             exportedFilesCount += 1
         from ...wta_wtp.exporter import export_wta, export_wtp
         if exportSteps.useWtaStep:

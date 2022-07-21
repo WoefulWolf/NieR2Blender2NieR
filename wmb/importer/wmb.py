@@ -2,7 +2,7 @@ import os
 import json
 from time import time
 
-from ...utils.util import print_class, create_dir, setTiming, timing
+from ...utils.util import print_class, create_dir
 from ...utils.ioUtils import SmartIO, read_uint8_x4, to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64
 from ...wta_wtp.importer.wta import *
 
@@ -50,7 +50,6 @@ class WMB_Header(object):
 
 class wmb3_vertexHeader(object):
 	"""docstring for wmb3_vertexHeader"""
-	@timing(["main", "WMB", "wmb3_vertexGroup", "vertexHeader"])
 	def __init__(self, wmb_fp):
 		super(wmb3_vertexHeader, self).__init__()
 		self.vertexArrayOffset = read_uint32(wmb_fp)		
@@ -84,7 +83,6 @@ class wmb3_vertex(object):
 	)
 
 	"""docstring for wmb3_vertex"""
-	@timing(["main", "WMB", "wmb3_vertexGroup", "vertex"])
 	def __init__(self, wmb_fp, vertex_flags):
 		super(wmb3_vertex, self).__init__()
 		# self.positionX = read_float(wmb_fp)
@@ -171,7 +169,6 @@ class wmb3_vertexExData(object):
 	)
 
 	"""docstring for wmb3_vertexExData"""
-	@timing(["main", "WMB", "wmb3_vertexGroup", "vertexExData"])
 	def __init__(self, wmb_fp, vertex_flags):
 		super(wmb3_vertexExData, self).__init__()
 		
@@ -264,7 +261,6 @@ class wmb3_vertexExData(object):
 	
 class wmb3_vertexGroup(object):
 	"""docstring for wmb3_vertexGroup"""
-	@timing(["main", "WMB", "wmb3_vertexGroup"])
 	def __init__(self, wmb_fp, faceSize):
 		super(wmb3_vertexGroup, self).__init__()
 		self.faceSize = faceSize
@@ -272,24 +268,17 @@ class wmb3_vertexGroup(object):
 
 		self.vertexFlags = self.vertexGroupHeader.vertexFlags	
 		
-		t1 = time()
 		self.vertexArray = [None] * self.vertexGroupHeader.vertexCount
 		wmb_fp.seek(self.vertexGroupHeader.vertexArrayOffset)
 		for vertex_index in range(self.vertexGroupHeader.vertexCount):
 			vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexFlags)
 			self.vertexArray[vertex_index] = vertex
-		tD = time() - t1
-		setTiming(["main", "WMB", "wmb3_vertexGroup", "vertex__"], tD)
 
-		t1 = time()
 		self.vertexesExDataArray = [None] * self.vertexGroupHeader.vertexCount
 		wmb_fp.seek(self.vertexGroupHeader.vertexExDataArrayOffset)
 		for vertexIndex in range(self.vertexGroupHeader.vertexCount):
 			self.vertexesExDataArray[vertexIndex] = wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags)
-		tD = time() - t1
-		setTiming(["main", "WMB", "wmb3_vertexGroup", "vertexExData__"], tD)
 
-		t1 = time()
 		self.faceRawArray = [None] * self.vertexGroupHeader.faceCount
 		wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
 		for face_index in range(self.vertexGroupHeader.faceCount):
@@ -297,8 +286,6 @@ class wmb3_vertexGroup(object):
 				self.faceRawArray[face_index] = read_uint16(wmb_fp) + 1
 			else:
 				self.faceRawArray[face_index] = read_uint32(wmb_fp) + 1
-		tD = time() - t1
-		setTiming(["main", "WMB", "wmb3_vertexGroup", "faceRawArray"], tD)
 
 class wmb3_mesh(object):
 	"""docstring for wmb3_mesh"""
@@ -365,7 +352,6 @@ class wmb3_boneMap(object):
 
 class wmb3_boneSet(object):
 	"""docstring for wmb3_boneSet"""
-	@timing(["main", "WMB", "wmb3_boneSet"])
 	def __init__(self, wmb_fp, boneSetCount):
 		super(wmb3_boneSet, self).__init__()
 		self.boneSetArray = []
@@ -384,7 +370,6 @@ class wmb3_boneSet(object):
 
 class wmb3_material(object):
 	"""docstring for wmb3_material"""
-	@timing(["main", "WMB", "wmb3_material"])
 	def __init__(self, wmb_fp):
 		super(wmb3_material, self).__init__()
 		read_uint16(wmb_fp)
@@ -505,7 +490,6 @@ class wmb3_groupedMesh(object):
 		
 class wmb3_meshGroupInfo(object):
 	"""docstring for wmb3_meshGroupInfo"""
-	@timing(["main", "WMB", "wmb3_meshGroupInfo"])
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroupInfo, self).__init__()
 		self.nameOffset = read_uint32(wmb_fp)					
@@ -554,7 +538,6 @@ class wmb3_worldData(object):
 		
 class WMB3(object):
 	"""docstring for WMB3"""
-	@timing(["main", "WMB"])
 	def __init__(self, wmb_file):
 		super(WMB3, self).__init__()
 		wmb_fp = 0
@@ -691,7 +674,6 @@ class WMB3(object):
 				self.unknownWorldDataArray.append(wmb3_worldData(wmb_fp))
 				
 
-	@timing(["main", "format_wmb_mesh", "clear_unused_vertex"])
 	def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex):
 		mesh = self.meshArray[meshArrayIndex]
 		faceRawStart = mesh.faceStart

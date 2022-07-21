@@ -214,10 +214,10 @@ def timing(path: List[str]):
     def decorator(f):
         @wraps(f)
         def wrap(*args, **kw):
-            t1 = time()
+            # t1 = time()
             result = f(*args, **kw)
-            t2 = time()
-            setTiming(path, t2 - t1)
+            # t2 = time()
+            # setTiming(path, t2 - t1)
             return result
         return wrap
     return decorator

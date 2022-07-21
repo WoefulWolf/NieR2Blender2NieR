@@ -107,7 +107,6 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-@timing(["main", "format_wmb_mesh", "construct_mesh"])
 def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
@@ -128,7 +127,6 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	objmesh.from_pydata(vertices, [], faces)
 	objmesh.update(calc_edges=True)
 
-	t1 = time()
 	if len(mesh_data[7]) != 0:
 		if objmesh.vertex_colors:
 			vcol_layer = objmesh.vertex_colors.active
@@ -144,8 +142,6 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 				dataColor[2]/255,
 				dataColor[3]/255
 			]
-	tD = time() - t1
-	setTiming(["main", "format_wmb_mesh", "construct_mesh", "3"], tD)
 
 	if has_bone:
 		weight_infos = mesh_data[4]
@@ -179,7 +175,6 @@ def set_partent(parent, child):
 	child.select_set(False)
 	parent.select_set(False)
 
-@timing(["main", "addWtaExportMaterial"])
 def addWtaExportMaterial(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
@@ -190,7 +185,6 @@ def addWtaExportMaterial(texture_dir, material):
 	]
 	makeWtaMaterial(material_name, wtaTextures)
 
-@timing(["main", "construct_materials"])
 def construct_materials(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
@@ -410,7 +404,6 @@ def construct_materials(texture_dir, material):
 
 	return material
 
-@timing(["main", "add_material_to_mesh"])
 def add_material_to_mesh(mesh, materials , uvs):
 	for material in materials:
 		#print('linking material %s to mesh object %s' % (material.name, mesh.name))
@@ -443,7 +436,6 @@ def add_material_to_mesh(mesh, materials , uvs):
 	#mesh.hide = True
 	mesh.select_set(False)
 	
-@timing(["main", "format_wmb_mesh"])
 def format_wmb_mesh(wmb, collection_name):
 	meshes = []
 	uvMaps = [[], [], [], [], []]
@@ -559,7 +551,6 @@ def format_wmb_mesh(wmb, collection_name):
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
-@timing(["main", "get_wmb_material"])
 def get_wmb_material(wmb, texture_dir):
 	materials = []
 	if wmb.wta:
@@ -662,7 +653,6 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
-@timing(["main"])
 def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
 	wmb = WMB3(wmb_file)

@@ -1,8 +1,6 @@
-from ....utils.util import timing
 from ....utils.ioUtils import write_Int32, write_uInt32
 
 
-@timing(["main", "create_wmb_batches"])
 def create_wmb_batches(wmb_file, data):
     wmb_file.seek(data.batches_Offset)
 

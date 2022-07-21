@@ -2,11 +2,9 @@ import math
 from time import time
 
 import bpy
-from ....utils.util import setTiming, timing
 
 
 class c_vertexGroup(object):
-    @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup"])
     def __init__(self, vertexGroupIndex, vertexesStart):
         self.vertexGroupIndex = vertexGroupIndex
         self.vertexGroupStart = vertexesStart
@@ -35,14 +33,12 @@ class c_vertexGroup(object):
             return numVertices
         numVertices = get_numVertices(self)
 
-        @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_numIndexes"])
         def get_numIndexes(self):
             numIndexes = 0
             for obj in self.blenderObjects:
                 numIndexes += len(obj.data.polygons)
             return numIndexes * 3
         
-        @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_blenderVertices"])
         def get_blenderVertices(self):
             blenderVertices = []
             blenderObjects = self.blenderObjects
@@ -59,7 +55,6 @@ class c_vertexGroup(object):
 
             return blenderLoops
 
-        @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "get_blenderUVCoords"])
         def get_blenderUVCoords(self, objOwner, loopIndex, uvSlot):
             if uvSlot > len(objOwner.data.uv_layers)-1:
                 print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", objOwner.name, "but it does not exist.")
@@ -115,7 +110,6 @@ class c_vertexGroup(object):
             self.vertexExDataSize = 20
 
 
-        @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_boneMap"])
         def get_boneMap(self):
             boneMap = []
             for obj in bpy.data.collections['WMB'].all_objects:
@@ -136,27 +130,22 @@ class c_vertexGroup(object):
                         boneSet.append(val)
                     return boneSet
 
-        @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData"])
         def get_vertexesData(self):
             vertexes = []
             vertexesExData = []
             for bvertex_obj in blenderVertices:
                 bvertex_obj_obj = bvertex_obj[1]
                 print('   [>] Generating vertex data for object', bvertex_obj_obj.name)
-                t1 = time()
                 loops = get_blenderLoops(self, bvertex_obj_obj)
                 sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
 
                 if self.vertexFlags not in {0, 1, 4, 5, 12, 14}:
                     boneSet = get_boneSet(self, bvertex_obj_obj["boneSetIndex"])
                 
-                setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "1"], time() - t1)
-
                 previousIndex = -1
                 for loop in sorted_loops:
                     if loop.vertex_index == previousIndex:
                         continue
-                    t1 = time()
 
                     previousIndex = loop.vertex_index
             
@@ -173,17 +162,12 @@ class c_vertexGroup(object):
 
                     tangents = [tx, ty, tz, sign]
 
-                    setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "2"], time() - t1)
-                    t1 = time()
-
                     # Normal
                     normal = []
                     if self.vertexFlags == 0:
                         normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
-                    setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "2.5"], time() - t1)
 
                     # UVs
-                    t1 = time()
                     uv_maps = []
 
                     uv1 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 0)
@@ -192,10 +176,8 @@ class c_vertexGroup(object):
                     if self.vertexFlags in {1, 4, 5, 12, 14}:
                         uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
                         uv_maps.append(uv2)
-                    setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "3"], time() - t1)
 
                     # Bones
-                    t1 = time()
                     boneIndexes = []
                     boneWeights = []
                     if self.vertexFlags in {7, 10, 11}:
@@ -249,8 +231,6 @@ class c_vertexGroup(object):
                         if sum(boneWeights) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
-                    setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "4"], time() - t1)
-                    t1 = time()
                     color = []
                     if self.vertexFlags in {4, 5, 12, 14}:
                         if len (bvertex_obj_obj.data.vertex_colors) == 0:
@@ -260,13 +240,11 @@ class c_vertexGroup(object):
                         color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
 
                     vertexes.append([position, tangents, normal, uv_maps, boneIndexes, boneWeights, color])
-                    setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "5"], time() - t1)
 
                     
                     ##################################################
                     ###### Now lets do the extra data shit ###########
                     ##################################################
-                    t1 = time()
                     normal = []
                     uv_maps = []
                     color = []
@@ -316,13 +294,11 @@ class c_vertexGroup(object):
                         uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
                         uv_maps.append(uv4)
                     
-                    setTiming(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_vertexesData", "6"], time() - t1)
                     vertexExData = [normal, uv_maps, color]
                     vertexesExData.append(vertexExData)
             
             return vertexes, vertexesExData
 
-        @timing(["main", "c_generate_data", "c_vertexGroup", "c_vertexGroup", "get_indexes"])
         def get_indexes(self):
             indexesOffset = 0
             indexes = []

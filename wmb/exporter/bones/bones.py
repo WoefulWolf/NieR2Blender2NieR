@@ -1,10 +1,9 @@
 import bpy
 
-from ....utils.util import Vector3, timing
+from ....utils.util import Vector3
 
 
 class c_bones(object):
-    @timing(["main", "c_generate_data", "c_bones"])
     def __init__(self):
 
         def get_bones(self):

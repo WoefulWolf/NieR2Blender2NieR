@@ -1,14 +1,11 @@
 from time import time
 
-from ....utils.util import setTiming, timing
 from ....utils.ioUtils import SmartIO, write_Int32, write_uInt32, write_xyz, write_byte, write_float16
 
 
-@timing(["main", "create_wmb_vertexGroups"])
 def create_wmb_vertexGroups(wmb_file, data):
     wmb_file.seek(data.vertexGroups_Offset)
     
-    t1 = time()
     for vertexGroup in data.vertexGroups.vertexGroups:
         write_uInt32(wmb_file, vertexGroup.vertexOffset)            # vertexOffset
         write_uInt32(wmb_file, vertexGroup.vertexExDataOffset)      # vertexExDataOffset
@@ -22,7 +19,6 @@ def create_wmb_vertexGroups(wmb_file, data):
         write_Int32(wmb_file, vertexGroup.vertexFlags)              # vertexFlags
         write_Int32(wmb_file, vertexGroup.indexBufferOffset)        # indexBufferOffset
         write_Int32(wmb_file, vertexGroup.numIndexes)               # numIndexes
-    setTiming(["main", "create_wmb_vertexGroups", "1"], time() - t1)
 
     writePos = SmartIO.makeFormat(SmartIO.float, SmartIO.float, SmartIO.float)
     writeTangent = SmartIO.makeFormat(SmartIO.uint8, SmartIO.uint8, SmartIO.uint8, SmartIO.uint8)
@@ -30,7 +26,6 @@ def create_wmb_vertexGroups(wmb_file, data):
     writeUV = SmartIO.makeFormat(SmartIO.float16, SmartIO.float16)
     writeColor = writeTangent
     for vertexGroup in data.vertexGroups.vertexGroups:
-        t1 = time()
         for vertex in vertexGroup.vertexes:                         # [position.xyz, tangents, normal, uv_maps, boneIndexes, boneWeights, color]
             # write_xyz(wmb_file, vertex[0])                          # position.xyz
             writePos.write(wmb_file, vertex[0])
@@ -58,9 +53,6 @@ def create_wmb_vertexGroups(wmb_file, data):
                 #     write_byte(wmb_file, val)                       # Color
                 writeColor.write(wmb_file, vertex[6])
 
-        setTiming(["main", "create_wmb_vertexGroups", "2"], time() - t1)
-
-        t1 = time()
         wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # [normal, uv_maps, color]
             if vertexGroup.vertexFlags in {1, 4}:                   # [1, 4]
@@ -128,10 +120,6 @@ def create_wmb_vertexGroups(wmb_file, data):
                 #     write_float16(wmb_file, val)
                 writeUV.write(wmb_file, vertexExData[1][1])
 
-        setTiming(["main", "create_wmb_vertexGroups", "3"], time() - t1)
-
-        t1 = time()
         for index in vertexGroup.indexes:                           # indexes
             write_uInt32(wmb_file, index)
-        setTiming(["main", "create_wmb_vertexGroups", "4"], time() - t1)
         
