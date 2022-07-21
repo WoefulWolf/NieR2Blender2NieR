@@ -188,6 +188,7 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
 
+startTime = -1
 timings: Dict[str, Dict|float] = {}
 
 def setTiming(path: List[str], time: float, inner: Dict|None = None):
@@ -205,8 +206,9 @@ def setTiming(path: List[str], time: float, inner: Dict|None = None):
         setTiming(path[1:], time, inner[path[0]])
 
 def resetTimings():
-    global timings
+    global timings, startTime
     timings = {}
+    startTime = time()
 
 def timing(path: List[str]):
     def decorator(f):
@@ -226,10 +228,11 @@ def printTimingsSection(total: float, inner: Dict, indent: int = 0):
             print(" " * indent + key + ":")
             printTimingsSection(total, inner[key], indent + 4)
         else:
-            print(f" {' ' * indent}{key}: {inner[key]/total:.1%}")
+            print(f"{' ' * indent}{key}: {inner[key]/total:.1%}")
 
 def printTimings():
     print("Timings:")
     print(json.dumps(timings, indent=4))
-    total = timings["main"]["_TOTAL"]
+    total = time() - startTime
+    print("Total: " + str(total))
     printTimingsSection(total, timings)

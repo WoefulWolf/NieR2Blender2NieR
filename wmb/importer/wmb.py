@@ -3,7 +3,7 @@ import json
 from time import time
 
 from ...utils.util import print_class, create_dir, setTiming, timing
-from ...utils.ioUtils import SmartRead, read_uint8_x4, to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64
+from ...utils.ioUtils import SmartIO, read_uint8_x4, to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64
 from ...wta_wtp.importer.wta import *
 
 
@@ -67,20 +67,20 @@ class wmb3_vertexHeader(object):
 		self.faceCount = read_uint32(wmb_fp)				
 
 class wmb3_vertex(object):
-	smartRead = SmartRead.makeFormat(
-		SmartRead.float,
-		SmartRead.float,
-		SmartRead.float,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.float16,
-		SmartRead.float16,
+	smartRead = SmartIO.makeFormat(
+		SmartIO.float,
+		SmartIO.float,
+		SmartIO.float,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.float16,
+		SmartIO.float16,
 	)
-	smartReadUV2 = SmartRead.makeFormat(
-		SmartRead.float16,
-		SmartRead.float16,
+	smartReadUV2 = SmartIO.makeFormat(
+		SmartIO.float16,
+		SmartIO.float16,
 	)
 
 	"""docstring for wmb3_vertex"""
@@ -123,51 +123,51 @@ class wmb3_vertex(object):
 			self.color = read_uint8_x4(wmb_fp)
 
 class wmb3_vertexExData(object):
-	smartRead5 = SmartRead.makeFormat(
-		SmartRead.uint64,
-		SmartRead.float16,
-		SmartRead.float16,
+	smartRead5 = SmartIO.makeFormat(
+		SmartIO.uint64,
+		SmartIO.float16,
+		SmartIO.float16,
 	)
-	smartRead7 = SmartRead.makeFormat(
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.uint64,
+	smartRead7 = SmartIO.makeFormat(
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.uint64,
 	)
-	smartRead10 = SmartRead.makeFormat(
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint64,
+	smartRead10 = SmartIO.makeFormat(
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint64,
 	)
-	smartRead11 = SmartRead.makeFormat(
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint8,
-		SmartRead.uint64,
-		SmartRead.float16,
-		SmartRead.float16,
+	smartRead11 = SmartIO.makeFormat(
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint8,
+		SmartIO.uint64,
+		SmartIO.float16,
+		SmartIO.float16,
 	)
-	smartRead12 = SmartRead.makeFormat(
-		SmartRead.uint64,
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.float16,
+	smartRead12 = SmartIO.makeFormat(
+		SmartIO.uint64,
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.float16,
 	)
-	smartRead14 = SmartRead.makeFormat(
-		SmartRead.uint64,
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.float16,
-		SmartRead.float16,
+	smartRead14 = SmartIO.makeFormat(
+		SmartIO.uint64,
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.float16,
+		SmartIO.float16,
 	)
 
 	"""docstring for wmb3_vertexExData"""
@@ -302,7 +302,6 @@ class wmb3_vertexGroup(object):
 
 class wmb3_mesh(object):
 	"""docstring for wmb3_mesh"""
-	@timing(["main", "WMB", "wmb3_mesh"])
 	def __init__(self, wmb_fp):
 		super(wmb3_mesh, self).__init__()
 		self.vertexGroupIndex = read_uint32(wmb_fp)
@@ -466,7 +465,6 @@ class wmb3_material(object):
 
 class wmb3_meshGroup(object):
 	"""docstring for wmb3_meshGroupInfo"""
-	@timing(["main", "WMB", "wmb3_meshGroup"])
 	def __init__(self, wmb_fp):
 		super(wmb3_meshGroup, self).__init__()
 		nameOffset = read_uint32(wmb_fp)

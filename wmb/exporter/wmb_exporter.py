@@ -1,8 +1,8 @@
-import time
-
 from ...utils.ioUtils import create_wmb, close_wmb
 from .generate_data import *
 from .write_wmb import *
+
+import time
 
 normals_flipped = False
 
@@ -33,6 +33,8 @@ def restore_blend():
     print('EXPORT COMPLETE. :D')
     return {'FINISHED'}
 
+
+@timing(["main"])
 def main(filepath):
     start_time = int(time.time())
     prepare_blend()

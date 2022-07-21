@@ -48,7 +48,7 @@ def read_float(file) -> float:
     entry = file.read(4)
     return struct.unpack('<f', entry)[0]
 
-class SmartRead:
+class SmartIO:
     int8 = "b"
     uint8 = "B"
     int16 = "h"
@@ -68,11 +68,14 @@ class SmartRead:
         self.count = struct.calcsize(format)
 
     @classmethod
-    def makeFormat(cls, *formats: List[str]) -> SmartRead:
-        return SmartRead("<" + "".join(formats))
+    def makeFormat(cls, *formats: List[str]) -> SmartIO:
+        return SmartIO("<" + "".join(formats))
     
     def read(self, file) -> Tuple[Any]:
         return struct.unpack(self.format, file.read(self.count))
+
+    def write(self, file, values: Any):
+        file.write(struct.pack(self.format, *values))
 
 def to_uint(bs):
 	return int.from_bytes(bs, byteorder='little', signed=False)

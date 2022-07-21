@@ -12,6 +12,7 @@ from .unknownWorldData.unknownWorldData import *
 from .vertexGroups.create_vertexGroups import *
 
 
+@timing(["main", "c_generate_data"])
 class c_generate_data(object):
     def __init__(self):
         hasArmature = False
