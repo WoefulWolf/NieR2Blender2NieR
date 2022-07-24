@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from ..common.bxm import bxmToXml
 from ...utils.xmlIntegrationUtils import strToFloat, xmlVecToVec3, xmlVecToVec2, makeMeshObj, randomRgb, tryAddEmpty, \
 	setCurrentCollection, tryAddCollection
+from ...utils.util import setViewportColorTypeToObject
 
 # <PrimitiveInfo>
 # 	<Trans>-37.882129 -116.717265 691.357685</Trans>
@@ -65,3 +66,4 @@ def importGaArea(file: str) -> None:
 		for prop in ga.find("GraphicAdjustInfo"):
 			gaObj[f"xml-GAI-{prop.tag}"] = prop.text
 
+	setViewportColorTypeToObject()

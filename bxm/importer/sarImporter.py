@@ -1,9 +1,11 @@
 import os
 import bpy
+
 from ..common.bxm import *
 from ...utils.xmlIntegrationUtils import xmlVecToVec3, makeSphereObj, strToFloat, setObjPosFromXmlPos, makeCurve, \
 	xmlVecToVec4, makeMeshObj, makeCube, makeCircle, setXmlAttributesOnObj, tryAddEmpty, randomRgb, tryAddCollection, \
 	setCurrentCollection
+from ...utils.util import setViewportColorTypeToObject
 from ..common.approxMapOffsets import approxMapOffsets
 
 class HandleShapeParams:
@@ -371,13 +373,7 @@ def importSar(file: str, tryApplyingOffset: bool) -> None:
 	
 	bpy.ops.object.select_all(action="DESELECT")
 	bpy.context.view_layer.objects.active = None
-	for window in bpy.context.window_manager.windows:
-		for area in window.screen.areas:
-			if area.type == 'VIEW_3D':
-				for space in area.spaces:
-					if space.type == 'VIEW_3D':
-						space.shading.type = "SOLID"
-						space.shading.color_type = "OBJECT"
+	setViewportColorTypeToObject()
 
 	print("Encountered Shapes:", encounteredShapes)
 	print("Done!")

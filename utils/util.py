@@ -236,3 +236,12 @@ def printTimings():
     total = time() - startTime
     print("Total: " + str(total))
     printTimingsSection(total, timings)
+
+def setViewportColorTypeToObject():
+    for window in bpy.context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'VIEW_3D':
+                for space in area.spaces:
+                    if space.type == 'VIEW_3D':
+                        space.shading.type = "SOLID"
+                        space.shading.color_type = "OBJECT"

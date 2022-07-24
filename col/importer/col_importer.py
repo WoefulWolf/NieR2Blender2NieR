@@ -4,18 +4,12 @@ from typing import List, Dict
 import bpy
 
 from .col import Col, Batch
+from ...utils.util import setViewportColorTypeToObject
 
 
 def main(colFilePath):
     # Setup Viewport
-    for window in bpy.context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for space in area.spaces:
-                    if space.type == 'VIEW_3D':
-                        space.shading.type = "SOLID"
-                        space.shading.color_type = "OBJECT"
-                        space.shading.show_backface_culling = True
+    setViewportColorTypeToObject()
 
     with open(colFilePath, "rb") as colFile:
         print("Parsing Col file...", colFilePath)

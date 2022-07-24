@@ -10,7 +10,6 @@ bl_info = {
 import bpy
 from bpy.app.handlers import persistent
 from . import preferences
-from .consts import ADDON_NAME
 from .col.exporter import col_ui_manager
 from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionTools
 from .dat_dtt.exporter import dat_dtt_ui_manager
@@ -31,6 +30,7 @@ from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
+from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
 
 
 class NierObjectMenu(bpy.types.Menu):
@@ -71,6 +71,7 @@ def menu_func_import(self, context):
     self.layout.operator(ImportNierLay.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierGaArea.bl_idname, text="Visual Environment File (GAArea.bxm)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierYaxXml.bl_idname, text="YAX XML for Nier:Automata (.xml)", icon_value=yorha_icon.icon_id)
 
 def menu_func_export(self, context):
     pcoll = preview_collections["main"]
@@ -95,6 +96,7 @@ classes = (
     ImportNierLay,
     ImportNierSar,
     ImportNierGaArea,
+    ImportNierYaxXml,
     ExportNierWmb,
     ExportNierCol,
     ExportNierSar,
