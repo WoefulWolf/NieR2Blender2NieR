@@ -135,7 +135,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
                 if filename[-4:] == '.dat':
                     try:
                         filepath = folder + '\\' + filename
-                        return self.doImport(self.only_extract, filepath)
+                        self.doImport(self.only_extract, filepath)
                     except:
                         print('ERROR: FAILED TO IMPORT', filename)
             return {'FINISHED'}
