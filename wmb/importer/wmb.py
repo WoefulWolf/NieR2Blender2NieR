@@ -418,12 +418,11 @@ class wmb3_material(object):
 			textureTypeName = to_string(wmb_fp.read(256))
 			self.textureArray[textureTypeName] = identifier
 			# Add new texture to nested material dictionary
-			file_dict[self.materialName][textureTypeName] = identifier
-		# Write the current material to materials.json
-		json.dump(file_dict, mat_list_file, indent= 4)
-		mat_list_file.close() 
-		
 
+		file_dict[self.materialName]["Textures"] = self.textureArray
+
+		file_dict[self.materialName]["Shader_Name"] = self.effectName
+		file_dict[self.materialName]["Technique_Name"] = self.techniqueName
 		wmb_fp.seek(paramterGroupsOffset)
 		self.parameterGroups = []
 		for i in range(numParameterGroups):
@@ -445,8 +444,15 @@ class wmb3_material(object):
 			offset = read_uint32(wmb_fp)
 			value = read_float(wmb_fp)
 			wmb_fp.seek(offset)
-			self.uniformArray [to_string(wmb_fp.read(256))] = value
-			
+			name = to_string(wmb_fp.read(256))
+			self.uniformArray[name] = value
+
+		file_dict[self.materialName]["ParameterGroups"] = self.parameterGroups
+		file_dict[self.materialName]["Variables"] = self.uniformArray
+
+		# Write the current material to materials.json
+		json.dump(file_dict, mat_list_file, indent= 4)
+		mat_list_file.close()
 
 class wmb3_meshGroup(object):
 	"""docstring for wmb3_meshGroupInfo"""
@@ -538,7 +544,7 @@ class wmb3_worldData(object):
 		
 class WMB3(object):
 	"""docstring for WMB3"""
-	def __init__(self, wmb_file):
+	def __init__(self, wmb_file, only_extract):
 		super(WMB3, self).__init__()
 		wmb_fp = 0
 		wta_fp = 0
@@ -572,12 +578,11 @@ class WMB3(object):
 		self.hasBone = False
 		if self.wmb3_header.boneCount > 0:
 			self.hasBone = True
-		print_class(self.wmb3_header)
+
 		wmb_fp.seek(self.wmb3_header.boneArrayOffset)
 		self.boneArray = []
 		for boneIndex in range(self.wmb3_header.boneCount):
 			self.boneArray.append(wmb3_bone(wmb_fp,boneIndex))
-
 		
 		# indexBoneTranslateTable
 		self.firstLevel = []
@@ -616,6 +621,15 @@ class WMB3(object):
 			for i in range(self.wmb3_header.boneIndexTranslateTableSize):
 				unknownData1Array.append(read_uint8(wmb_fp))
 
+		self.materialArray = []
+		for materialIndex in range(self.wmb3_header.materialCount):
+			wmb_fp.seek(self.wmb3_header.materialArrayOffset + materialIndex * 0x30)
+			material = wmb3_material(wmb_fp)
+			self.materialArray.append(material)
+
+		if only_extract:
+			return
+
 		self.vertexGroupArray = []
 		for vertexGroupIndex in range(self.wmb3_header.vertexGroupCount):
 			wmb_fp.seek(self.wmb3_header.vertexGroupArrayOffset + 0x30 * vertexGroupIndex)
@@ -641,12 +655,6 @@ class WMB3(object):
 			meshGroup = wmb3_meshGroup(wmb_fp)
 			
 			self.meshGroupArray.append(meshGroup)
-
-		self.materialArray = []
-		for materialIndex in range(self.wmb3_header.materialCount):
-			wmb_fp.seek(self.wmb3_header.materialArrayOffset + materialIndex * 0x30)
-			material = wmb3_material(wmb_fp)
-			self.materialArray.append(material)
 
 		wmb_fp.seek(self.wmb3_header.boneMapOffset)
 		self.boneMap = []

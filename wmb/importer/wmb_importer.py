@@ -226,12 +226,15 @@ def construct_materials(texture_dir, material):
 			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
 
 	# Custom Shader Parameters
+	shaderFile = open("./wmb/importer/shader_params.json", "r")
+	shaders = json.load(shaderFile)
+
 	for gindx, parameterGroup in enumerate(parameterGroups):
 		for pindx, parameter in enumerate(parameterGroup):
-			if pindx == 5:
-				material[str(gindx) + '_UseAlpha_' + str(pindx)] = parameter
+			if (gindx == 0) and (shader_name in shaders):
+				material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
 			else:
-				material[str(gindx) + '_' + str(pindx)] = parameter
+				material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
 
 	albedo_maps = {}
 	normal_maps = {}
@@ -655,7 +658,7 @@ def import_unknowWorldDataArray(wmb):
 
 def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
 	#reset_blend()
-	wmb = WMB3(wmb_file)
+	wmb = WMB3(wmb_file, only_extract)
 	wmbname = wmb_file.split('\\')[-1]
 
 	if only_extract:
