@@ -226,7 +226,7 @@ def construct_materials(texture_dir, material):
 			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
 
 	# Custom Shader Parameters
-	shaderFile = open("./wmb/importer/shader_params.json", "r")
+	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/shader_params.json", "r")
 	shaders = json.load(shaderFile)
 
 	for gindx, parameterGroup in enumerate(parameterGroups):
