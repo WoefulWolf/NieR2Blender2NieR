@@ -3,7 +3,6 @@ from time import time
 
 import bpy
 
-
 class c_vertexGroup(object):
     def __init__(self, vertexGroupIndex, vertexesStart):
         self.vertexGroupIndex = vertexGroupIndex
@@ -15,6 +14,8 @@ class c_vertexGroup(object):
                 if obj.type == 'MESH':
                     obj_name = obj.name.split('-')
                     if int(obj_name[-1]) == vertexGroupIndex:
+                        if len(obj.data.uv_layers) == 0:
+                            obj.data.uv_layers.new()
                         obj.data.calc_tangents()
                         objs[int(obj_name[0])] = obj
 
@@ -57,7 +58,8 @@ class c_vertexGroup(object):
 
         def get_blenderUVCoords(self, objOwner, loopIndex, uvSlot):
             if uvSlot > len(objOwner.data.uv_layers)-1:
-                print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", objOwner.name, "but it does not exist.")
+                print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", objOwner.name, "but it does not exist. Adding one!")
+                objOwner.data.uv_layers.new()
             uv_coords = objOwner.data.uv_layers[uvSlot].data[loopIndex].uv
             return [uv_coords.x, 1-uv_coords.y]
 
