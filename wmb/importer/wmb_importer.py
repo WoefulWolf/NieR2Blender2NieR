@@ -572,9 +572,9 @@ def get_wmb_material(wmb, texture_dir):
 					try:
 						texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
 						if texture_stream:
-							if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
+							if not os.path.exists(os.path.join(texture_dir, identifier + '.dds')):
 								create_dir(texture_dir)
-								texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
+								texture_fp = open(os.path.join(texture_dir, identifier + '.dds'), "wb")
 								print('[+] dumping %s.dds'% identifier)
 								texture_fp.write(texture_stream)
 								texture_fp.close()
@@ -588,9 +588,9 @@ def get_wmb_material(wmb, texture_dir):
 				identifier = wmb.wta.wtaTextureIdentifier[textureIndex]
 				texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
 				if texture_stream:
-					if not os.path.exists("%s\%s.dds" %(texture_dir, identifier)):
+					if not os.path.exists(os.path.join(texture_dir, identifier + '.dds')):
 						create_dir(texture_dir)
-						texture_fp = open("%s\%s.dds" %(texture_dir, identifier), "wb")
+						texture_fp = open(os.path.join(texture_dir, identifier + '.dds'), "wb")
 						print('[+] dumping %s.dds'% identifier)
 						texture_fp.write(texture_stream)
 						texture_fp.close()
@@ -656,13 +656,13 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
-def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file__))[0] + '\\test\\pl0000.dtt\\pl0000.wmb'):
+def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb')):
 	#reset_blend()
 	wmb = WMB3(wmb_file, only_extract)
-	wmbname = wmb_file.split('\\')[-1]
+	wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
 
 	if only_extract:
-		texture_dir = wmb_file.replace(wmbname, '\\textures\\')
+		texture_dir = wmb_file.replace(wmbname, '%stextures%s'.format(os.sep, os.sep))
 		wmb_materials = get_wmb_material(wmb, texture_dir)
 		print('Extraction finished. ;)')
 		return {'FINISHED'}
@@ -678,7 +678,7 @@ def main(only_extract = False, wmb_file = os.path.split(os.path.realpath(__file_
 	wmbCollection.children.link(col)
 	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	
-	texture_dir = wmb_file.replace(wmbname, '\\textures\\')
+	texture_dir = wmb_file.replace(wmbname, '%stextures%s'.format(os.sep, os.sep))
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')

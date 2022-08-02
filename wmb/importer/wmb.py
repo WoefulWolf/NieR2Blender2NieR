@@ -394,9 +394,9 @@ class wmb3_material(object):
 		self.techniqueName = to_string(wmb_fp.read(256))
 		self.textureArray = {}
 
-		path_split = wmb_fp.name.split('\\')
-		mat_list_filepath = "\\".join(path_split[:-3])
-		mat_list_file = open(mat_list_filepath + '\\materials.json', 'a+')
+		path_split = wmb_fp.name.split(os.sep)
+		mat_list_filepath = os.sep.join(path_split[:-3])
+		mat_list_file = open(os.path.join(mat_list_filepath, 'materials.json'), 'a+')
 		mat_list_file.seek(0)
 		file_dict = {}
 		# Try to load json from pre-existing file
@@ -836,7 +836,7 @@ def main(arg, wmb_fp, wta_fp, wtp_fp, dump):
 		wta = WTA(wta_fp)
 		wta_fp.close()
 	if dump:
-		obj_file = arg.split('\\')[-1].replace('.wmb','')
+		obj_file = os.path.split(arg)[-1].replace('.wmb','')
 		export_obj(wmb, wta, wtp_fp, obj_file)
 		if wtp_fp:
 			wtp_fp.close()

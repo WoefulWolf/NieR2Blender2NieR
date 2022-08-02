@@ -31,7 +31,7 @@ class ImportNierYaxXml(bpy.types.Operator, ImportHelper):
             for root, dirs, files in os.walk(directory):
                 for file in files:
                     if file.endswith(".xml"):
-                        self.doImport(root + '\\' + file)
+                        self.doImport(os.path.join(root, file))
             print("Imported all files!")
         else:
             self.doImport(self.filepath)
