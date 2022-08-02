@@ -34,7 +34,7 @@ class ImportNierSar(bpy.types.Operator, ImportHelper):
             for root, dirs, files in os.walk(directory):
                 for file in files:
                     if file.endswith(".sar"):
-                        self.doImport(root + '\\' + file)
+                        self.doImport(os.path.join(root, file))
             print("Imported all file!")
         else:
             self.doImport(self.filepath)
