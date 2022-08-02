@@ -28,7 +28,7 @@ class RecalculateObjectIndices(bpy.types.Operator):
             if obj.type == "MESH":
                 regex = re.search(".*(?=\.)", obj.name)
                 if regex != None:
-                    obj.name = regex.group()
+                    obj.data.name = regex.group()
 
     def execute(self, context):
         self.recalculateIndicesInCollection("WMB")
