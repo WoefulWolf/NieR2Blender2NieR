@@ -9,7 +9,6 @@ from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
 from ...consts import ADDON_NAME
 
-
 def importDat(only_extract, filepath):
     head = os.path.split(filepath)[0]
     tail = os.path.split(filepath)[1]

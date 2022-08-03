@@ -181,8 +181,22 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
     tailless_tail = tail[:-4]
     extract_dir = os.path.join(head, 'nier2blender_extracted')
 
-    bpy.context.scene.DatDir = os.path.join(extract_dir, tailless_tail + '.dat')
-    bpy.context.scene.DttDir = os.path.join(extract_dir, tailless_tail + '.dtt')
+    datDir = os.path.join(extract_dir, tailless_tail + '.dat')
+    bpy.context.scene.DatContents.clear()
+    for filename in os.listdir(datDir):
+        full_path = os.path.join(datDir, filename)
+        if os.path.isfile(full_path):
+            added_file = bpy.context.scene.DatContents.add()
+            added_file.filepath = full_path
+
+    dttDir = os.path.join(extract_dir, tailless_tail + '.dtt')
+    bpy.context.scene.DttContents.clear()
+    for filename in os.listdir(dttDir):
+        full_path = os.path.join(dttDir, filename)
+        if os.path.isfile(full_path):
+            added_file = bpy.context.scene.DttContents.add()
+            added_file.filepath = full_path
+
     bpy.context.scene.ExportFileName = tailless_tail
 
 def getPreferences():

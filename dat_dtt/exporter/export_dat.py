@@ -7,37 +7,11 @@ from ...utils.util import *
 def to_string(bs, encoding = 'utf8'):
 	return bs.split(b'\x00')[0].decode(encoding)
 
-def main(dat_dir, export_filepath):
-    files = []
-    hash_file_path = None
-
-    # Get hash_file_path
-    for filepath in os.listdir(dat_dir):
-        if 'hash_data.metadata' in filepath:
-            hash_file_path = dat_dir + '/' + filepath
-
-    if hash_file_path == None:
-        print('[!] DAT/DTT Error: hash_data.metadata not found.')
-        ShowMessageBox('hash_data.metadata not found.', 'DAT/DTT Export Error', 'ERROR') 
-        return
-
-    # Get files and their order
-    if os.path.isfile(dat_dir + '/' + 'file_order.metadata'):
-        file_orderFile = open(dat_dir + '/' + 'file_order.metadata', 'rb')
-        fileCount = read_int32(file_orderFile)
-        fileNameSize = read_int32(file_orderFile)
-
-        for i in range(fileCount):
-            fileName = to_string(file_orderFile.read(fileNameSize))
-            files.append(dat_dir + '/' + fileName)
-            print('[' + fileName + ']')
-    else:
-        print('[!] DAT/DTT Error: file_order.metadata not found.')
-        ShowMessageBox('file_order.metadata not found.', 'DAT/DTT Export Error', 'ERROR') 
-        return
-    
-
+def main(export_filepath, file_list):
+    files = file_list
     fileNumber = len(files)
+    from .datHashGenerator import generateHashData
+    hashData = generateHashData(files)
 
     fileExtensionsSize = 0
     fileExtensions = []
@@ -58,7 +32,7 @@ def main(dat_dir, export_filepath):
         fileName = os.path.basename(fp)
         fileNames.append(fileName)
 
-    hashMapSize = os.path.getsize(hash_file_path)
+    hashMapSize = hashData.getStructSize()
 
     # Header
     fileID = 'DAT'
@@ -116,10 +90,7 @@ def main(dat_dir, export_filepath):
         write_Int32(dat_file, value)
 
         # hashMap
-    hashMapFile = open(hash_file_path, 'rb')
-    hashMap = hashMapFile.read()
-    dat_file.write(hashMap)
-    hashMapFile.close()
+    hashData.write(dat_file)
 
         # Files
     for i, fp in enumerate(files):

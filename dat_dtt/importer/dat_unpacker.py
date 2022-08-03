@@ -97,19 +97,6 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	for i in range(FileCount):
 		fileNames.append(fp.read(fileNameSize))
 
-	# Extraction
-	filename = 'file_order.metadata'
-	extract_dir_sub = os.path.join(extract_dir, filename)
-	with open(extract_dir_sub,'wb') as outfile:
-
-		# Header
-		outfile.write(struct.pack('<i', FileCount))
-		outfile.write(struct.pack('<i', fileNameSize))
-
-		#Filenames
-		for fileName in fileNames:
-			outfile.write(fileName)
-
 	# hash_data.metadata
 	# Header
 	fp.seek(hashMapOffset)
@@ -135,32 +122,6 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	fileIndices = []
 	for i in range(FileCount):
 		fileIndices.append(read_uint16(fp))
- 
-	# Extraction
-	filename = 'hash_data.metadata'
-	extract_dir_sub = os.path.join(extract_dir, filename)
-	with open(extract_dir_sub,'wb') as outfile:
-
-			# Header
-		outfile.write(struct.pack('<i', preHashShift))
-		outfile.write(struct.pack('<i', bucketOffsetsOffset))
-		outfile.write(struct.pack('<i', hashesOffset))
-		outfile.write(struct.pack('<i', fileIndicesOffset))
-
-			# Bucket Offsets
-		for i in bucketOffsets:
-			#print(bucketOffsets)
-			outfile.write(struct.pack('<H', i))
-
-			# Hashes
-		for i in hashes:
-			outfile.write(i)
-
-			# File Indices
-		for i in fileIndices:
-			#print(i)
-			outfile.write(struct.pack('<H', i))
-
 
 def main(filename, extract_dir, ROOT_DIR):
 	with open(filename,"rb") as fp:

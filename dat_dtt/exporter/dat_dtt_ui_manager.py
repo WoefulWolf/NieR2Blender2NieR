@@ -5,7 +5,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from ...utils.util import triangulate_meshes, centre_origins
+from ...utils.util import triangulate_meshes, centre_origins, ShowMessageBox
 
 
 class ExportAllSteps(bpy.types.PropertyGroup):
@@ -59,30 +59,6 @@ class ExportAllSteps(bpy.types.PropertyGroup):
         default = True
     )
 
-class ExportDATOperator(bpy.types.Operator, ExportHelper):
-    '''Export DAT'''
-    bl_idname = "na.export_dat"
-    bl_label = "Export DAT"
-    filename_ext = ".dat"
-    filter_glob: StringProperty(default="*.dat", options={'HIDDEN'})
-
-    def execute(self, context):
-        from . import export_dat
-        export_dat.main(context.scene.DatDir, self.filepath)
-        return {'FINISHED'}
-
-class ExportDTTOperator(bpy.types.Operator, ExportHelper):
-    '''Export DTT'''
-    bl_idname = "na.export_dtt"
-    bl_label = "Export DTT"
-    filename_ext = ".dtt"
-    filter_glob: StringProperty(default="*.dtt", options={'HIDDEN'})
-
-    def execute(self, context):
-        from . import export_dat
-        export_dat.main(context.scene.DttDir, self.filepath)
-        return {'FINISHED'}
-
 class DAT_DTT_PT_Export(bpy.types.Panel):
     bl_label = "NieR:Automata Export"
     bl_space_type = 'PROPERTIES'
@@ -94,20 +70,46 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
         layout = self.layout
 
         box = layout.box()
-        row = box.row(align=True)
-        row.scale_y = 1.125
-        row.ui_units_y = 1.125
-        row.label(text="DAT Directory:")
-        row.prop(context.scene, "DatDir", text="")
-        row.operator("na.folder_select", icon="FILE_FOLDER", text="").target = "dat"
+        
 
         row = box.row(align=True)
         row.scale_y = 1.125
         row.ui_units_y = 1.125
-        row.label(text="DTT Directory:")
-        row.prop(context.scene, "DttDir", text="")
-        row.operator("na.folder_select", icon="FILE_FOLDER", text="").target = "dtt"
+        row.prop(context.scene, "ShowDatContents", emboss=False,
+            text="DAT Contents",
+            icon = "TRIA_DOWN" if context.scene.ShowDatContents else "TRIA_RIGHT")
+        if context.scene.ShowDatContents:
+            if len(context.scene.DatContents) > 14:
+                columns = box.column_flow(columns=3, align=False)
+            else:
+                columns = box.column_flow(columns=2, align=False)
+            for file in context.scene.DatContents:
+                row = columns.box().row()
+                row.operator("na.show_full_filepath", emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
+                row.operator("na.remove_dat_file", icon="X", text="").filepath = file.filepath
+            row = box.row()
+            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dat"
 
+        box = layout.box()
+        row = box.row(align=True)
+        row.scale_y = 1.125
+        row.ui_units_y = 1.125
+        row.prop(context.scene, "ShowDttContents", emboss=False,
+            text="DTT Contents",
+            icon = "TRIA_DOWN" if context.scene.ShowDttContents else "TRIA_RIGHT")
+        if context.scene.ShowDttContents:
+            if len(context.scene.DttContents) > 14:
+                columns = box.column_flow(columns=3, align=False)
+            else:
+                columns = box.column_flow(columns=2, align=False)
+            for file in context.scene.DttContents:
+                row = columns.box().row()
+                row.operator("na.show_full_filepath", emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
+                row.operator("na.remove_dtt_file", icon="X", text="").filepath = file.filepath
+            row = box.row()
+            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dtt"
+
+        box = layout.box()
         row = box.row(align=True)
         row.scale_y = 1.125
         row.ui_units_y = 1.125
@@ -207,33 +209,46 @@ class ExportAll(bpy.types.Operator):
         t1 = time.time()
         exportedFilesCount = 0
         exportSteps: ExportAllSteps = context.scene.ExportAllSteps
-        datDir = context.scene.DatDir
-        dttDir = context.scene.DttDir
+        #datDir = context.scene.DatDir
+        #dttDir = context.scene.DttDir
         baseFilename = context.scene.ExportFileName
         datDttExportDir = context.scene.DatDttExportDir
-
+        """
         if not datDir and (exportSteps.useWtaStep or exportSteps.useColStep or exportSteps.useLayStep or exportSteps.useDatStep or exportSteps.useSarStep or exportSteps.useGaStep):
             self.report({"ERROR"}, "Missing DAT Directory!")
             return {"CANCELLED"}
         if not dttDir and (exportSteps.useWtpStep or exportSteps.useWmbStep or exportSteps.useDttStep):
             self.report({"ERROR"}, "Missing DTT Directory!")
             return {"CANCELLED"}
+        """
         if not datDttExportDir and (exportSteps.useDatStep or exportSteps.useDttStep):
             self.report({"ERROR"}, "Missing DAT/DTT Export Directory!")
             return {"CANCELLED"}
         if not baseFilename:
             self.report({"ERROR"}, "Missing Base Name!")
             return {"CANCELLED"}
-        
-        wmbFilePath = os.path.join(dttDir, baseFilename + ".wmb")
-        wtpFilePath = os.path.join(dttDir, baseFilename + ".wtp")
-        wtaFilePath = os.path.join(datDir, baseFilename + ".wta")
-        colFilePath = os.path.join(datDir, baseFilename + ".col")
-        layFilePath = os.path.join(datDir, "Layout" + ".lay")
+
         if exportSteps.useSarStep:
             sarColl = bpy.data.objects["Field-Root"].users_collection[0]
-            sarFilePath = os.path.join(datDir, sarColl.name.replace("SAR_", ""))
-        gaFilePath = os.path.join(datDir, "GAArea" + ".bxm")
+
+        for item in context.scene.DatContents:
+            if item.filepath.endswith('.wta'):
+                wtaFilePath = item.filepath
+            elif item.filepath.endswith('.col'):
+                colFilePath = item.filepath
+            elif item.filepath == 'Layout.lay':
+                layFilePath = item.filepath
+            elif item.filepath == "GAArea.bxm":
+                gaFilePath = item.filepath
+            elif item.filepath.endswith('.sar'):
+                sarFilePath = item.filepath
+
+        for item in context.scene.DttContents:
+            if item.filepath.endswith('.wmb'):
+                wmbFilePath = item.filepath
+            elif item.filepath.endswith('.wtp'):
+                wtpFilePath = item.filepath        
+
         datFilePath = os.path.join(datDttExportDir, baseFilename + ".dat")
         dttFilePath = os.path.join(datDttExportDir, baseFilename + ".dtt")
 
@@ -284,11 +299,19 @@ class ExportAll(bpy.types.Operator):
         from . import export_dat
         if exportSteps.useDatStep:
             print("Exporting DAT")
-            export_dat.main(datDir, datFilePath)
+            file_list = []
+            for item in context.scene.DatContents:
+                file_list.append(item.filepath)
+            file_list.sort()
+            export_dat.main(datFilePath, file_list)
             exportedFilesCount += 1
         if exportSteps.useDttStep:
             print("Exporting DTT")
-            export_dat.main(dttDir, dttFilePath)
+            file_list = []
+            for item in context.scene.DttContents:
+                file_list.append(item.filepath)
+            file_list.sort()
+            export_dat.main(dttFilePath, file_list)
             exportedFilesCount += 1
 
         tDiff = int(time.time() - t1)
@@ -313,22 +336,132 @@ class GetBaseName(bpy.types.Operator):
             context.scene.ExportFileName = os.path.basename(context.scene.DttDir).replace(".dtt", "")
         return {"FINISHED"}
 
+class AddDatDttContentsFile(bpy.types.Operator, ImportHelper):
+    '''Select file(s)'''
+    bl_idname = "na.datdtt_file_selector"
+    bl_label = "Select File(s) To Add"
+    bl_options = {"UNDO"}
+
+    files: bpy.props.CollectionProperty(
+            name="File Path",
+            type=bpy.types.OperatorFileListElement,
+            )
+    directory: bpy.props.StringProperty(
+            subtype='DIR_PATH',
+            )
+    filter_glob: StringProperty(default="*", options={'HIDDEN'})
+
+    type: bpy.props.StringProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        dir = self.directory
+        #fdir = self.properties.filepath
+        for file_elem in self.files:
+            path = os.path.join(dir, file_elem.name)
+            if self.type == "dat":
+                skip = False
+                for file in context.scene.DatContents:
+                    if file.filepath == path:
+                        self.report({"ERROR"}, "File already added!")
+                        skip = True
+                        break
+                if skip:
+                    continue
+                added_file = bpy.context.scene.DatContents.add()
+                added_file.filepath = path
+            elif self.type == "dtt":
+                skip = False
+                for file in context.scene.DttContents:
+                    if file.filepath == path:
+                        self.report({"ERROR"}, "File already added!")
+                        skip = True
+                        break
+                if skip:
+                    continue
+                added_file = bpy.context.scene.DttContents.add()
+                added_file.filepath = path
+        return{'FINISHED'}
+
+class RemoveDatFileOperator(bpy.types.Operator):
+    '''Remove a file from DAT contents'''
+    bl_idname = "na.remove_dat_file"
+    bl_label = "Remove"
+    bl_options = {"UNDO"}
+
+    filepath : bpy.props.StringProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        index_to_remove = 0
+        for i, item in enumerate(context.scene.DatContents):
+            if item.filepath == self.filepath:
+                index_to_remove = i
+                break
+
+        context.scene.DatContents.remove(index_to_remove)
+        return {"FINISHED"}
+
+class RemoveDttFileOperator(bpy.types.Operator):
+    '''Remove a file from DTT contents'''
+    bl_idname = "na.remove_dtt_file"
+    bl_label = "Remove"
+    bl_options = {"UNDO"}
+
+    filepath : bpy.props.StringProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        index_to_remove = 0
+        for i, item in enumerate(context.scene.DttContents):
+            if item.filepath == self.filepath:
+                index_to_remove = i
+                break
+
+        context.scene.DttContents.remove(index_to_remove)
+        return {"FINISHED"}
+
+class FilePathProp(bpy.types.PropertyGroup):
+    filepath: bpy.props.StringProperty()
+    include: bpy.props.BoolProperty(default=True)
+
+class ShowFullFilePath(bpy.types.Operator):
+    '''Show this file's full path.'''
+    bl_idname = "na.show_full_filepath"
+    bl_label = "Show Full Filepath"
+    bl_options = {"UNDO"}
+
+    filepath : bpy.props.StringProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        ShowMessageBox(self.filepath, os.path.basename(self.filepath))
+        return {"FINISHED"}
+
 def register():
     bpy.utils.register_class(ExportAllSteps)
     bpy.utils.register_class(DAT_DTT_PT_Export)
     bpy.utils.register_class(SelectFolder)
-    bpy.utils.register_class(ExportDATOperator)
-    bpy.utils.register_class(ExportDTTOperator)
     bpy.utils.register_class(ExportAll)
     bpy.utils.register_class(GetBaseName)
+    bpy.utils.register_class(FilePathProp)
+    bpy.utils.register_class(AddDatDttContentsFile)
+    bpy.utils.register_class(RemoveDatFileOperator)
+    bpy.utils.register_class(RemoveDttFileOperator)
+    bpy.utils.register_class(ShowFullFilePath)
 
     bpy.types.Scene.ExportAllSteps = bpy.props.PointerProperty(type=ExportAllSteps)
-    bpy.types.Scene.DatDir = bpy.props.StringProperty(
-        name = "DAT Directory",
+    bpy.types.Scene.ShowDatContents = bpy.props.BoolProperty (
+        name = "Dat Contents",
+        default = False,
     )
-    bpy.types.Scene.DttDir = bpy.props.StringProperty(
-        name = "DTT Directory",
+    bpy.types.Scene.DatContents = bpy.props.CollectionProperty(
+        type = FilePathProp
     )
+    bpy.types.Scene.ShowDttContents = bpy.props.BoolProperty (
+        name = "Dtt Contents",
+        default = False,
+    )
+    bpy.types.Scene.DttContents = bpy.props.CollectionProperty(
+        type = FilePathProp
+    )
+
     bpy.types.Scene.ExportFileName = bpy.props.StringProperty(
         name = "Base File Name",
         description = "When exporting the .wmb/.dat/... extension will be added to the base"
@@ -342,13 +475,18 @@ def unregister():
     bpy.utils.unregister_class(ExportAllSteps)
     bpy.utils.unregister_class(DAT_DTT_PT_Export)
     bpy.utils.unregister_class(SelectFolder)
-    bpy.utils.unregister_class(ExportDATOperator)
-    bpy.utils.unregister_class(ExportDTTOperator)
     bpy.utils.unregister_class(ExportAll)
     bpy.utils.unregister_class(GetBaseName)
+    bpy.utils.unregister_class(FilePathProp)
+    bpy.utils.unregister_class(AddDatDttContentsFile)
+    bpy.utils.unregister_class(RemoveDatFileOperator)
+    bpy.utils.unregister_class(RemoveDttFileOperator)
+    bpy.utils.unregister_class(ShowFullFilePath)
 
     del bpy.types.Scene.ExportAllSteps
-    del bpy.types.Scene.DatDir
-    del bpy.types.Scene.DttDir
+    del bpy.types.Scene.ShowDatContents
+    del bpy.types.Scene.DatContents
+    del bpy.types.Scene.ShowDttContents
+    del bpy.types.Scene.DttContents
     del bpy.types.Scene.ExportFileName
     del bpy.types.Scene.DatDttExportDir
