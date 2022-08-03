@@ -9,6 +9,15 @@ widely known so that others can start modding too. :)
 <br> <br>
 **We still have much more to share, but we are trying to get this out as fast as possible, expect much more documentation incoming. And things to become easier.**
 
+## Installation Instructions:
+1. Install [Blender](https://www.blender.org/) (also available on Steam).
+2. Download this repository as a ZIP (Green button labelled "Code" near the top-right, `Download ZIP`).
+3. Launch Blender.
+4. Go to `Edit > Preferences`.
+5. Go to the `Add-ons` section and press `Install...` near the top-right.
+6. Select the ZIP you downloaded in step 2 and press `Install Add-on`.
+7. Check the tickbox next to `Import-Export: Nier2Blender2NieR (NieR:Automata Data Exporter)`.
+
 ## Some Tips:
 #### For now, you should just understand these basic things:
 * ~~You can find info/tutorials at the wiki (near top of this page) [SORTA OUTDATED]~~.
