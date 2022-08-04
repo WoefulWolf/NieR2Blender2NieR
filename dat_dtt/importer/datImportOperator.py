@@ -15,7 +15,7 @@ def importDat(only_extract, filepath):
     tail = os.path.split(filepath)[1]
     tailless_tail = tail[:-4]
     dat_filepath = os.path.join(head, tailless_tail + '.dat')
-    extract_dir = os.path.join(head + 'nier2blender_extracted')
+    extract_dir = os.path.join(head, 'nier2blender_extracted')
     from . import dat_unpacker
     if os.path.isfile(dat_filepath):
         dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + '.dat'), dat_filepath)   # dat
