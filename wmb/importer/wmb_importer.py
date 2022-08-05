@@ -678,7 +678,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	wmbCollection.children.link(col)
 	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	
-	texture_dir = wmb_file.replace(wmbname, '%stextures%s'.format(os.sep, os.sep))
+	texture_dir = wmb_file.replace(wmbname, 'textures')
 	if wmb.hasBone:
 		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
