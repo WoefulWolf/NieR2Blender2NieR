@@ -662,7 +662,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
 
 	if only_extract:
-		texture_dir = wmb_file.replace(wmbname, '%stextures%s'.format(os.sep, os.sep))
+		texture_dir = wmb_file.replace(wmbname, 'textures')
 		wmb_materials = get_wmb_material(wmb, texture_dir)
 		print('Extraction finished. ;)')
 		return {'FINISHED'}
