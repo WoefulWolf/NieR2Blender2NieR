@@ -24,7 +24,7 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
 
         if self.centre_origins:
             print("Centering origins...")
-            wmb_exporter.centre_origins()
+            wmb_exporter.centre_origins("WMB")
 
         """
         if self.purge_materials:
@@ -34,7 +34,7 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
 
         if self.triangulate_meshes:
             print("Triangulating meshes...")
-            wmb_exporter.triangulate_meshes()
+            wmb_exporter.triangulate_meshes("WMB")
 
         if self.delete_loose_geometry:
             print("Deleting loose geometry...")
