@@ -1,8 +1,7 @@
 import bpy
 from mathutils import Vector
 
-from ....utils.util import getUsedMaterials
-
+from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder
 
 def getObjectCenter(obj):
     obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
@@ -42,8 +41,8 @@ class c_mesh(object):
         def get_materials(self, obj):
             materials = []
             obj_mesh_name = obj.name.split('-')[1]
-            for mesh in bpy.data.collections['WMB'].all_objects:
-                if mesh.type == 'MESH' and mesh.name.split('-')[1] == obj_mesh_name:
+            for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                if mesh.name.split('-')[1] == obj_mesh_name:
                     for slot in mesh.material_slots:
                         material = slot.material
                         for indx, mat in enumerate(getUsedMaterials()):
@@ -59,8 +58,8 @@ class c_mesh(object):
             bones = []
             numBones = 0
             obj_mesh_name = obj.name.split('-')[1]
-            for mesh in bpy.data.collections['WMB'].all_objects:
-                if mesh.type == 'MESH' and mesh.name.split('-')[1] == obj_mesh_name:
+            for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                if mesh.name.split('-')[1] == obj_mesh_name:
                     for vertexGroup in mesh.vertex_groups:
                         boneName = vertexGroup.name.replace('bone', '')
                         if int(boneName) not in bones:

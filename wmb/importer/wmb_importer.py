@@ -107,7 +107,7 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
+def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
@@ -159,6 +159,7 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	if mesh_data[5] != "None":
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
+	obj['vertexGroup'] = mesh_data[13]
 	obj['LOD_Name'] = mesh_data[8]
 	obj['LOD_Level'] = mesh_data[9]
 	obj['colTreeNodeIndex'] = mesh_data[10]
@@ -550,7 +551,7 @@ def format_wmb_mesh(wmb, collection_name):
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name)
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name)
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
