@@ -186,6 +186,9 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
     for filename in os.listdir(datDir):
         full_path = os.path.join(datDir, filename)
         if os.path.isfile(full_path):
+            name, ext = os.path.splitext(full_path)
+            if len(ext) > 4:
+                continue
             added_file = bpy.context.scene.DatContents.add()
             added_file.filepath = full_path
 
@@ -194,6 +197,9 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
     for filename in os.listdir(dttDir):
         full_path = os.path.join(dttDir, filename)
         if os.path.isfile(full_path):
+            name, ext = os.path.splitext(full_path)
+            if len(ext) > 4:
+                continue
             added_file = bpy.context.scene.DttContents.add()
             added_file.filepath = full_path
 

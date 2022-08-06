@@ -358,6 +358,7 @@ class AddDatDttContentsFile(bpy.types.Operator, ImportHelper):
         #fdir = self.properties.filepath
         for file_elem in self.files:
             path = os.path.join(dir, file_elem.name)
+            name, ext = os.path.splitext(path)
             if self.type == "dat":
                 skip = False
                 for file in context.scene.DatContents:
@@ -365,6 +366,9 @@ class AddDatDttContentsFile(bpy.types.Operator, ImportHelper):
                         self.report({"ERROR"}, "File already added!")
                         skip = True
                         break
+                if len(ext) > 4:
+                    self.report({"ERROR"}, "File extension too long!")
+                    skip = True
                 if skip:
                     continue
                 added_file = bpy.context.scene.DatContents.add()
@@ -376,6 +380,9 @@ class AddDatDttContentsFile(bpy.types.Operator, ImportHelper):
                         self.report({"ERROR"}, "File already added!")
                         skip = True
                         break
+                if len(ext) > 4:
+                    self.report({"ERROR"}, "File extension too long!")
+                    skip = True
                 if skip:
                     continue
                 added_file = bpy.context.scene.DttContents.add()
