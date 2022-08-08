@@ -182,26 +182,28 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
     extract_dir = os.path.join(head, 'nier2blender_extracted')
 
     datDir = os.path.join(extract_dir, tailless_tail + '.dat')
-    bpy.context.scene.DatContents.clear()
-    for filename in os.listdir(datDir):
-        full_path = os.path.join(datDir, filename)
-        if os.path.isfile(full_path):
-            name, ext = os.path.splitext(full_path)
-            if len(ext) > 4:
-                continue
-            added_file = bpy.context.scene.DatContents.add()
-            added_file.filepath = full_path
+    if os.path.isdir(datDir):
+        bpy.context.scene.DatContents.clear()
+        for filename in os.listdir(datDir):
+            full_path = os.path.join(datDir, filename)
+            if os.path.isfile(full_path):
+                name, ext = os.path.splitext(full_path)
+                if len(ext) > 4:
+                    continue
+                added_file = bpy.context.scene.DatContents.add()
+                added_file.filepath = full_path
 
     dttDir = os.path.join(extract_dir, tailless_tail + '.dtt')
-    bpy.context.scene.DttContents.clear()
-    for filename in os.listdir(dttDir):
-        full_path = os.path.join(dttDir, filename)
-        if os.path.isfile(full_path):
-            name, ext = os.path.splitext(full_path)
-            if len(ext) > 4:
-                continue
-            added_file = bpy.context.scene.DttContents.add()
-            added_file.filepath = full_path
+    if os.path.isdir(dttDir):
+        bpy.context.scene.DttContents.clear()
+        for filename in os.listdir(dttDir):
+            full_path = os.path.join(dttDir, filename)
+            if os.path.isfile(full_path):
+                name, ext = os.path.splitext(full_path)
+                if len(ext) > 4:
+                    continue
+                added_file = bpy.context.scene.DttContents.add()
+                added_file.filepath = full_path
 
     bpy.context.scene.ExportFileName = tailless_tail
 
