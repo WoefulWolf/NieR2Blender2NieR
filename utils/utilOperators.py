@@ -31,8 +31,8 @@ class RecalculateObjectIndices(bpy.types.Operator):
                     obj.data.name = regex.group()
 
     def execute(self, context):
-        self.recalculateIndicesInCollection("WMB")
         self.recalculateIndicesInCollection("COL")
+        self.recalculateIndicesInCollection("WMB")
 
         return {'FINISHED'}
 
@@ -163,7 +163,9 @@ class DeleteLooseGeometryAll(bpy.types.Operator):
         bm = bmesh.new()
 
         v_delete_count = 0
-        for m in meshes:
+        print(f"len: {len(meshes)}")
+        for i, m in enumerate(meshes):
+            print(f"{i}: {m.name}")
 
             bm.from_mesh(m)
             # verts with no linked faces
