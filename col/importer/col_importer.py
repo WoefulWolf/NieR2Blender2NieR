@@ -4,7 +4,8 @@ from typing import List, Dict
 import bpy
 
 from .col import Col, Batch
-from ...utils.util import setViewportColorTypeToObject
+from ...utils.util import centre_origins, setViewportColorTypeToObject
+from mathutils import Matrix
 
 
 def main(colFilePath):
@@ -90,6 +91,7 @@ def main(colFilePath):
         if len(node.meshIndices) > 0:
             obj["meshIndices"] = node.meshIndices
     
+    centre_origins("COL")
     print('Importing finished. ;)')
     return {'FINISHED'}
 
