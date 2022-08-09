@@ -53,7 +53,7 @@ class ExportAllSteps(bpy.types.PropertyGroup):
     centerOrigins: bpy.props.BoolProperty(
         name = "Center Origin",
         default = True,
-        description = "Set object origins to world origin (except for collision meshes)"
+        description = "Set object origins to world origin"
     )
     deleteLoose: bpy.props.BoolProperty(
         name = "Delete Loose Geometry",
@@ -263,8 +263,8 @@ class ExportAll(bpy.types.Operator):
             print("Exporting COL")
             if exportSteps.triangulateMeshes:
                 triangulate_meshes("COL")
-            # No centering origin, because for some rigged collisions the object origin is at the
-            # bone position, not world origin
+            if exportSteps.centerOrigins:
+                centre_origins("COL")
             if exportSteps.deleteLoose:
                 bpy.ops.b2n.deleteloosegeometryall()
             col_exporter.main(colFilePath, True)
