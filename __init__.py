@@ -52,13 +52,9 @@ class CreateLayBoundingBox(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        from .lay.importer.lay_importer import getModelBoundingBox, createBoundingBoxObject
+        from .lay.importer.lay_importer import getModelBoundingBox, createVisualizationObject
         for obj in bpy.context.selected_objects:
-            boundingBox = getModelBoundingBox(obj.name.split("_")[0], ADDON_NAME)
-            if boundingBox:
-                createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
-            else:
-                self.report({'WARNING'}, "Couldn't find dtt of " + obj.name)
+            createVisualizationObject(obj, obj.name + "-BoundingBox", obj.users_collection[0])
         return {'FINISHED'}
 
 def menu_func_import(self, context):

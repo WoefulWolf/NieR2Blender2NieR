@@ -16,9 +16,17 @@ class SelectDirectory(bpy.types.Operator, ImportHelper):
     filename_ext = ""
     dirpath : bpy.props.StringProperty(name = "", description="Choose directory:", subtype='DIR_PATH')
 
+    settingsType: bpy.props.IntProperty()
+
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
-        newDir = getPreferences().assetDirs.add()
+        if self.settingsType == 0:
+            newDir = getPreferences().assetDirs.add()
+        elif self.settingsType == 1:
+            newDir = getPreferences().assetBlendDirs.add()
+        else:
+            print("Invalid settingsType")
+            return {'CANCELLED'}
         newDir.directory = directory
 
         return {'FINISHED'}
@@ -28,10 +36,17 @@ class RemoveDirectory(bpy.types.Operator):
     bl_idname = "n2b.remove_asset_dir"
     bl_label = "Remove Directory"
 
+    settingsType: bpy.props.IntProperty()
     index : bpy.props.IntProperty()
 
     def execute(self, context):
-        getPreferences().assetDirs.remove(self.index)
+        if self.settingsType == 0:
+            getPreferences().assetDirs.remove(self.index)
+        elif self.settingsType == 1:
+            getPreferences().assetBlendDirs.remove(self.index)
+        else:
+            print("Invalid settingsType")
+            return {'CANCELLED'}
         return {'FINISHED'}
 
 ArmatureDisplayTypeEnum = [
@@ -46,6 +61,7 @@ ArmatureDisplayTypeEnum = [
 class N2B2NPreferences(bpy.types.AddonPreferences):
     bl_idname = ADDON_NAME
     assetDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
+    assetBlendDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
     armatureDefaultDisplayType: bpy.props.EnumProperty(name="Armature Display Type", items=ArmatureDisplayTypeEnum, default="DEFAULT")
     armatureDefaultInFront: bpy.props.BoolProperty(name="Armature Default In Front", default=False)
 
@@ -61,13 +77,30 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
         row.label(text="In Front:")
         row.prop(self, "armatureDefaultInFront", text="")
 
+        # asset dirs selection
         box = layout.box()
         drawMultilineLabel(context, "Assign extracted cpk directories below if you wish to enable bounding box visualization with layout import", box)
         for i, assetDir in enumerate(self.assetDirs):
             row = box.row(align=True)
             row.prop(self.assetDirs[i], "directory", text="")
-            row.operator(RemoveDirectory.bl_idname, text="", icon="X").index = i
-        box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
+            remOp = row.operator(RemoveDirectory.bl_idname, text="", icon="X")
+            remOp.index = i
+            remOp.settingsType = 0
+        addOp = box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
+        addOp.settingsType = 0
+
+        # asset blend dirs selection
+        box = layout.box()
+        drawMultilineLabel(context, "Assign downloaded blend directories below if you wish to enable full model visualization with layout import", box)
+        for i, assetDir in enumerate(self.assetBlendDirs):
+            row = box.row(align=True)
+            row.prop(self.assetBlendDirs[i], "directory", text="")
+            remOp = row.operator(RemoveDirectory.bl_idname, text="", icon="X")
+            remOp.index = i
+            remOp.settingsType = 1
+        addOp = box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
+        addOp.settingsType = 1
+
 
 def register():
     bpy.utils.register_class(DirectoryProperty)

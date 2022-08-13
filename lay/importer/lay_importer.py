@@ -1,11 +1,15 @@
+from __future__ import annotations
 import math
+from time import time
 
 from ...utils.ioUtils import to_string, read_float, read_uint32
 from .lay import Lay
 from ...utils.util import *
 
 
-def main(layFilePath, addonName):
+def main(layFilePath):
+    t1 = time()
+
     with open(layFilePath, "rb") as layFile:
         print("Parsing Lay file...", layFilePath)
         lay = Lay(layFile)
@@ -42,18 +46,18 @@ def main(layFilePath, addonName):
     for asset in lay.assets:
         assetName = asset.name
         print("Placing asset", assetName)
-        boundingBox = getModelBoundingBox(assetName.split("_")[0], addonName)
-        assetObj = createLayObject(assetName, layAssetsCollection, assetRootNode, asset.position, asset.rotation, asset.scale, boundingBox)
+        assetObj = createLayObject(assetName, layAssetsCollection, assetRootNode, asset.position, asset.rotation, asset.scale)
         assetObj["unknownIndex"] = asset.unknownIndex
         assetObj["null1"] = asset.null1
         for instance in asset.instances:
             instanceName = assetName + "-Instance"
-            createLayObject(instanceName, layInstancesCollection, instanceRootNode, instance.position, instance.rotation, instance.scale, boundingBox)
+            createLayObject(instanceName, layInstancesCollection, instanceRootNode, instance.position, instance.rotation, instance.scale)
 
-    print('Importing finished. ;)')
+    tD = time() - t1
+    print(f"Importing finished in {tD:.1}s ;)")
     return {'FINISHED'}
 
-def createLayObject(name, collection, parent, pos, rot, scale, boundingBox):
+def createLayObject(name, collection, parent, pos, rot, scale):
     obj = bpy.data.objects.new(name, None)
     collection.objects.link(obj)
     obj.parent = parent
@@ -66,18 +70,24 @@ def createLayObject(name, collection, parent, pos, rot, scale, boundingBox):
 
     obj.show_axis = True
 
-    if boundingBox is not None:
-        createBoundingBoxObject(obj, name + "-BoundingBox", collection, boundingBox)
+    createVisualizationObject(obj, name + "-BoundingBox", collection)
 
     return obj
 
 
 
-def createBoundingBoxObject(obj: bpy.types.Object, name, collection, boundingBox):
-    boundingBoxObj = bpy.data.objects.new(name, None)
-    collection.objects.link(boundingBoxObj)
+def createVisualizationObject(obj: bpy.types.Object, name, collection):
     for child in obj.children:
         bpy.data.objects.remove(child, do_unlink=True)
+    linkAssetModel(obj, obj.name[:6], collection) or createBoundingBoxObject(obj, name, collection)
+
+def createBoundingBoxObject(obj: bpy.types.Object, name, collection):
+    boundingBox = getModelBoundingBox(obj.name[:6])
+    if boundingBox is None:
+        return None
+
+    boundingBoxObj = bpy.data.objects.new(name, None)
+    collection.objects.link(boundingBoxObj)
     boundingBoxObj.parent = obj
     boundingBoxObj.empty_display_type = 'CUBE'
 
@@ -86,7 +96,7 @@ def createBoundingBoxObject(obj: bpy.types.Object, name, collection, boundingBox
 
     boundingBoxObj.hide_select = True
 
-def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
+def searchDirForModel(dir: str, modelName: str, depth = 0) -> str | None:
     if depth > 0 and dir.endswith("nier2blender_extracted") or depth > 6:
         return None
 
@@ -101,7 +111,7 @@ def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
     
     return None
 
-def getModelBoundingBox(modelName, addonName):
+def getModelBoundingBox(modelName):
     searchDirs = getPreferences().assetDirs
     searchDirs = [dir.directory for dir in searchDirs]
 
@@ -119,7 +129,7 @@ def getModelBoundingBox(modelName, addonName):
         return None
 
     with open(filePath, "rb") as modelDTTFile:
-        id = modelDTTFile.read(4)
+        modelDTTFile.read(4) # id
         numFiles = read_uint32(modelDTTFile)
         fileOffsetsOffset = read_uint32(modelDTTFile)
         fileExtensionsOffset = read_uint32(modelDTTFile)
@@ -137,5 +147,45 @@ def getModelBoundingBox(modelName, addonName):
         for i, ext in enumerate(fileExtensions):
             if ext == "wmb":
                 modelDTTFile.seek(fileOffsets[i] + 16)
-                boundingBox = [read_float(modelDTTFile) for val in range(6)]
+                boundingBox = [read_float(modelDTTFile) for _ in range(6)]
                 return boundingBox
+
+def linkAssetModel(obj: bpy.types.Object, modelName: str, collection: bpy.types.Collection) -> bpy.types.Object | None:
+    global linked
+    linkedObjName = f"{modelName}-linked-model"
+
+    # link file for first object
+    if modelName not in bpy.data.collections:
+        searchDirs = getPreferences().assetBlendDirs
+        searchDirs = [dir.directory for dir in searchDirs]
+
+        filePath = ""
+        for pathName in searchDirs:
+            if not os.path.isdir(pathName):
+                continue
+
+            modelPath = searchDirForModel(pathName, modelName + ".blend")
+            if modelPath is not None:
+                filePath = modelPath
+                break
+
+        if not filePath:
+            return False
+
+        if f"{modelName}.blend" not in bpy.data.libraries:
+            with bpy.data.libraries.load(filepath = filePath, link = True, relative = True) as (data_from, data_to):
+                data_to.collections = [modelName]
+        if modelName in bpy.data.objects and bpy.data.objects[modelName].instance_type == "COLLECTION":
+            bpy.data.objects.remove(bpy.data.objects[modelName], do_unlink=True)
+
+    # create instance object
+    newObj = bpy.data.objects.new(linkedObjName, None)
+    newObj.instance_type = "COLLECTION"
+    newObj.instance_collection = bpy.data.collections[modelName]
+    collection.objects.link(newObj)
+    newObj.parent = obj
+    newObj.name = linkedObjName
+    newObj.rotation_euler[0] = -math.radians(90)
+    newObj.hide_select = True
+
+    return newObj

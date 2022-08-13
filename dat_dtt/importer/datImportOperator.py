@@ -7,7 +7,6 @@ from bpy_extras.io_utils import ImportHelper
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
-from ...consts import ADDON_NAME
 
 
 def importDat(only_extract, filepath):
@@ -49,7 +48,7 @@ def importDat(only_extract, filepath):
     lay_filepath = os.path.join(extract_dir, tailless_tail + '.dat', 'Layout.lay')
     if os.path.isfile(lay_filepath):
         from ...lay.importer import lay_importer
-        lay_importer.main(lay_filepath, ADDON_NAME)
+        lay_importer.main(lay_filepath)
 
     return {'FINISHED'}
 
@@ -121,7 +120,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         lay_filepath = os.path.join(extract_dir, tailless_tail + '.dat', 'Layout.lay')
         if os.path.isfile(lay_filepath):
             from ...lay.importer import lay_importer
-            lay_importer.main(lay_filepath, ADDON_NAME)
+            lay_importer.main(lay_filepath)
 
         return {'FINISHED'}
 
