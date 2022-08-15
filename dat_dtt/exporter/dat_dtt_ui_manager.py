@@ -52,7 +52,8 @@ class ExportAllSteps(bpy.types.PropertyGroup):
     )
     centerOrigins: bpy.props.BoolProperty(
         name = "Center Origin",
-        default = True
+        default = True,
+        description = "Set object origins to world origin"
     )
     deleteLoose: bpy.props.BoolProperty(
         name = "Delete Loose Geometry",

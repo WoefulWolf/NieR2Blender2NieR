@@ -3,6 +3,7 @@ from io import BufferedWriter
 from typing import List
 import bmesh
 import bpy
+import numpy as np
 
 from ...utils.ioUtils import write_Int32, write_float, write_uInt32, write_uInt16
 from .col_boneMap import BoneMap
@@ -59,7 +60,17 @@ class BatchT2(Batch):
             self.boneIndex = -1
         else:
             self.boneIndex = boneMap.boneToMapIndex[bObj.vertex_groups[0].name]
-        self.vertices = self.vertexPositions
+
+
+        vertexOffset = [0, 0, 0, 0]
+        if self.boneIndex != -1:
+            boneName = bObj.vertex_groups[0].name
+            parentAmtObj = bObj.parent
+            bone = parentAmtObj.pose.bones[boneName]
+            boneGlobalLoc = parentAmtObj.matrix_world @ bone.matrix @ bone.location
+            vertexOffset[:3] = [boneGlobalLoc[0], boneGlobalLoc[2], -boneGlobalLoc[1]]
+        
+        self.vertices = np.array(self.vertexPositions) - np.array(vertexOffset)
 
         self.headerStructSize = 5 * 4
         self.vertexStructSize = self.vertexCount * 16
