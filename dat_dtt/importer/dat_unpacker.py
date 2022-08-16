@@ -97,6 +97,11 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	for i in range(FileCount):
 		fileNames.append(fp.read(fileNameSize))
 
+	# Write filenames to txt
+	with open(extract_dir + '/extracted_files.txt', 'w') as f:
+		for i in range(FileCount):
+			f.write(fileNames[i].decode('utf-8') + '\n')
+
 	# hash_data.metadata
 	# Header
 	fp.seek(hashMapOffset)
