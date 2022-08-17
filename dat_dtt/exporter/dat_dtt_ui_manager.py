@@ -81,9 +81,10 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
             text="DAT Contents",
             icon = "TRIA_DOWN" if context.scene.ShowDatContents else "TRIA_RIGHT")
         if context.scene.ShowDatContents:
+            box = box.box()
             row = box.row()
+            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dat"
             row.operator("na.import_datdtt_contents_file").type = "dat"
-            row.operator("na.clear_datdtt_contents").type = "dat"
             if len(context.scene.DatContents) > 0:
                 columns = box.column_flow(columns=3, align=False)
                 for file in context.scene.DatContents:
@@ -94,9 +95,11 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
                     remove_op.type = "dat"
             else:
                 row = box.row()
+                row.alignment = "CENTER"
                 row.label(text="No files added")
             row = box.row()
-            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dat"
+            row.operator("na.clear_datdtt_contents").type = "dat"
+            
 
         box = layout.box()
         row = box.row(align=True)
@@ -106,9 +109,11 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
             text="DTT Contents",
             icon = "TRIA_DOWN" if context.scene.ShowDttContents else "TRIA_RIGHT")
         if context.scene.ShowDttContents:
+            box = box.box()
             row = box.row()
+            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dtt"
             row.operator("na.import_datdtt_contents_file").type = "dtt"
-            row.operator("na.clear_datdtt_contents").type = "dtt"
+            
             if len(context.scene.DttContents) > 0:
                 columns = box.column_flow(columns=3, align=False)
                 for file in context.scene.DttContents:
@@ -119,9 +124,10 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
                     remove_op.type = "dtt"
             else:
                 row = box.row()
+                row.alignment = "CENTER"
                 row.label(text="No files added")
-            row = box.row()
-            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dtt"
+            row = box.row(align=True)
+            row.operator("na.clear_datdtt_contents").type = "dtt"
 
         box = layout.box()
         row = box.row(align=True)
