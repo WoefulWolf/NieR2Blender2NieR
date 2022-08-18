@@ -108,7 +108,7 @@ class c_vertexGroup(object):
             self.vertexExDataSize = 12                                    
         elif self.vertexFlags in {10, 14}:
             self.vertexExDataSize = 16
-        elif self.vertexFlags == 11:
+        elif self.vertexFlags in {11, 12}:
             self.vertexExDataSize = 20
 
 
@@ -281,8 +281,6 @@ class c_vertexGroup(object):
                         uv_maps.append(uv3)
 
                     elif self.vertexFlags == 12:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
                         uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
                         uv_maps.append(uv3)
                         uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)

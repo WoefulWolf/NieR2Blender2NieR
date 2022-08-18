@@ -11,6 +11,8 @@ currentCollection: bpy.types.Collection = None
 def setCurrentCollection(col: bpy.types.Collection):
     global currentCollection
     currentCollection = col
+def getCurrentCollection() -> bpy.types.Collection:
+    return currentCollection
 
 
 def tryAddCollection(collName: str, parent: bpy.types.Collection) -> bpy.types.Collection:
@@ -45,7 +47,6 @@ def prepareObject(obj: bpy.types.Object, name: str, parent: bpy.types.Object, co
         coll.objects.unlink(obj)
     currentCollection.objects.link(obj)
 
-
 def makeMeshObj(name: str, vertices: List[List[float]], edges: List[List[float]], faces: List[List[float]],
                 parent: bpy.types.Object, color: List[float] = None) -> bpy.types.Object:
     cube = bpy.data.meshes.new(name)
@@ -62,6 +63,10 @@ def makeMeshObj(name: str, vertices: List[List[float]], edges: List[List[float]]
 
     return cubeObj
 
+def makeEmptyObj(name: str, parent: bpy.types.Object) -> bpy.types.Object:
+    emptyObj = bpy.data.objects.new(name, None)
+    prepareObject(emptyObj, name, parent)
+    return emptyObj
 
 def makeCube(name, parent: bpy.types.Object, color: List[float], originAtCorner=True) -> bpy.types.Object:
     vertices = [
@@ -175,6 +180,11 @@ def makeCircle(name: str, radius: float, parent: bpy.types.Object, color: List[f
     prepareObject(circleObj, name, parent, color)
     return circleObj
 
+def makeCircleMesh(name: str, radius: float, parent: bpy.types.Object, color: List[float]) -> bpy.types.Object:
+    bpy.ops.mesh.primitive_circle_add(radius=radius, fill_type="NGON")
+    circleObj = bpy.context.active_object
+    prepareObject(circleObj, name, parent, color)
+    return circleObj
 
 # importing - misc
 

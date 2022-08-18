@@ -43,22 +43,21 @@ class NierObjectMenu(bpy.types.Menu):
         self.layout.operator(DeleteLooseGeometrySelected.bl_idname)
         self.layout.operator(DeleteLooseGeometryAll.bl_idname)
         self.layout.operator(RipMeshByUVIslands.bl_idname)
-        self.layout.operator(CreateLayBoundingBox.bl_idname, icon="CUBE")
+        self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
 
-class CreateLayBoundingBox(bpy.types.Operator):
-    """Create Layout Object Bounding Box"""
-    bl_idname = "n2b.create_lay_bb"
-    bl_label = "Create Layout Object Bounding Box"
+class CreateLayVisualization(bpy.types.Operator):
+    """Create Layout Object Visualization"""
+    bl_idname = "n2b.create_lay_vis"
+    bl_label = "Create Layout Object Visualization"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        from .lay.importer.lay_importer import getModelBoundingBox, createBoundingBoxObject
+        from .lay.importer.lay_importer import updateVisualizationObject
         for obj in bpy.context.selected_objects:
-            boundingBox = getModelBoundingBox(obj.name.split("_")[0], ADDON_NAME)
-            if boundingBox:
-                createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
-            else:
-                self.report({'WARNING'}, "Couldn't find dtt of " + obj.name)
+            if len(obj.name) <= 6:
+                self.report({"ERROR"}, f"{obj.name} name needs to be at least 6 characters long!")
+                return {"CANCELLED"}
+            updateVisualizationObject(obj, obj.name[:6], True)
         return {'FINISHED'}
 
 def menu_func_import(self, context):
@@ -102,7 +101,7 @@ classes = (
     ExportNierSar,
     ExportNierLay,
     ExportNierGaArea,
-    CreateLayBoundingBox,
+    CreateLayVisualization,
     NierObjectMenu,
     RecalculateObjectIndices,
     RemoveUnusedVertexGroups,
