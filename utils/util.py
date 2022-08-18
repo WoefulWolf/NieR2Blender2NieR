@@ -188,7 +188,7 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
             full_path = os.path.join(datDir, filename)
             if os.path.isfile(full_path):
                 name, ext = os.path.splitext(full_path)
-                if len(ext) > 4 or "extracted_files.txt" in full_path:
+                if len(ext) > 4:
                     continue
                 added_file = bpy.context.scene.DatContents.add()
                 added_file.filepath = full_path
@@ -200,7 +200,7 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
             full_path = os.path.join(dttDir, filename)
             if os.path.isfile(full_path):
                 name, ext = os.path.splitext(full_path)
-                if len(ext) > 4 or "extracted_files.txt" in full_path:
+                if len(ext) > 4:
                     continue
                 added_file = bpy.context.scene.DttContents.add()
                 added_file.filepath = full_path
@@ -267,3 +267,11 @@ def setViewportColorTypeToObject():
                     if space.type == 'VIEW_3D':
                         space.shading.type = "SOLID"
                         space.shading.color_type = "OBJECT"
+
+def saveDatInfo(filepath: str, files: List[str]):
+    with open(filepath, 'w') as f:
+        jsonFiles = {
+            "version": "1.0",
+            "files": files
+        }
+        json.dump(jsonFiles, f, indent=4)

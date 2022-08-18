@@ -1,9 +1,8 @@
 #encoding = utf-8
 import os
-import struct
 import sys
-import json
 
+from ...utils.util import saveDatInfo
 from ...utils.ioUtils import read_int32, read_uint32, read_uint16
 
 
@@ -99,12 +98,10 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 		fileNames.append(fp.read(fileNameSize))
 
 	# Write filenames to json
-	with open(extract_dir + '/extracted_files.json', 'w') as f:
-		jsonFiles = {
-			"version": "1.0",
-			"files": [file.decode('utf-8') for file in fileNames]
-		}
-		json.dump(jsonFiles, f)
+	saveDatInfo(
+		extract_dir + '/dat_info.json',
+		[file.decode('utf-8').rstrip('\x00') for file in fileNames]
+	)
 
 	# hash_data.metadata
 	# Header

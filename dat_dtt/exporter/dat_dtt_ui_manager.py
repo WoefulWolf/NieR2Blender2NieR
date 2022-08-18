@@ -1,12 +1,13 @@
 import os
 import time
+import json
 
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 from ...utils.ioUtils import read_uint32
 
-from ...utils.util import triangulate_meshes, centre_origins, ShowMessageBox
+from ...utils.util import saveDatInfo, triangulate_meshes, centre_origins, ShowMessageBox
 
 
 class ExportAllSteps(bpy.types.PropertyGroup):
@@ -108,13 +109,16 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
                 row = box.row()
                 if len(datType["contentsVar"]) > 0:
                     columns = int(context.region.width / bpy.context.preferences.system.ui_scale // 150)
-                    columns = box.column_flow(columns=columns, align=False)
+                    column = 0
                     for file in datType["contentsVar"]:
-                        row = columns.box().row()
-                        row.operator(ShowFullFilePath.bl_idname, emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
-                        remove_op = row.operator("na.remove_datdtt_file", icon="X", text="")
+                        if column % columns == 0:
+                            row = box.row()
+                        cell = row.box().row()
+                        cell.operator(ShowFullFilePath.bl_idname, emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
+                        remove_op = cell.operator("na.remove_datdtt_file", icon="X", text="")
                         remove_op.filepath = file.filepath
                         remove_op.type = datType["name"]
+                        column += 1
                 else:
                     row = box.row()
                     row.alignment = "CENTER"
@@ -220,18 +224,8 @@ class ExportAll(bpy.types.Operator):
         t1 = time.time()
         exportedFilesCount = 0
         exportSteps: ExportAllSteps = context.scene.ExportAllSteps
-        #datDir = context.scene.DatDir
-        #dttDir = context.scene.DttDir
         baseFilename = context.scene.ExportFileName
         datDttExportDir = context.scene.DatDttExportDir
-        """
-        if not datDir and (exportSteps.useWtaStep or exportSteps.useColStep or exportSteps.useLayStep or exportSteps.useDatStep or exportSteps.useSarStep or exportSteps.useGaStep):
-            self.report({"ERROR"}, "Missing DAT Directory!")
-            return {"CANCELLED"}
-        if not dttDir and (exportSteps.useWtpStep or exportSteps.useWmbStep or exportSteps.useDttStep):
-            self.report({"ERROR"}, "Missing DTT Directory!")
-            return {"CANCELLED"}
-        """
         if not datDttExportDir and (exportSteps.useDatStep or exportSteps.useDttStep):
             self.report({"ERROR"}, "Missing DAT/DTT Export Directory!")
             return {"CANCELLED"}
@@ -312,18 +306,26 @@ class ExportAll(bpy.types.Operator):
         from . import export_dat
         if exportSteps.useDatStep:
             print("Exporting DAT")
-            file_list = []
-            for item in context.scene.DatContents:
-                file_list.append(item.filepath)
+            # get files list
+            file_list = [item.filepath for item in context.scene.DatContents]
             file_list.sort()
+            # save info file
+            datInfoFilePath = os.path.join(os.path.dirname(file_list[0]), "dat_info.json")
+            fileNames = [os.path.basename(file_path) for file_path in file_list]
+            saveDatInfo(datInfoFilePath, fileNames)
+            # export dtt
             export_dat.main(datFilePath, file_list)
             exportedFilesCount += 1
         if exportSteps.useDttStep:
             print("Exporting DTT")
-            file_list = []
-            for item in context.scene.DttContents:
-                file_list.append(item.filepath)
+            # get files list
+            file_list = [item.filepath for item in context.scene.DttContents]
             file_list.sort()
+            # save info file
+            datInfoFilePath = os.path.join(os.path.dirname(file_list[0]), "dat_info.json")
+            fileNames = [os.path.basename(file_path) for file_path in file_list]
+            saveDatInfo(datInfoFilePath, fileNames)
+            # export dtt
             export_dat.main(dttFilePath, file_list)
             exportedFilesCount += 1
 
@@ -446,19 +448,22 @@ class ClearDatDttAllContentsOperator(bpy.types.Operator):
         return {"FINISHED"}
 
 class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
-    '''Import the contents of a "file_order.metadata" or "extracted_files.txt" file'''
+    '''Import the contents of a "file_order.metadata" or "dat_info.json" file or a folder with theses files'''
     bl_idname = "na.import_datdtt_contents_file"
-    bl_label = "Import Contents File"
+    bl_label = "Contents File or Folder"
     bl_options = {"UNDO"}
-    filter_glob: StringProperty(default="*.metadata;*.txt", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*.metadata;*.json", options={'HIDDEN'})
 
     type: bpy.props.StringProperty(options={'HIDDEN'})
 
     def execute(self, context):
-        if os.path.basename(self.filepath) not in ["file_order.metadata", "extracted_files.txt"] and \
+        if os.path.basename(self.filepath) not in ["file_order.metadata", "dat_info.json"] and \
                     not os.path.isdir(self.filepath):
-            self.report({"ERROR"}, "Invalid file name! Please select either a 'file_order.metadata' or 'extracted_files.txt' file.")
-            return {"FINISHED"}
+            self.report({"ERROR"}, "Invalid file name! Please select either a 'file_order.metadata' or 'dat_info.json' file.")
+            return {"CANCELLED"}
+        if not os.path.exists(self.filepath):
+            self.report({"ERROR"}, "File doesn't exist!")
+            return {"CANCELLED"}
         
         contentsList: bpy.types.CollectionProperty
         if self.type == "dat":
@@ -471,13 +476,12 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
         # Clear current context
         contentsList.clear()
 
-        def readTxtFile(filepath):
+        def readJsonFile(filepath):
             with open(filepath, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        added_file = contentsList.add()
-                        added_file.filepath = os.path.join(os.path.dirname(self.filepath), line)
+                filesData = json.load(f)
+                for file in filesData["files"]:
+                    added_file = contentsList.add()
+                    added_file.filepath = os.path.join(os.path.dirname(self.filepath), file)
         def readFileOrderMetadata(filepath):
             if filepath.endswith("hash_order.metadata"):
                 self.report({"ERROR"}, "hash_order.metadata is not supported! Please use 'file_order.metadata' instead.")
@@ -495,18 +499,18 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
         # Parse the appropriate file and add files to contents
         root, ext = os.path.splitext(self.filepath)
         if os.path.isdir(self.filepath):
-            # search for metadata or txt file
+            # search for metadata or json file
             for file in os.listdir(self.filepath):
-                if file == "extracted_files.txt":
-                    readTxtFile(os.path.join(self.filepath, file))
+                if file == "dat_info.json":
+                    readJsonFile(os.path.join(self.filepath, file))
                 elif file == "file_order.metadata":
                     readFileOrderMetadata(os.path.join(self.filepath, file))
                     break
             else:
-                self.report({"ERROR"}, "No 'file_order.metadata' or 'extracted_files.txt' file found in directory!")
+                self.report({"ERROR"}, "No 'file_order.metadata' or 'dat_info.json' file found in directory!")
                 return {"FINISHED"}
-        elif ext == ".txt":
-            readTxtFile(self.filepath)
+        elif ext == ".json":
+            readJsonFile(self.filepath)
         elif ext == ".metadata":
             readFileOrderMetadata(self.filepath)
         return {"FINISHED"}
