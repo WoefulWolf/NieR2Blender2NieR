@@ -70,31 +70,49 @@ def createLayObject(name, collection, parent, pos, rot, scale):
 
     obj.show_axis = True
 
-    createVisualizationObject(obj, name + "-BoundingBox", collection)
+    updateVisualizationObject(obj, name[:6], True)
 
     return obj
 
+def updateVisualizationObject(emptyObj: bpy.types.Object, modelName: str, isParentRotated: bool) -> None:
+    if emptyObj is not None:
+        # clear objects from old addon versions
+        for child in emptyObj.children:
+            bpy.data.objects.remove(child, do_unlink=True)
+    
+    visColl = linkAssetModel(modelName, isParentRotated) or createBoundingBoxCollection(modelName)
+    if visColl is not None:
+        emptyObj.instance_type = "COLLECTION"
+        emptyObj.instance_collection = visColl
+        emptyObj.empty_display_type = "ARROWS"
+        emptyObj.empty_display_size = 0.15
+        emptyObj.show_axis = False
+    else:
+        emptyObj.instance_type = "NONE"
+        emptyObj.instance_collection = None
+        emptyObj.empty_display_type = "SPHERE"
+        emptyObj.empty_display_size = 0.5
+        emptyObj.show_axis = True
 
+def createBoundingBoxCollection(modelName: str) -> bpy.types.Collection | None:
+    bbCollName = f"{modelName}_BoundingBox"
 
-def createVisualizationObject(obj: bpy.types.Object, name, collection):
-    for child in obj.children:
-        bpy.data.objects.remove(child, do_unlink=True)
-    linkAssetModel(obj, obj.name[:6], collection) or createBoundingBoxObject(obj, name, collection)
+    if bbCollName in bpy.data.collections:
+        return bpy.data.collections[bbCollName]
 
-def createBoundingBoxObject(obj: bpy.types.Object, name, collection):
-    boundingBox = getModelBoundingBox(obj.name[:6])
+    boundingBox = getModelBoundingBox(modelName)
     if boundingBox is None:
         return None
 
-    boundingBoxObj = bpy.data.objects.new(name, None)
-    collection.objects.link(boundingBoxObj)
-    boundingBoxObj.parent = obj
-    boundingBoxObj.empty_display_type = 'CUBE'
+    boundingBoxObj = bpy.data.objects.new(f"{modelName}_BoundingBox", None)
+    bbColl = bpy.data.collections.new(bbCollName)
+    bbColl.objects.link(boundingBoxObj)
+    boundingBoxObj.empty_display_type = "CUBE"
 
     boundingBoxObj.location = boundingBox[:3]
     boundingBoxObj.scale = boundingBox[-3:]
 
-    boundingBoxObj.hide_select = True
+    return bbColl
 
 def searchDirForModel(dir: str, modelName: str, depth = 0) -> str | None:
     if depth > 0 and dir.endswith("nier2blender_extracted") or depth > 6:
@@ -150,12 +168,11 @@ def getModelBoundingBox(modelName):
                 boundingBox = [read_float(modelDTTFile) for _ in range(6)]
                 return boundingBox
 
-def linkAssetModel(obj: bpy.types.Object, modelName: str, collection: bpy.types.Collection) -> bpy.types.Object | None:
-    global linked
-    linkedObjName = f"{modelName}-linked-model"
+def linkAssetModel(modelName, isParentRotated: bool) -> bpy.types.Collection | None:
+    linkedCollName = f"{modelName}_linked"
 
     # link file for first object
-    if modelName not in bpy.data.collections:
+    if linkedCollName not in bpy.data.collections:
         searchDirs = getPreferences().assetBlendDirs
         searchDirs = [dir.directory for dir in searchDirs]
 
@@ -170,22 +187,19 @@ def linkAssetModel(obj: bpy.types.Object, modelName: str, collection: bpy.types.
                 break
 
         if not filePath:
-            return False
+            return None
 
-        if f"{modelName}.blend" not in bpy.data.libraries:
-            with bpy.data.libraries.load(filepath = filePath, link = True, relative = True) as (data_from, data_to):
-                data_to.collections = [modelName]
+        libName = f"{modelName}.blend"
+        if libName in bpy.data.libraries:
+            bpy.data.libraries.remove(bpy.data.libraries[libName])
+        with bpy.data.libraries.load(filepath = filePath, link = True, relative = True) as (data_from, data_to):
+            data_to.collections = [modelName]
         if modelName in bpy.data.objects and bpy.data.objects[modelName].instance_type == "COLLECTION":
             bpy.data.objects.remove(bpy.data.objects[modelName], do_unlink=True)
+        linkedColl = bpy.data.collections[modelName]
+        linkedColl.name = linkedCollName
+        if isParentRotated and len(linkedColl.objects) > 0:
+            linkedColl.objects[0].rotation_euler[0] = 0
+        linkedColl
 
-    # create instance object
-    newObj = bpy.data.objects.new(linkedObjName, None)
-    newObj.instance_type = "COLLECTION"
-    newObj.instance_collection = bpy.data.collections[modelName]
-    collection.objects.link(newObj)
-    newObj.parent = obj
-    newObj.name = linkedObjName
-    newObj.rotation_euler[0] = -math.radians(90)
-    newObj.hide_select = True
-
-    return newObj
+    return bpy.data.collections[linkedCollName]

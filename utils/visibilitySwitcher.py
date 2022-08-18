@@ -55,7 +55,7 @@ def getMeshPartGroups(collection: str) -> Dict[str, List[str]]:
             else:
                 objLod = "0"
 
-            lodName = f"LOD{objLod}"
+            lodName = f"Group_{objLod}"
             objName = getObjectName(obj)
 
             if lodName not in partGroups:
