@@ -70,64 +70,55 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-
-        box = layout.box()
         
+        datTypes = [
+            {
+                "name": "dat",
+                "showVarName": "ShowDatContents",
+                "showVar": context.scene.ShowDatContents,
+                "contentsVar": context.scene.DatContents
+            },
+            {
+                "name": "dtt",
+                "showVarName": "ShowDttContents",
+                "showVar": context.scene.ShowDttContents,
+                "contentsVar": context.scene.DttContents
+            }
+        ]
 
-        row = box.row(align=True)
-        row.scale_y = 1.125
-        row.ui_units_y = 1.125
-        row.prop(context.scene, "ShowDatContents", emboss=False,
-            text="DAT Contents",
-            icon = "TRIA_DOWN" if context.scene.ShowDatContents else "TRIA_RIGHT")
-        if context.scene.ShowDatContents:
-            box = box.box()
+        for datType in datTypes:
+            box = layout.box()
             row = box.row()
-            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dat"
-            row.operator("na.import_datdtt_contents_file").type = "dat"
-            if len(context.scene.DatContents) > 0:
-                columns = box.column_flow(columns=3, align=False)
-                for file in context.scene.DatContents:
-                    row = columns.box().row()
-                    row.operator("na.show_full_filepath", emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
-                    remove_op = row.operator("na.remove_datdtt_file", icon="X", text="")
-                    remove_op.filepath = file.filepath
-                    remove_op.type = "dat"
-            else:
-                row = box.row()
-                row.alignment = "CENTER"
-                row.label(text="No files added")
-            row = box.row()
-            row.operator("na.clear_datdtt_contents").type = "dat"
-            
+            row.scale_y = 1.125
+            row.ui_units_y = 1.125
+            subRow = row.row()
+            subRow.prop(context.scene, datType["showVarName"], emboss=False,
+                text= f"{datType['name'].upper()} Contents ({len(datType['contentsVar'])})",
+                icon = "TRIA_DOWN" if datType["showVar"] else "TRIA_RIGHT")
+            subRow = row.row(align=True)
+            subRow.scale_x = 1.1
+            subRow.scale_y = 1.05
+            subRow.operator(AddDatDttContentsFile.bl_idname, text="", icon="FILE_NEW").type = datType["name"]
+            subRow.operator(ImportDatDttContentsFile.bl_idname, text="", icon="FILE_FOLDER").type = datType["name"]
+            if len(datType["contentsVar"]) > 0:
+                subRow.operator(ClearDatDttAllContentsOperator.bl_idname, text="", icon="X").type = datType["name"]
 
-        box = layout.box()
-        row = box.row(align=True)
-        row.scale_y = 1.125
-        row.ui_units_y = 1.125
-        row.prop(context.scene, "ShowDttContents", emboss=False,
-            text="DTT Contents",
-            icon = "TRIA_DOWN" if context.scene.ShowDttContents else "TRIA_RIGHT")
-        if context.scene.ShowDttContents:
-            box = box.box()
-            row = box.row()
-            row.operator("na.datdtt_file_selector", text="Add File(s)").type = "dtt"
-            row.operator("na.import_datdtt_contents_file").type = "dtt"
-            
-            if len(context.scene.DttContents) > 0:
-                columns = box.column_flow(columns=3, align=False)
-                for file in context.scene.DttContents:
-                    row = columns.box().row()
-                    row.operator("na.show_full_filepath", emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
-                    remove_op = row.operator("na.remove_datdtt_file", icon="X", text="")
-                    remove_op.filepath = file.filepath
-                    remove_op.type = "dtt"
-            else:
+            if datType["showVar"]:
+                box = box.box()
                 row = box.row()
-                row.alignment = "CENTER"
-                row.label(text="No files added")
-            row = box.row(align=True)
-            row.operator("na.clear_datdtt_contents").type = "dtt"
+                if len(datType["contentsVar"]) > 0:
+                    columns = int(context.region.width / bpy.context.preferences.system.ui_scale // 150)
+                    columns = box.column_flow(columns=columns, align=False)
+                    for file in datType["contentsVar"]:
+                        row = columns.box().row()
+                        row.operator(ShowFullFilePath.bl_idname, emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
+                        remove_op = row.operator("na.remove_datdtt_file", icon="X", text="")
+                        remove_op.filepath = file.filepath
+                        remove_op.type = datType["name"]
+                else:
+                    row = box.row()
+                    row.alignment = "CENTER"
+                    row.label(text="No files added")
 
         box = layout.box()
         row = box.row(align=True)
@@ -352,10 +343,8 @@ class GetBaseName(bpy.types.Operator):
     def execute(self, context):
         if "WMB" in bpy.data.collections and len(bpy.data.collections["WMB"].children) > 0:
             context.scene.ExportFileName = bpy.data.collections["WMB"].children[0].name
-        elif context.scene.DatDir:
-            context.scene.ExportFileName = os.path.basename(context.scene.DatDir).replace(".dat", "")
-        elif context.scene.DttDir:
-            context.scene.ExportFileName = os.path.basename(context.scene.DttDir).replace(".dtt", "")
+        else:
+            self.report({"WARNING"}, "Couldn't auto fill base name")
         return {"FINISHED"}
 
 class AddDatDttContentsFile(bpy.types.Operator, ImportHelper):
@@ -376,40 +365,44 @@ class AddDatDttContentsFile(bpy.types.Operator, ImportHelper):
     type: bpy.props.StringProperty(options={'HIDDEN'})
 
     def execute(self, context):
+        contentsList: bpy.types.CollectionProperty
+        if self.type == "dat":
+            contentsList = context.scene.DatContents
+        elif self.type == "dtt":
+            contentsList = context.scene.DttContents
+        else:
+            raise Exception("Invalid type")
+
         dir = self.directory
         #fdir = self.properties.filepath
+        warnings = set()
+        skippedFiles = 0
         for file_elem in self.files:
             path = os.path.join(dir, file_elem.name)
             name, ext = os.path.splitext(path)
-            if self.type == "dat":
-                skip = False
-                for file in context.scene.DatContents:
-                    if file.filepath == path or os.path.basename(file.filepath) == os.path.basename(path):
-                        self.report({"ERROR"}, "File already added!")
-                        skip = True
-                        break
-                if len(ext) > 4:
-                    self.report({"ERROR"}, "File extension too long!")
+            skip = False
+            for file in contentsList:
+                if file.filepath == path or os.path.basename(file.filepath) == os.path.basename(path):
+                    warnings.add("File already added!")
                     skip = True
-                if skip:
-                    continue
-                added_file = bpy.context.scene.DatContents.add()
-                added_file.filepath = path
-            elif self.type == "dtt":
-                skip = False
-                for file in context.scene.DttContents:
-                    if file.filepath == path or os.path.basename(file.filepath) == os.path.basename(path):
-                        self.report({"ERROR"}, "File already added!")
-                        skip = True
-                        break
-                if len(ext) > 4:
-                    self.report({"ERROR"}, "File extension too long!")
-                    skip = True
-                if skip:
-                    continue
-                added_file = bpy.context.scene.DttContents.add()
-                added_file.filepath = path
-        return{'FINISHED'}
+                    break
+            if len(ext) > 4:
+                warnings.add("File extension too long!")
+                skip = True
+            if skip:
+                skippedFiles += 1
+                continue
+            added_file = contentsList.add()
+            added_file.filepath = path
+
+        if len(warnings) == 1:
+            self.report({"WARNING"}, f"{skippedFiles} files skipped ({next(iter(warnings))})")
+        elif len(warnings) > 1:
+            print(f"{len(warnings)} warnings:")
+            print("\n".join(warnings))
+            self.report({"WARNING"}, f"{skippedFiles} files skipped ({'; '.join(warnings)})")
+        
+        return {'FINISHED'}
 
 class RemoveDatDttFileOperator(bpy.types.Operator):
     '''Remove a file from DAT/DTT contents'''
@@ -421,21 +414,20 @@ class RemoveDatDttFileOperator(bpy.types.Operator):
     type: bpy.props.StringProperty(options={'HIDDEN'})
 
     def execute(self, context):
+        contentsList: bpy.types.CollectionProperty
         if self.type == "dat":
-            index_to_remove = 0
-            for i, item in enumerate(context.scene.DatContents):
-                if item.filepath == self.filepath:
-                    index_to_remove = i
-                    break
-            context.scene.DatContents.remove(index_to_remove)
+            contentsList = context.scene.DatContents
         elif self.type == "dtt":
-            index_to_remove = 0
-            for i, item in enumerate(context.scene.DttContents):
-                if item.filepath == self.filepath:
-                    index_to_remove = i
-                    break
+            contentsList = context.scene.DttContents
+        else:
+            raise Exception("Invalid type")
 
-            context.scene.DttContents.remove(index_to_remove)
+        index_to_remove = 0
+        for i, item in enumerate(contentsList):
+            if item.filepath == self.filepath:
+                index_to_remove = i
+                break
+        contentsList.remove(index_to_remove)
         return {"FINISHED"}
 
 class ClearDatDttAllContentsOperator(bpy.types.Operator):
@@ -463,43 +455,60 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
     type: bpy.props.StringProperty(options={'HIDDEN'})
 
     def execute(self, context):
-        if os.path.basename(self.filepath) not in ["file_order.metadata", "extracted_files.txt"]:
+        if os.path.basename(self.filepath) not in ["file_order.metadata", "extracted_files.txt"] and \
+                    not os.path.isdir(self.filepath):
             self.report({"ERROR"}, "Invalid file name! Please select either a 'file_order.metadata' or 'extracted_files.txt' file.")
             return {"FINISHED"}
+        
+        contentsList: bpy.types.CollectionProperty
+        if self.type == "dat":
+            contentsList = context.scene.DatContents
+        elif self.type == "dtt":
+            contentsList = context.scene.DttContents
+        else:
+            raise Exception("Invalid type")
 
         # Clear current context
-        if self.type == "dat":
-            context.scene.DatContents.clear()
-        elif self.type == "dtt":
-            context.scene.DttContents.clear()
+        contentsList.clear()
 
-        # Parse the appropriate file and add files to contents
-        root, ext = os.path.splitext(self.filepath)
-        if ext == ".txt":
-            with open(self.filepath, "r") as f:
+        def readTxtFile(filepath):
+            with open(filepath, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line:
-                        if self.type == "dat":
-                            added_file = bpy.context.scene.DatContents.add()
-                            added_file.filepath = os.path.join(os.path.dirname(self.filepath), line)
-                        elif self.type == "dtt":
-                            added_file = bpy.context.scene.DttContents.add()
-                            added_file.filepath = os.path.join(os.path.dirname(self.filepath), line)
-        elif ext == ".metadata":
-            with open(self.filepath, "rb") as f:
+                        added_file = contentsList.add()
+                        added_file.filepath = os.path.join(os.path.dirname(self.filepath), line)
+        def readFileOrderMetadata(filepath):
+            if filepath.endswith("hash_order.metadata"):
+                self.report({"ERROR"}, "hash_order.metadata is not supported! Please use 'file_order.metadata' instead.")
+                
+            with open(filepath, "rb") as f:
                 num_files = read_uint32(f)
                 name_length = read_uint32(f)
                 files = []
                 for i in range(num_files):
                     files.append(f.read(name_length).decode("utf-8").strip("\x00"))
                 for file in files:
-                    if self.type == "dat":
-                        added_file = bpy.context.scene.DatContents.add()
-                        added_file.filepath = os.path.join(os.path.dirname(self.filepath), file)
-                    elif self.type == "dtt":
-                        added_file = bpy.context.scene.DttContents.add()
-                        added_file.filepath = os.path.join(os.path.dirname(self.filepath), file)
+                    added_file = contentsList.add()
+                    added_file.filepath = os.path.join(self.filepath, file)
+
+        # Parse the appropriate file and add files to contents
+        root, ext = os.path.splitext(self.filepath)
+        if os.path.isdir(self.filepath):
+            # search for metadata or txt file
+            for file in os.listdir(self.filepath):
+                if file == "extracted_files.txt":
+                    readTxtFile(os.path.join(self.filepath, file))
+                elif file == "file_order.metadata":
+                    readFileOrderMetadata(os.path.join(self.filepath, file))
+                    break
+            else:
+                self.report({"ERROR"}, "No 'file_order.metadata' or 'extracted_files.txt' file found in directory!")
+                return {"FINISHED"}
+        elif ext == ".txt":
+            readTxtFile(self.filepath)
+        elif ext == ".metadata":
+            readFileOrderMetadata(self.filepath)
         return {"FINISHED"}
 
 class FilePathProp(bpy.types.PropertyGroup):
