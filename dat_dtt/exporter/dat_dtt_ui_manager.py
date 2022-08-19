@@ -7,7 +7,7 @@ from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 from ...utils.ioUtils import read_uint32
 
-from ...utils.util import saveDatInfo, triangulate_meshes, centre_origins, ShowMessageBox
+from ...utils.util import readFileOrderMetadata, readJsonDatInfo, saveDatInfo, triangulate_meshes, centre_origins, ShowMessageBox
 
 
 class ExportAllSteps(bpy.types.PropertyGroup):
@@ -452,67 +452,70 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
     bl_idname = "na.import_datdtt_contents_file"
     bl_label = "Contents File or Folder"
     bl_options = {"UNDO"}
-    filter_glob: StringProperty(default="*.metadata;*.json", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*dat_info.json;*order.metadata", options={'HIDDEN'})
 
     type: bpy.props.StringProperty(options={'HIDDEN'})
 
     def execute(self, context):
-        if os.path.basename(self.filepath) not in ["file_order.metadata", "dat_info.json"] and \
-                    not os.path.isdir(self.filepath):
+        filepath = self.filepath
+        isDir = os.path.isdir(filepath)
+        dirname = filepath if isDir else os.path.dirname(filepath)
+        # Check if valid selection:
+        # selection should exist
+        if not os.path.exists(filepath):
+            if not os.path.exists(dirname):
+                self.report({"ERROR"}, "File doesn't exist!")
+                return {"CANCELLED"}
+            # if it doesn't, but it's a folder, try to find a file_order.metadata or dat_info.json file
+            # blender adds the last selected filename to the path when importing a folder
+            # so we need to remove it
+            else:
+                filepath = dirname
+                isDir = True
+        # if is file, check if filename is valid or if it's a folder
+        if os.path.basename(filepath) not in ["file_order.metadata", "dat_info.json"] and \
+                    not os.path.isdir(filepath):
             self.report({"ERROR"}, "Invalid file name! Please select either a 'file_order.metadata' or 'dat_info.json' file.")
-            return {"CANCELLED"}
-        if not os.path.exists(self.filepath):
-            self.report({"ERROR"}, "File doesn't exist!")
             return {"CANCELLED"}
         
         contentsList: bpy.types.CollectionProperty
         if self.type == "dat":
             contentsList = context.scene.DatContents
+            if dirname.endswith(".dtt"):
+                self.report({"WARNING"}, "You selected a DTT folder, but the contents will be added to the DAT file")
         elif self.type == "dtt":
             contentsList = context.scene.DttContents
+            if dirname.endswith(".dat"):
+                self.report({"WARNING"}, "You selected a DAT folder, but the contents will be added to the DTT file")
         else:
             raise Exception("Invalid type")
 
         # Clear current context
         contentsList.clear()
 
-        def readJsonFile(filepath):
-            with open(filepath, "r") as f:
-                filesData = json.load(f)
-                for file in filesData["files"]:
-                    added_file = contentsList.add()
-                    added_file.filepath = os.path.join(os.path.dirname(self.filepath), file)
-        def readFileOrderMetadata(filepath):
-            if filepath.endswith("hash_order.metadata"):
-                self.report({"ERROR"}, "hash_order.metadata is not supported! Please use 'file_order.metadata' instead.")
-                
-            with open(filepath, "rb") as f:
-                num_files = read_uint32(f)
-                name_length = read_uint32(f)
-                files = []
-                for i in range(num_files):
-                    files.append(f.read(name_length).decode("utf-8").strip("\x00"))
-                for file in files:
-                    added_file = contentsList.add()
-                    added_file.filepath = os.path.join(self.filepath, file)
-
         # Parse the appropriate file and add files to contents
-        root, ext = os.path.splitext(self.filepath)
-        if os.path.isdir(self.filepath):
+        root, ext = os.path.splitext(filepath)
+        if isDir:
             # search for metadata or json file
-            for file in os.listdir(self.filepath):
+            datInfoJson = ""
+            fileOrderMetadata = ""
+            for file in os.listdir(filepath):
                 if file == "dat_info.json":
-                    readJsonFile(os.path.join(self.filepath, file))
-                elif file == "file_order.metadata":
-                    readFileOrderMetadata(os.path.join(self.filepath, file))
+                    datInfoJson = os.path.join(filepath, file)
                     break
+                elif file == "file_order.metadata":
+                    fileOrderMetadata = os.path.join(filepath, file)
+            if datInfoJson:
+                readJsonDatInfo(datInfoJson, contentsList)
+            elif fileOrderMetadata:
+                readFileOrderMetadata(fileOrderMetadata, contentsList)
             else:
                 self.report({"ERROR"}, "No 'file_order.metadata' or 'dat_info.json' file found in directory!")
                 return {"FINISHED"}
         elif ext == ".json":
-            readJsonFile(self.filepath)
+            readJsonDatInfo(filepath, contentsList)
         elif ext == ".metadata":
-            readFileOrderMetadata(self.filepath)
+            readFileOrderMetadata(filepath, contentsList)
         return {"FINISHED"}
 
 class FilePathProp(bpy.types.PropertyGroup):

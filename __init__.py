@@ -182,6 +182,10 @@ def initialCheckCustomPanelsEnableDisable(_, __):
 
 @persistent
 def checkOldVersionMigration(_, __):
+    migrateOldWmbCollection()
+    migrateDatDirs()
+
+def migrateOldWmbCollection():
     # check if current file is an old wmb import
     if "hasMigratedToN2B2N" in bpy.context.scene:
         return
@@ -211,6 +215,36 @@ def checkOldVersionMigration(_, __):
     bpy.context.scene["hasMigratedToN2B2N"] = True
 
     print("Migrated scene to new version")
+
+def migrateDatDirs():
+    dirTypes = [
+        {
+            "key": "DatDir",
+            "newList": bpy.context.scene.DatContents
+        },
+        {
+            "key": "DttDir",
+            "newList": bpy.context.scene.DttContents
+        }
+    ]
+    for dirType in dirTypes:
+        if dirType["key"] not in bpy.context.scene or len(dirType["newList"]) > 0:
+            continue
+        datDir = bpy.context.scene[dirType["key"]]
+        datInfoJson = ""
+        fileOrderMetadata = ""
+        for file in os.listdir(datDir):
+                if file == "dat_info.json":
+                    datInfoJson = os.path.join(datDir, file)
+                    break
+                elif file == "file_order.metadata":
+                    fileOrderMetadata = os.path.join(datDir, file)
+        if datInfoJson:
+            readJsonDatInfo(datInfoJson, dirType["newList"])
+        elif fileOrderMetadata:
+            readFileOrderMetadata(fileOrderMetadata, dirType["newList"])
+        else:
+            print("No dat_info.json or file_order.metadata found in " + datDir)
 
 ## Collision Extras
 def setColourByCollisionType(obj):
