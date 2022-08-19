@@ -10,6 +10,7 @@ import bpy
 import numpy as np
 from mathutils import Vector
 
+from .ioUtils import read_uint32
 from ..consts import ADDON_NAME
 
 
@@ -188,7 +189,7 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
             full_path = os.path.join(datDir, filename)
             if os.path.isfile(full_path):
                 name, ext = os.path.splitext(full_path)
-                if len(ext) > 4 or "extracted_files.txt" in full_path:
+                if len(ext) > 4:
                     continue
                 added_file = bpy.context.scene.DatContents.add()
                 added_file.filepath = full_path
@@ -200,7 +201,7 @@ def setExportFieldsFromImportFile(filepath: str) -> None:
             full_path = os.path.join(dttDir, filename)
             if os.path.isfile(full_path):
                 name, ext = os.path.splitext(full_path)
-                if len(ext) > 4 or "extracted_files.txt" in full_path:
+                if len(ext) > 4:
                     continue
                 added_file = bpy.context.scene.DttContents.add()
                 added_file.filepath = full_path
@@ -267,3 +268,32 @@ def setViewportColorTypeToObject():
                     if space.type == 'VIEW_3D':
                         space.shading.type = "SOLID"
                         space.shading.color_type = "OBJECT"
+
+def readJsonDatInfo(filepath: str, contentsList: bpy.types.CollectionProperty):
+    with open(filepath, "r") as f:
+        filesData = json.load(f)
+        for file in filesData["files"]:
+            added_file = contentsList.add()
+            added_file.filepath = os.path.join(os.path.dirname(filepath), file)
+
+def readFileOrderMetadata(filepath: str, contentsList: bpy.types.CollectionProperty):
+    if filepath.endswith("hash_order.metadata"):
+        raise Exception("hash_order.metadata is not supported! Please use 'file_order.metadata' instead.")
+        
+    with open(filepath, "rb") as f:
+        num_files = read_uint32(f)
+        name_length = read_uint32(f)
+        files = []
+        for i in range(num_files):
+            files.append(f.read(name_length).decode("utf-8").strip("\x00"))
+        for file in files:
+            added_file = contentsList.add()
+            added_file.filepath = os.path.join(os.path.dirname(filepath), file)
+
+def saveDatInfo(filepath: str, files: List[str]):
+    with open(filepath, 'w') as f:
+        jsonFiles = {
+            "version": "1.0",
+            "files": files
+        }
+        json.dump(jsonFiles, f, indent=4)

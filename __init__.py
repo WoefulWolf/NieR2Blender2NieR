@@ -43,22 +43,21 @@ class NierObjectMenu(bpy.types.Menu):
         self.layout.operator(DeleteLooseGeometrySelected.bl_idname)
         self.layout.operator(DeleteLooseGeometryAll.bl_idname)
         self.layout.operator(RipMeshByUVIslands.bl_idname)
-        self.layout.operator(CreateLayBoundingBox.bl_idname, icon="CUBE")
+        self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
 
-class CreateLayBoundingBox(bpy.types.Operator):
-    """Create Layout Object Bounding Box"""
-    bl_idname = "n2b.create_lay_bb"
-    bl_label = "Create Layout Object Bounding Box"
+class CreateLayVisualization(bpy.types.Operator):
+    """Create Layout Object Visualization"""
+    bl_idname = "n2b.create_lay_vis"
+    bl_label = "Create Layout Object Visualization"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        from .lay.importer.lay_importer import getModelBoundingBox, createBoundingBoxObject
+        from .lay.importer.lay_importer import updateVisualizationObject
         for obj in bpy.context.selected_objects:
-            boundingBox = getModelBoundingBox(obj.name.split("_")[0], ADDON_NAME)
-            if boundingBox:
-                createBoundingBoxObject(obj, obj.name + "-BoundingBox", bpy.data.collections.get("lay_layAssets"), boundingBox)
-            else:
-                self.report({'WARNING'}, "Couldn't find dtt of " + obj.name)
+            if len(obj.name) <= 6:
+                self.report({"ERROR"}, f"{obj.name} name needs to be at least 6 characters long!")
+                return {"CANCELLED"}
+            updateVisualizationObject(obj, obj.name[:6], True)
         return {'FINISHED'}
 
 def menu_func_import(self, context):
@@ -102,7 +101,7 @@ classes = (
     ExportNierSar,
     ExportNierLay,
     ExportNierGaArea,
-    CreateLayBoundingBox,
+    CreateLayVisualization,
     NierObjectMenu,
     RecalculateObjectIndices,
     RemoveUnusedVertexGroups,
@@ -183,6 +182,10 @@ def initialCheckCustomPanelsEnableDisable(_, __):
 
 @persistent
 def checkOldVersionMigration(_, __):
+    migrateOldWmbCollection()
+    migrateDatDirs()
+
+def migrateOldWmbCollection():
     # check if current file is an old wmb import
     if "hasMigratedToN2B2N" in bpy.context.scene:
         return
@@ -212,6 +215,36 @@ def checkOldVersionMigration(_, __):
     bpy.context.scene["hasMigratedToN2B2N"] = True
 
     print("Migrated scene to new version")
+
+def migrateDatDirs():
+    dirTypes = [
+        {
+            "key": "DatDir",
+            "newList": bpy.context.scene.DatContents
+        },
+        {
+            "key": "DttDir",
+            "newList": bpy.context.scene.DttContents
+        }
+    ]
+    for dirType in dirTypes:
+        if dirType["key"] not in bpy.context.scene or len(dirType["newList"]) > 0:
+            continue
+        datDir = bpy.context.scene[dirType["key"]]
+        datInfoJson = ""
+        fileOrderMetadata = ""
+        for file in os.listdir(datDir):
+                if file == "dat_info.json":
+                    datInfoJson = os.path.join(datDir, file)
+                    break
+                elif file == "file_order.metadata":
+                    fileOrderMetadata = os.path.join(datDir, file)
+        if datInfoJson:
+            readJsonDatInfo(datInfoJson, dirType["newList"])
+        elif fileOrderMetadata:
+            readFileOrderMetadata(fileOrderMetadata, dirType["newList"])
+        else:
+            print("No dat_info.json or file_order.metadata found in " + datDir)
 
 ## Collision Extras
 def setColourByCollisionType(obj):

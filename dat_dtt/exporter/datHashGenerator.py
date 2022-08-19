@@ -43,7 +43,7 @@ class HashData:
             write_Int16(file, fileIndex)
 
 def generateHashData(files) -> bytes:
-    preHashShift = 32 - next_power_of_2_bits(len(files))
+    preHashShift = min(31, 32 - next_power_of_2_bits(len(files)))
     bucketOffsetsSize = 1 << (31 - preHashShift)
     bucketOffsets = [-1] * bucketOffsetsSize
     hashes = [0] * len(files)

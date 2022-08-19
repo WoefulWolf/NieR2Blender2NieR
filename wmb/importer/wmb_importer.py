@@ -16,7 +16,7 @@ def reset_blend():
 		for obj in collection.objects:
 			collection.objects.unlink(obj)
 		bpy.data.collections.remove(collection)
-	for bpy_data_iter in (bpy.data.objects,bpy.data.meshes,bpy.data.lights,bpy.data.cameras):
+	for bpy_data_iter in (bpy.data.objects, bpy.data.meshes, bpy.data.lights, bpy.data.cameras, bpy.data.libraries):
 		for id_data in bpy_data_iter:
 			bpy_data_iter.remove(id_data)
 	for material in bpy.data.materials:
