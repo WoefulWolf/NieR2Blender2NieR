@@ -53,7 +53,7 @@ def generateHashData(files) -> bytes:
 
     # generate hashes
     for i in range(len(files)):
-        fileName = files[i]
+        fileName = os.path.basename(files[i])
         hash = crc32(fileName.lower())
         otherHash = (hash & 0x7FFFFFFF)
         hashes[i] = otherHash
