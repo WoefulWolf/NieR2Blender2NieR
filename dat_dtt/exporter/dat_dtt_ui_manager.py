@@ -106,7 +106,6 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
 
             if datType["showVar"]:
                 box = box.box()
-                row = box.row()
                 if len(datType["contentsVar"]) > 0:
                     columns = int(context.region.width / bpy.context.preferences.system.ui_scale // 150)
                     column = 0
@@ -305,6 +304,10 @@ class ExportAll(bpy.types.Operator):
             exportedFilesCount += 1
         from . import export_dat
         if exportSteps.useDatStep:
+            if len(context.scene.DatContents) == 0:
+                self.report({"ERROR"}, "No DAT contents to export!")
+                print("No DAT contents to export!")
+                return {"CANCELLED"}
             print("Exporting DAT")
             # get files list
             file_list = [item.filepath for item in context.scene.DatContents]
@@ -317,6 +320,10 @@ class ExportAll(bpy.types.Operator):
             export_dat.main(datFilePath, file_list)
             exportedFilesCount += 1
         if exportSteps.useDttStep:
+            if len(context.scene.DttContents) == 0:
+                self.report({"ERROR"}, "No DTT contents to export!")
+                print("No DTT contents to export!")
+                return {"CANCELLED"}
             print("Exporting DTT")
             # get files list
             file_list = [item.filepath for item in context.scene.DttContents]
