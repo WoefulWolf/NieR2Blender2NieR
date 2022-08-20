@@ -240,9 +240,9 @@ class ExportAll(bpy.types.Operator):
                 wtaFilePath = item.filepath
             elif item.filepath.endswith('.col'):
                 colFilePath = item.filepath
-            elif item.filepath == 'Layout.lay':
+            elif item.filepath.endswith('Layout.lay'):
                 layFilePath = item.filepath
-            elif item.filepath == "GAArea.bxm":
+            elif item.filepath.endswith("GAArea.bxm"):
                 gaFilePath = item.filepath
             elif item.filepath.endswith('.sar'):
                 sarFilePath = item.filepath

@@ -54,7 +54,7 @@ class CreateLayVisualization(bpy.types.Operator):
     def execute(self, context):
         from .lay.importer.lay_importer import updateVisualizationObject
         for obj in bpy.context.selected_objects:
-            if len(obj.name) <= 6:
+            if len(obj.name) < 6:
                 self.report({"ERROR"}, f"{obj.name} name needs to be at least 6 characters long!")
                 return {"CANCELLED"}
             updateVisualizationObject(obj, obj.name[:6], True)
