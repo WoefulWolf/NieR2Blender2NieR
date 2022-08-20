@@ -87,7 +87,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
     bl_label = "Import DAT Data"
     bl_options = {'PRESET'}
     filename_ext = ".dat"
-    filter_glob: StringProperty(default="*.dat", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*.dat;*.eff;*.evn", options={'HIDDEN'})
 
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
     bulk_import: bpy.props.BoolProperty(name="Bulk Import All DTT/DATs In Folder (Experimental)", default=False)
@@ -96,12 +96,13 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
     def doImport(self, onlyExtract, filepath):
         head = os.path.split(filepath)[0]
         tail = os.path.split(filepath)[1]
+        ext = tail[-4:]
         tailless_tail = tail[:-4]
-        dat_filepath = os.path.join(head, tailless_tail + '.dat')
+        dat_filepath = os.path.join(head, tailless_tail + ext)
         extract_dir = os.path.join(head, 'nier2blender_extracted')
         from . import dat_unpacker
         if os.path.isfile(dat_filepath):
-            dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + '.dat'), dat_filepath)   # dat
+            dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + ext), dat_filepath)   # dat
 
         if onlyExtract:
             return {'FINISHED'}
@@ -130,7 +131,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         if self.bulk_import:
             folder = os.path.split(self.filepath)[0]
             for filename in os.listdir(folder):
-                if filename[-4:] == '.dat':
+                if filename[-4:] in {'.dat', '.eff', '.evn'}:
                     try:
                         filepath = os.path.join(folder, filename)
                         self.doImport(self.only_extract, filepath)
