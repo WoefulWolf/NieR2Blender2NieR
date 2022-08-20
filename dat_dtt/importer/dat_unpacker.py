@@ -84,7 +84,7 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 def get_all_files(path):
 	pass
 
-def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
+def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset, extension):
 	create_dir(extract_dir)
 
 	# file_order.metadata
@@ -100,7 +100,8 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	# Write filenames to json
 	saveDatInfo(
 		extract_dir + '/dat_info.json',
-		[file.decode('utf-8').rstrip('\x00') for file in fileNames]
+		[file.decode('utf-8').rstrip('\x00') for file in fileNames],
+		extension
 	)
 
 	# hash_data.metadata
@@ -144,7 +145,7 @@ def main(filename, extract_dir, ROOT_DIR):
 					extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
 					extractedFiles += 1
 			
-			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset)
+			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset, os.path.splitext(filename)[1][1:])
 			print(f"[+] {extractedFiles} files extracted from {filename}")
 	if (FileCount):
 		return Filename

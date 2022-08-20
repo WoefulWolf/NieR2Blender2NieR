@@ -5,6 +5,7 @@ import json
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
+from ...consts import DAT_EXTENSIONS
 from ...utils.ioUtils import read_uint32
 
 from ...utils.util import readFileOrderMetadata, readJsonDatInfo, saveDatInfo, triangulate_meshes, centre_origins, ShowMessageBox
@@ -74,13 +75,15 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
         
         datTypes = [
             {
-                "name": "dat",
+                "name": context.scene.DatExtension,
+                "type": "dat",
                 "showVarName": "ShowDatContents",
                 "showVar": context.scene.ShowDatContents,
                 "contentsVar": context.scene.DatContents
             },
             {
                 "name": "dtt",
+                "type": "dtt",
                 "showVarName": "ShowDttContents",
                 "showVar": context.scene.ShowDttContents,
                 "contentsVar": context.scene.DttContents
@@ -99,10 +102,10 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
             subRow = row.row(align=True)
             subRow.scale_x = 1.1
             subRow.scale_y = 1.05
-            subRow.operator(AddDatDttContentsFile.bl_idname, text="", icon="FILE_NEW").type = datType["name"]
-            subRow.operator(ImportDatDttContentsFile.bl_idname, text="", icon="FILE_FOLDER").type = datType["name"]
+            subRow.operator(AddDatDttContentsFile.bl_idname, text="", icon="FILE_NEW").type = datType["type"]
+            subRow.operator(ImportDatDttContentsFile.bl_idname, text="", icon="FILE_FOLDER").type = datType["type"]
             if len(datType["contentsVar"]) > 0:
-                subRow.operator(ClearDatDttAllContentsOperator.bl_idname, text="", icon="X").type = datType["name"]
+                subRow.operator(ClearDatDttAllContentsOperator.bl_idname, text="", icon="X").type = datType["type"]
 
             if datType["showVar"]:
                 box = box.box()
@@ -116,7 +119,7 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
                         cell.operator(ShowFullFilePath.bl_idname, emboss=False, text=os.path.basename(file.filepath)).filepath = file.filepath
                         remove_op = cell.operator("na.remove_datdtt_file", icon="X", text="")
                         remove_op.filepath = file.filepath
-                        remove_op.type = datType["name"]
+                        remove_op.type = datType["type"]
                         column += 1
                 else:
                     row = box.row()
@@ -189,23 +192,25 @@ class SelectFolder(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
-        if self.target == "dat":
-            context.scene.DatDir = directory
-            if directory.endswith(".dtt"):
-                self.report({'WARNING'}, "DTT directory selected, this field is for the DAT directory")
-            elif not context.scene.DttDir and directory.endswith(".dat"):
-                context.scene.DttDir = directory[:-4] + ".dtt"
-            if not context.scene.ExportFileName:
-                bpy.ops.na.get_base_name()
-        elif self.target == "dtt":
-            context.scene.DttDir = directory
-            if directory.endswith(".dat"):
-                self.report({'WARNING'}, "DAT directory selected, this field is for the DTT directory")
-            elif not context.scene.DatDir and directory.endswith(".dtt"):
-                context.scene.DatDir = directory[:-4] + ".dat"
-            if not context.scene.ExportFileName:
-                bpy.ops.na.get_base_name()
-        elif self.target == "datdttdir":
+        ext = os.path.splitext(self.filepath)[1]
+        # if self.target == "dat":
+        #     context.scene.DatDir = directory
+        #     if ext == ".dtt":
+        #         self.report({'WARNING'}, "DTT directory selected, this field is for the DAT directory")
+        #     # elif not context.scene.DttDir and directory.endswith(".dat"):
+        #         # context.scene.DttDir = directory[:-4] + ".dtt"
+        #     elif not context.scene.DttCon
+        #     if not context.scene.ExportFileName:
+        #         bpy.ops.na.get_base_name()
+        # elif self.target == "dtt":
+        #     context.scene.DttDir = directory
+        #     if ext in DAT_EXTENSIONS:
+        #         self.report({'WARNING'}, "DAT directory selected, this field is for the DTT directory")
+        #     # elif not context.scene.DatDir and directory.endswith(".dtt"):
+        #         # context.scene.DatDir = directory[:-4] + ".dat"
+        #     if not context.scene.ExportFileName:
+        #         bpy.ops.na.get_base_name()
+        if self.target == "datdttdir":
             context.scene.DatDttExportDir = directory
         else:
             print("Invalid target", self.target)
@@ -225,6 +230,7 @@ class ExportAll(bpy.types.Operator):
         exportSteps: ExportAllSteps = context.scene.ExportAllSteps
         baseFilename = context.scene.ExportFileName
         datDttExportDir = context.scene.DatDttExportDir
+        datExt = context.scene.DatExtension
         if not datDttExportDir and (exportSteps.useDatStep or exportSteps.useDttStep):
             self.report({"ERROR"}, "Missing DAT/DTT Export Directory!")
             return {"CANCELLED"}
@@ -253,7 +259,7 @@ class ExportAll(bpy.types.Operator):
             elif item.filepath.endswith('.wtp'):
                 wtpFilePath = item.filepath        
 
-        datFilePath = os.path.join(datDttExportDir, baseFilename + ".dat")
+        datFilePath = os.path.join(datDttExportDir, baseFilename + datExt)
         dttFilePath = os.path.join(datDttExportDir, baseFilename + ".dtt")
 
         from ...wmb.exporter import wmb_exporter
@@ -315,7 +321,7 @@ class ExportAll(bpy.types.Operator):
             # save info file
             datInfoFilePath = os.path.join(os.path.dirname(file_list[0]), "dat_info.json")
             fileNames = [os.path.basename(file_path) for file_path in file_list]
-            saveDatInfo(datInfoFilePath, fileNames)
+            saveDatInfo(datInfoFilePath, fileNames, context.scene.DatExtension)
             # export dtt
             export_dat.main(datFilePath, file_list)
             exportedFilesCount += 1
@@ -331,7 +337,7 @@ class ExportAll(bpy.types.Operator):
             # save info file
             datInfoFilePath = os.path.join(os.path.dirname(file_list[0]), "dat_info.json")
             fileNames = [os.path.basename(file_path) for file_path in file_list]
-            saveDatInfo(datInfoFilePath, fileNames)
+            saveDatInfo(datInfoFilePath, fileNames, "dtt")
             # export dtt
             export_dat.main(dttFilePath, file_list)
             exportedFilesCount += 1
@@ -492,7 +498,7 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
                 self.report({"WARNING"}, "You selected a DTT folder, but the contents will be added to the DAT file")
         elif self.type == "dtt":
             contentsList = context.scene.DttContents
-            if dirname.endswith(".dat"):
+            if dirname[-4:] in DAT_EXTENSIONS:
                 self.report({"WARNING"}, "You selected a DAT folder, but the contents will be added to the DTT file")
         else:
             raise Exception("Invalid type")
@@ -501,6 +507,7 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
         contentsList.clear()
 
         # Parse the appropriate file and add files to contents
+        extension: str = None
         root, ext = os.path.splitext(filepath)
         if isDir:
             # search for metadata or json file
@@ -513,16 +520,20 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
                 elif file == "file_order.metadata":
                     fileOrderMetadata = os.path.join(filepath, file)
             if datInfoJson:
-                readJsonDatInfo(datInfoJson, contentsList)
+                extension = readJsonDatInfo(datInfoJson, contentsList)
             elif fileOrderMetadata:
-                readFileOrderMetadata(fileOrderMetadata, contentsList)
+                extension = readFileOrderMetadata(fileOrderMetadata, contentsList)
             else:
                 self.report({"ERROR"}, "No 'file_order.metadata' or 'dat_info.json' file found in directory!")
                 return {"FINISHED"}
         elif ext == ".json":
-            readJsonDatInfo(filepath, contentsList)
+            extension = readJsonDatInfo(filepath, contentsList)
         elif ext == ".metadata":
-            readFileOrderMetadata(filepath, contentsList)
+            extension = readFileOrderMetadata(filepath, contentsList)
+        
+        if self.type == "dat":
+            context.scene.DatExtension = extension if extension else "dat"
+
         return {"FINISHED"}
 
 class FilePathProp(bpy.types.PropertyGroup):
@@ -566,6 +577,10 @@ def register():
     )
     bpy.types.Scene.DatContents = bpy.props.CollectionProperty(
         type = FilePathProp
+    )
+    bpy.types.Scene.DatExtension = bpy.props.StringProperty(
+        name = "Dat Extension",
+        default = "dat",
     )
     bpy.types.Scene.ShowDttContents = bpy.props.BoolProperty (
         name = "Dtt Contents",

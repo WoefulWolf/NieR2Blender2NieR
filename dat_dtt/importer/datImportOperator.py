@@ -4,11 +4,12 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ...consts import DAT_EXTENSIONS
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
 
-def importDat(only_extract, filepath):
+def importDtt(only_extract, filepath):
     head = os.path.split(filepath)[0]
     tail = os.path.split(filepath)[1]
     tailless_tail = tail[:-4]
@@ -73,13 +74,13 @@ class ImportNierDtt(bpy.types.Operator, ImportHelper):
                 if filename[-4:] == '.dtt':
                     try:
                         filepath = os.path.join(folder, filename)
-                        importDat(self.only_extract, filepath)
+                        importDtt(self.only_extract, filepath)
                     except:
                         print('ERROR: FAILED TO IMPORT', filename)
             return {'FINISHED'}
 
         else:
-            return importDat(self.only_extract, self.filepath)
+            return importDtt(self.only_extract, self.filepath)
 
 class ImportNierDat(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DAT File.'''
@@ -87,7 +88,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
     bl_label = "Import DAT Data"
     bl_options = {'PRESET'}
     filename_ext = ".dat"
-    filter_glob: StringProperty(default="*.dat;*.eff;*.evn", options={'HIDDEN'})
+    filter_glob: StringProperty(default=";".join([f"*{ext}" for ext in DAT_EXTENSIONS]), options={'HIDDEN'})
 
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
     bulk_import: bpy.props.BoolProperty(name="Bulk Import All DTT/DATs In Folder (Experimental)", default=False)
@@ -131,7 +132,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         if self.bulk_import:
             folder = os.path.split(self.filepath)[0]
             for filename in os.listdir(folder):
-                if filename[-4:] in {'.dat', '.eff', '.evn'}:
+                if filename[-4:] in DAT_EXTENSIONS:
                     try:
                         filepath = os.path.join(folder, filename)
                         self.doImport(self.only_extract, filepath)

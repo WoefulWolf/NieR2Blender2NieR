@@ -11,7 +11,7 @@ import numpy as np
 from mathutils import Vector
 
 from .ioUtils import read_uint32
-from ..consts import ADDON_NAME
+from ..consts import ADDON_NAME, DAT_EXTENSIONS
 
 
 class Vector3(object):
@@ -179,11 +179,13 @@ def centre_origins(collection: str):
 def setExportFieldsFromImportFile(filepath: str) -> None:
     head = os.path.split(filepath)[0]
     tail = os.path.split(filepath)[1]
+    datExt = ".dat" if tail.endswith("dtt") else os.path.splitext(tail)[1]
     tailless_tail = tail[:-4]
     extract_dir = os.path.join(head, 'nier2blender_extracted')
 
-    datDir = os.path.join(extract_dir, tailless_tail + '.dat')
-    if os.path.isdir(datDir):
+    datDir = os.path.join(extract_dir, tailless_tail + datExt)
+    if os.path.isdir(datDir) and datExt in DAT_EXTENSIONS:
+        bpy.context.scene.DatExtension = datExt[1:]
         bpy.context.scene.DatContents.clear()
         for filename in os.listdir(datDir):
             full_path = os.path.join(datDir, filename)
@@ -272,9 +274,15 @@ def setViewportColorTypeToObject():
 def readJsonDatInfo(filepath: str, contentsList: bpy.types.CollectionProperty):
     with open(filepath, "r") as f:
         filesData = json.load(f)
-        for file in filesData["files"]:
-            added_file = contentsList.add()
-            added_file.filepath = os.path.join(os.path.dirname(filepath), file)
+    for file in filesData["files"]:
+        added_file = contentsList.add()
+        added_file.filepath = os.path.join(os.path.dirname(filepath), file)
+    if "ext" in filesData:
+        if filesData["ext"] != "dtt":
+            bpy.context.scene.DatExtension = filesData["ext"].lower()
+    elif not os.path.dirname(filepath).endswith(".dtt"):
+        bpy.context.scene.DatExtension = "dat"
+        
 
 def readFileOrderMetadata(filepath: str, contentsList: bpy.types.CollectionProperty):
     if filepath.endswith("hash_order.metadata"):
@@ -290,10 +298,11 @@ def readFileOrderMetadata(filepath: str, contentsList: bpy.types.CollectionPrope
             added_file = contentsList.add()
             added_file.filepath = os.path.join(os.path.dirname(filepath), file)
 
-def saveDatInfo(filepath: str, files: List[str]):
+def saveDatInfo(filepath: str, files: List[str], ext: str):
     with open(filepath, 'w') as f:
         jsonFiles = {
-            "version": "1.0",
-            "files": files
+            "version": 1,
+            "files": files,
+            "ext": ext.lower()
         }
         json.dump(jsonFiles, f, indent=4)
