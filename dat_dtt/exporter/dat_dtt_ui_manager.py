@@ -259,7 +259,7 @@ class ExportAll(bpy.types.Operator):
             elif item.filepath.endswith('.wtp'):
                 wtpFilePath = item.filepath        
 
-        datFilePath = os.path.join(datDttExportDir, baseFilename + datExt)
+        datFilePath = os.path.join(datDttExportDir, baseFilename + "." + datExt)
         dttFilePath = os.path.join(datDttExportDir, baseFilename + ".dtt")
 
         from ...wmb.exporter import wmb_exporter
@@ -507,7 +507,6 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
         contentsList.clear()
 
         # Parse the appropriate file and add files to contents
-        extension: str = None
         root, ext = os.path.splitext(filepath)
         if isDir:
             # search for metadata or json file
@@ -520,20 +519,17 @@ class ImportDatDttContentsFile(bpy.types.Operator, ImportHelper):
                 elif file == "file_order.metadata":
                     fileOrderMetadata = os.path.join(filepath, file)
             if datInfoJson:
-                extension = readJsonDatInfo(datInfoJson, contentsList)
+                readJsonDatInfo(datInfoJson, contentsList)
             elif fileOrderMetadata:
-                extension = readFileOrderMetadata(fileOrderMetadata, contentsList)
+                readFileOrderMetadata(fileOrderMetadata, contentsList)
             else:
                 self.report({"ERROR"}, "No 'file_order.metadata' or 'dat_info.json' file found in directory!")
                 return {"FINISHED"}
         elif ext == ".json":
-            extension = readJsonDatInfo(filepath, contentsList)
+            readJsonDatInfo(filepath, contentsList)
         elif ext == ".metadata":
-            extension = readFileOrderMetadata(filepath, contentsList)
+            readFileOrderMetadata(filepath, contentsList)
         
-        if self.type == "dat":
-            context.scene.DatExtension = extension if extension else "dat"
-
         return {"FINISHED"}
 
 class FilePathProp(bpy.types.PropertyGroup):
