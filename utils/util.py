@@ -176,39 +176,30 @@ def centre_origins(collection: str):
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             obj.select_set(False)
 
-def setExportFieldsFromImportFile(filepath: str) -> None:
-    head = os.path.split(filepath)[0]
-    tail = os.path.split(filepath)[1]
-    datExt = ".dat" if tail.endswith("dtt") else os.path.splitext(tail)[1]
-    tailless_tail = tail[:-4]
-    extract_dir = os.path.join(head, 'nier2blender_extracted')
-
-    datDir = os.path.join(extract_dir, tailless_tail + datExt)
-    if os.path.isdir(datDir) and datExt in DAT_EXTENSIONS:
-        bpy.context.scene.DatExtension = datExt[1:]
-        bpy.context.scene.DatContents.clear()
-        for filename in os.listdir(datDir):
-            full_path = os.path.join(datDir, filename)
-            if os.path.isfile(full_path):
-                name, ext = os.path.splitext(full_path)
-                if len(ext) > 4:
-                    continue
-                added_file = bpy.context.scene.DatContents.add()
-                added_file.filepath = full_path
-
-    dttDir = os.path.join(extract_dir, tailless_tail + '.dtt')
-    if os.path.isdir(dttDir):
-        bpy.context.scene.DttContents.clear()
-        for filename in os.listdir(dttDir):
-            full_path = os.path.join(dttDir, filename)
-            if os.path.isfile(full_path):
-                name, ext = os.path.splitext(full_path)
-                if len(ext) > 4:
-                    continue
-                added_file = bpy.context.scene.DttContents.add()
-                added_file.filepath = full_path
-
-    bpy.context.scene.ExportFileName = tailless_tail
+def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
+    dir = os.path.dirname(filepath)
+    if isDatImport:
+        filename = os.path.basename(filepath)
+        basename, ext = os.path.splitext(filename)
+        datExt = ext if ext in DAT_EXTENSIONS else ".dat"
+        datExtractedDir = os.path.join(dir, "nier2blender_extracted", basename + datExt)
+        dttExtraDir = os.path.join(dir, "nier2blender_extracted", basename + ".dtt")
+    else:
+        filename = os.path.basename(dir)
+        basename, ext = os.path.splitext(filename)
+        datExt = ext if ext in DAT_EXTENSIONS else ".dat"
+        parentDir = os.path.dirname(dir)
+        if ext == ".dtt" or ext in DAT_EXTENSIONS:
+            datExtractedDir = os.path.join(parentDir, basename + ".dat")
+            dttExtraDir = os.path.join(parentDir, basename + ".dtt")
+        else:
+            print("Unknown DAT folder type")
+            return
+    
+    if os.path.exists(datExtractedDir):
+        importContentsFileFromFolder(datExtractedDir, bpy.context.scene.DatContents)
+    if os.path.exists(dttExtraDir):
+        importContentsFileFromFolder(dttExtraDir, bpy.context.scene.DttContents)
 
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
@@ -271,18 +262,53 @@ def setViewportColorTypeToObject():
                         space.shading.type = "SOLID"
                         space.shading.color_type = "OBJECT"
 
+def importContentsFileFromFolder(folderPath: str, contentsList: bpy.types.CollectionProperty) -> bool:
+    # search for metadata or json file
+    datInfoJson = ""
+    fileOrderMetadata = ""
+    for file in os.listdir(folderPath):
+        if file == "dat_info.json":
+            datInfoJson = os.path.join(folderPath, file)
+            break
+        elif file == "file_order.metadata":
+            fileOrderMetadata = os.path.join(folderPath, file)
+    if datInfoJson:
+        readJsonDatInfo(datInfoJson, contentsList)
+    elif fileOrderMetadata:
+        readFileOrderMetadata(fileOrderMetadata, contentsList)
+    else:
+        return False
+    return True
+
+def getFileSortingKey(file: str):
+    base, ext = os.path.splitext(file)
+    return (base.lower(), ext.lower())
+
 def readJsonDatInfo(filepath: str, contentsList: bpy.types.CollectionProperty):
     with open(filepath, "r") as f:
         filesData = json.load(f)
+    files = []
+    dir = os.path.dirname(filepath)
     for file in filesData["files"]:
+        files.append(os.path.join(dir, file))
+    # remove duplicates and sort
+    files = list(set(files))
+    files.sort(key=getFileSortingKey)
+    
+    for file in files:
         added_file = contentsList.add()
-        added_file.filepath = os.path.join(os.path.dirname(filepath), file)
+        added_file.filepath = file
+    
+    # some old dev versions don't have these properties, for backwards compatibility
+    if "basename" in filesData:
+        bpy.context.scene.ExportFileName = filesData["basename"]
+    else:
+        bpy.context.scene.ExportFileName = os.path.splitext(os.path.basename(dir))[0]
     if "ext" in filesData:
         if filesData["ext"] != "dtt":
             bpy.context.scene.DatExtension = filesData["ext"].lower()
     elif not os.path.dirname(filepath).endswith(".dtt"):
         bpy.context.scene.DatExtension = "dat"
-        
 
 def readFileOrderMetadata(filepath: str, contentsList: bpy.types.CollectionProperty):
     if filepath.endswith("hash_order.metadata"):
@@ -294,15 +320,28 @@ def readFileOrderMetadata(filepath: str, contentsList: bpy.types.CollectionPrope
         files = []
         for i in range(num_files):
             files.append(f.read(name_length).decode("utf-8").strip("\x00"))
+        # remove duplicates and sort
+        files = list(set(files))
+        files.sort(key=getFileSortingKey)
+
         for file in files:
             added_file = contentsList.add()
             added_file.filepath = os.path.join(os.path.dirname(filepath), file)
+    
+    ext = os.path.splitext(filepath)[1]
+    if ext == ".dtt" or ext in DAT_EXTENSIONS:
+        bpy.context.scene.DatExtension = ext[1:]
+        bpy.context.scene.ExportFileName = os.path.basename(filepath)[:-4]
 
-def saveDatInfo(filepath: str, files: List[str], ext: str):
+def saveDatInfo(filepath: str, files: List[str], filename: str):
+    files = list(set(files))
+    files.sort(key=getFileSortingKey)
+    base, ext = os.path.splitext(filename)
     with open(filepath, 'w') as f:
         jsonFiles = {
             "version": 1,
             "files": files,
-            "ext": ext.lower()
+            "basename": base,
+            "ext": ext[1:]
         }
         json.dump(jsonFiles, f, indent=4)

@@ -234,20 +234,9 @@ def migrateDatDirs():
         if dirType["key"] not in bpy.context.scene or len(dirType["newList"]) > 0:
             continue
         datDir = bpy.context.scene[dirType["key"]]
-        datInfoJson = ""
-        fileOrderMetadata = ""
-        for file in os.listdir(datDir):
-                if file == "dat_info.json":
-                    datInfoJson = os.path.join(datDir, file)
-                    break
-                elif file == "file_order.metadata":
-                    fileOrderMetadata = os.path.join(datDir, file)
-        if datInfoJson:
-            readJsonDatInfo(datInfoJson, dirType["newList"])
-        elif fileOrderMetadata:
-            readFileOrderMetadata(fileOrderMetadata, dirType["newList"])
-        else:
-            print("No dat_info.json or file_order.metadata found in " + datDir)
+        if os.path.isdir(datDir):
+            if not importContentsFileFromFolder(datDir, dirType["newList"]):
+                print("No dat_info.json or file_order.metadata found in " + datDir)
 
 ## Collision Extras
 def setColourByCollisionType(obj):

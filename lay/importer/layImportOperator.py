@@ -16,6 +16,6 @@ class ImportNierLay(bpy.types.Operator, ImportHelper):
     def execute(self, context):
         from . import lay_importer
 
-        setExportFieldsFromImportFile(self.filepath)
+        setExportFieldsFromImportFile(self.filepath, False)
 
         return lay_importer.main(self.filepath)

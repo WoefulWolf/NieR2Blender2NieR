@@ -91,7 +91,7 @@ def importEntities(action: ET.Element, color: List[float], prefix: str) -> None:
 
 	for i, entity in enumerate(action.find("layouts").find("normal").find("layouts").findall("value")):
 		entityId = entity.find("id").text
-		loc = xmlVecToVec3(entity.find("location").find("position").text)
+		loc = xmlVecToVec3(entity.find("location").find("position").text) if entity.find("location").find("position") is not None else (0, 0, 0)
 		rot = xmlVecToVec3(entity.find("location").find("rotation").text) if entity.find("location").find("rotation") is not None else (0, 0, 0)
 		scale = xmlVecToVec3(entity.find("scale").text) if entity.find("scale") is not None else (1, 1, 1)
 		entityObjId = entity.find("objId").text if entity.find("objId") is not None else entity.find("objID").text

@@ -27,15 +27,15 @@ def importDtt(only_extract, filepath):
     if not os.path.exists(wmb_filepath):
         wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4] + '.wmb')                     # if not in dtt, then must be in dat
 
-    # WMB
-    from ...wmb.importer import wmb_importer
-    wmb_importer.main(only_extract, wmb_filepath)
-
     if only_extract:
         return {'FINISHED'}
 
-    setExportFieldsFromImportFile(filepath)
+    setExportFieldsFromImportFile(filepath, True)
     enableVisibilitySelector()
+
+    # WMB
+    from ...wmb.importer import wmb_importer
+    wmb_importer.main(only_extract, wmb_filepath)
 
     # COL
     col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
@@ -108,7 +108,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         if onlyExtract:
             return {'FINISHED'}
 
-        setExportFieldsFromImportFile(filepath)
+        setExportFieldsFromImportFile(filepath, True)
 
         # COL
         col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
