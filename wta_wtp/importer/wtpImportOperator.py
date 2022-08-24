@@ -52,14 +52,15 @@ class WTAData:
 
         self.data = wtpFile.read()
 
-    def extract_textures(self, wtaPath):
+        self.wtaPath = f.name
+
+    def extract_textures(self, extractionDir):
         count = 0
-        fileName = os.path.basename(wtaPath)
-        dir = os.path.dirname(wtaPath)
-        extractionDir = os.path.join(dir, "nier2blender_extracted", fileName, "textures")
+        fileName = os.path.basename(self.wtaPath)
+        dir = os.path.dirname(self.wtaPath)
         for i in range(self.num_files):
             os.makedirs(extractionDir, exist_ok=True)
-            with open(os.path.join(extractionDir, f"{i}.dds"), "wb") as f:
+            with open(os.path.join(extractionDir, f"{self.idx[i]:0>8X}.dds"), "wb") as f:
                 f.write(self.data[self.offsets[i]:self.offsets[i]+self.sizes[i]])
             count += 1
         return count
@@ -82,23 +83,29 @@ class ExtractNierWtaWtp(bpy.types.Operator, ImportHelper):
             for wtaPath in os.listdir(dir):
                 if not wtaPath.endswith(".wta"):
                     continue
-                extractedDdsCount += self.extractFromWta(os.path.join(dir, wtaPath))
+                full_wtaPath = os.path.join(dir, wtaPath)
+                full_wtpPath = full_wtaPath[:-4] + ".wtp"
+                extractDir = os.path.join(dir, "nier2blender_extracted", os.path.basename(wtaPath), "textures")
+                extractedDdsCount += extractFromWta(full_wtaPath, full_wtpPath, extractDir)
                 extractedWtpCount += 1
             print(f"Extracted {extractedDdsCount} DDS files and {extractedWtpCount} WTP files")
         else:
-            extractedDdsCount = self.extractFromWta(self.filepath)
+            dir = os.path.dirname(self.filepath)
+            full_wtaPath = self.filepath
+            full_wtpPath = full_wtaPath[:-4] + ".wtp"
+            extractDir = os.path.join(dir, "nier2blender_extracted", os.path.basename(self.filepath), "textures")
+            extractedDdsCount = extractFromWta(full_wtaPath, full_wtpPath, extractDir)
             print(f"Extracted {extractedDdsCount} DDS files")
         
         self.report({'INFO'}, f"{extractedDdsCount} textures extracted")
 
         return {'FINISHED'}
 
-    def extractFromWta(self, wtaPath) -> int:
-        wtpPath = wtaPath[:-4] + ".wtp"
-        with (
-            open(wtaPath, "rb") as wtaFile,
-            open(wtpPath, "rb") as wtpFile
-        ):
-            wta = WTAData(wtaFile, wtpFile)
-        extractedCount = wta.extract_textures(wtaPath)
-        return extractedCount
+def extractFromWta(wtaPath, wtpPath, extractDir) -> int:
+    with (
+        open(wtaPath, "rb") as wtaFile,
+        open(wtpPath, "rb") as wtpFile
+    ):
+        wta = WTAData(wtaFile, wtpFile)
+    extractedCount = wta.extract_textures(extractDir)
+    return extractedCount
