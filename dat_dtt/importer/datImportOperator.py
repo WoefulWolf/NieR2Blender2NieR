@@ -27,6 +27,14 @@ def importDtt(only_extract, filepath):
     if not os.path.exists(wmb_filepath):
         wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4] + '.wmb')                     # if not in dtt, then must be in dat
 
+    # WTA/WTP
+    wtaPath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wta')
+    wtpPath = os.path.join(extract_dir, tailless_tail + '.dtt', tailless_tail + '.wtp')
+    if os.path.isfile(wtaPath) and os.path.isfile(wtpPath):
+        texturesExtractDir = os.path.join(extract_dir, tailless_tail + '.dtt', "textures")
+        from ...wta_wtp.importer import wtpImportOperator
+        wtpImportOperator.extractFromWta(wtaPath, wtpPath, texturesExtractDir)
+
     if only_extract:
         return {'FINISHED'}
 
