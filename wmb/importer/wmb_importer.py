@@ -576,9 +576,11 @@ def get_wmb_material(wmb, texture_dir):
 							if not os.path.exists(os.path.join(texture_dir, identifier + '.dds')):
 								create_dir(texture_dir)
 								texture_fp = open(os.path.join(texture_dir, identifier + '.dds'), "wb")
-								print('[+] dumping %s.dds'% identifier)
+								print('[+] could not find DDS texture, trying to find it in WTA; %s.dds'% identifier)
 								texture_fp.write(texture_stream)
 								texture_fp.close()
+							else:
+								print('[+] Found %s.dds'% identifier)
 					except:
 						continue
 				materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
