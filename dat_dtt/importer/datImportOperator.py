@@ -4,13 +4,12 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+from ...consts import DAT_EXTENSIONS
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
-from ...consts import ADDON_NAME
 
-
-def importDat(only_extract, filepath):
+def importDtt(only_extract, filepath):
     head = os.path.split(filepath)[0]
     tail = os.path.split(filepath)[1]
     tailless_tail = tail[:-4]
@@ -28,15 +27,23 @@ def importDat(only_extract, filepath):
     if not os.path.exists(wmb_filepath):
         wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4] + '.wmb')                     # if not in dtt, then must be in dat
 
-    # WMB
-    from ...wmb.importer import wmb_importer
-    wmb_importer.main(only_extract, wmb_filepath)
+    # WTA/WTP
+    wtaPath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wta')
+    wtpPath = os.path.join(extract_dir, tailless_tail + '.dtt', tailless_tail + '.wtp')
+    if os.path.isfile(wtaPath) and os.path.isfile(wtpPath):
+        texturesExtractDir = os.path.join(extract_dir, tailless_tail + '.dtt', "textures")
+        from ...wta_wtp.importer import wtpImportOperator
+        wtpImportOperator.extractFromWta(wtaPath, wtpPath, texturesExtractDir)
 
     if only_extract:
         return {'FINISHED'}
 
-    setExportFieldsFromImportFile(filepath)
+    setExportFieldsFromImportFile(filepath, True)
     enableVisibilitySelector()
+
+    # WMB
+    from ...wmb.importer import wmb_importer
+    wmb_importer.main(only_extract, wmb_filepath)
 
     # COL
     col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
@@ -49,7 +56,7 @@ def importDat(only_extract, filepath):
     lay_filepath = os.path.join(extract_dir, tailless_tail + '.dat', 'Layout.lay')
     if os.path.isfile(lay_filepath):
         from ...lay.importer import lay_importer
-        lay_importer.main(lay_filepath, ADDON_NAME)
+        lay_importer.main(lay_filepath)
 
     return {'FINISHED'}
 
@@ -75,13 +82,13 @@ class ImportNierDtt(bpy.types.Operator, ImportHelper):
                 if filename[-4:] == '.dtt':
                     try:
                         filepath = os.path.join(folder, filename)
-                        importDat(self.only_extract, filepath)
+                        importDtt(self.only_extract, filepath)
                     except:
                         print('ERROR: FAILED TO IMPORT', filename)
             return {'FINISHED'}
 
         else:
-            return importDat(self.only_extract, self.filepath)
+            return importDtt(self.only_extract, self.filepath)
 
 class ImportNierDat(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DAT File.'''
@@ -89,7 +96,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
     bl_label = "Import DAT Data"
     bl_options = {'PRESET'}
     filename_ext = ".dat"
-    filter_glob: StringProperty(default="*.dat", options={'HIDDEN'})
+    filter_glob: StringProperty(default=";".join([f"*{ext}" for ext in DAT_EXTENSIONS]), options={'HIDDEN'})
 
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
     bulk_import: bpy.props.BoolProperty(name="Bulk Import All DTT/DATs In Folder (Experimental)", default=False)
@@ -98,17 +105,18 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
     def doImport(self, onlyExtract, filepath):
         head = os.path.split(filepath)[0]
         tail = os.path.split(filepath)[1]
+        ext = tail[-4:]
         tailless_tail = tail[:-4]
-        dat_filepath = os.path.join(head, tailless_tail + '.dat')
+        dat_filepath = os.path.join(head, tailless_tail + ext)
         extract_dir = os.path.join(head, 'nier2blender_extracted')
         from . import dat_unpacker
         if os.path.isfile(dat_filepath):
-            dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + '.dat'), dat_filepath)   # dat
+            dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + ext), dat_filepath)   # dat
 
         if onlyExtract:
             return {'FINISHED'}
 
-        setExportFieldsFromImportFile(filepath)
+        setExportFieldsFromImportFile(filepath, True)
 
         # COL
         col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
@@ -121,7 +129,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         lay_filepath = os.path.join(extract_dir, tailless_tail + '.dat', 'Layout.lay')
         if os.path.isfile(lay_filepath):
             from ...lay.importer import lay_importer
-            lay_importer.main(lay_filepath, ADDON_NAME)
+            lay_importer.main(lay_filepath)
 
         return {'FINISHED'}
 
@@ -132,7 +140,7 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         if self.bulk_import:
             folder = os.path.split(self.filepath)[0]
             for filename in os.listdir(folder):
-                if filename[-4:] == '.dat':
+                if filename[-4:] in DAT_EXTENSIONS:
                     try:
                         filepath = os.path.join(folder, filename)
                         self.doImport(self.only_extract, filepath)

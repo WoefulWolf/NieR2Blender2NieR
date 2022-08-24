@@ -1,11 +1,15 @@
+from __future__ import annotations
 import math
+from time import time
 
 from ...utils.ioUtils import to_string, read_float, read_uint32
 from .lay import Lay
 from ...utils.util import *
 
 
-def main(layFilePath, addonName):
+def main(layFilePath):
+    t1 = time()
+
     with open(layFilePath, "rb") as layFile:
         print("Parsing Lay file...", layFilePath)
         lay = Lay(layFile)
@@ -42,18 +46,18 @@ def main(layFilePath, addonName):
     for asset in lay.assets:
         assetName = asset.name
         print("Placing asset", assetName)
-        boundingBox = getModelBoundingBox(assetName.split("_")[0], addonName)
-        assetObj = createLayObject(assetName, layAssetsCollection, assetRootNode, asset.position, asset.rotation, asset.scale, boundingBox)
+        assetObj = createLayObject(assetName, layAssetsCollection, assetRootNode, asset.position, asset.rotation, asset.scale)
         assetObj["unknownIndex"] = asset.unknownIndex
         assetObj["null1"] = asset.null1
         for instance in asset.instances:
             instanceName = assetName + "-Instance"
-            createLayObject(instanceName, layInstancesCollection, instanceRootNode, instance.position, instance.rotation, instance.scale, boundingBox)
+            createLayObject(instanceName, layInstancesCollection, instanceRootNode, instance.position, instance.rotation, instance.scale)
 
-    print('Importing finished. ;)')
+    tD = time() - t1
+    print(f"Importing finished in {tD:.1}s ;)")
     return {'FINISHED'}
 
-def createLayObject(name, collection, parent, pos, rot, scale, boundingBox):
+def createLayObject(name, collection, parent, pos, rot, scale):
     obj = bpy.data.objects.new(name, None)
     collection.objects.link(obj)
     obj.parent = parent
@@ -66,27 +70,51 @@ def createLayObject(name, collection, parent, pos, rot, scale, boundingBox):
 
     obj.show_axis = True
 
-    if boundingBox is not None:
-        createBoundingBoxObject(obj, name + "-BoundingBox", collection, boundingBox)
+    updateVisualizationObject(obj, name[:6], True)
 
     return obj
 
+def updateVisualizationObject(emptyObj: bpy.types.Object, modelName: str, isParentRotated: bool) -> None:
+    if emptyObj is not None:
+        # clear objects from old addon versions
+        for child in emptyObj.children:
+            bpy.data.objects.remove(child, do_unlink=True)
+    
+    visColl = linkAssetModel(modelName, isParentRotated) or createBoundingBoxCollection(modelName)
+    if visColl is not None:
+        emptyObj.instance_type = "COLLECTION"
+        emptyObj.instance_collection = visColl
+        emptyObj.empty_display_type = "ARROWS"
+        emptyObj.empty_display_size = 0.15
+        emptyObj.show_axis = False
+    else:
+        emptyObj.instance_type = "NONE"
+        emptyObj.instance_collection = None
+        emptyObj.empty_display_type = "SPHERE"
+        emptyObj.empty_display_size = 0.5
+        emptyObj.show_axis = True
 
+def createBoundingBoxCollection(modelName: str) -> bpy.types.Collection | None:
+    bbCollName = f"{modelName}_BoundingBox"
 
-def createBoundingBoxObject(obj: bpy.types.Object, name, collection, boundingBox):
-    boundingBoxObj = bpy.data.objects.new(name, None)
-    collection.objects.link(boundingBoxObj)
-    for child in obj.children:
-        bpy.data.objects.remove(child, do_unlink=True)
-    boundingBoxObj.parent = obj
-    boundingBoxObj.empty_display_type = 'CUBE'
+    if bbCollName in bpy.data.collections:
+        return bpy.data.collections[bbCollName]
+
+    boundingBox = getModelBoundingBox(modelName)
+    if boundingBox is None:
+        return None
+
+    boundingBoxObj = bpy.data.objects.new(f"{modelName}_BoundingBox", None)
+    bbColl = bpy.data.collections.new(bbCollName)
+    bbColl.objects.link(boundingBoxObj)
+    boundingBoxObj.empty_display_type = "CUBE"
 
     boundingBoxObj.location = boundingBox[:3]
     boundingBoxObj.scale = boundingBox[-3:]
 
-    boundingBoxObj.hide_select = True
+    return bbColl
 
-def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
+def searchDirForModel(dir: str, modelName: str, depth = 0) -> str | None:
     if depth > 0 and dir.endswith("nier2blender_extracted") or depth > 6:
         return None
 
@@ -101,7 +129,7 @@ def searchDirForModel(dir: str, modelName: str, depth = 0) -> str:
     
     return None
 
-def getModelBoundingBox(modelName, addonName):
+def getModelBoundingBox(modelName):
     searchDirs = getPreferences().assetDirs
     searchDirs = [dir.directory for dir in searchDirs]
 
@@ -119,7 +147,7 @@ def getModelBoundingBox(modelName, addonName):
         return None
 
     with open(filePath, "rb") as modelDTTFile:
-        id = modelDTTFile.read(4)
+        modelDTTFile.read(4) # id
         numFiles = read_uint32(modelDTTFile)
         fileOffsetsOffset = read_uint32(modelDTTFile)
         fileExtensionsOffset = read_uint32(modelDTTFile)
@@ -137,5 +165,41 @@ def getModelBoundingBox(modelName, addonName):
         for i, ext in enumerate(fileExtensions):
             if ext == "wmb":
                 modelDTTFile.seek(fileOffsets[i] + 16)
-                boundingBox = [read_float(modelDTTFile) for val in range(6)]
+                boundingBox = [read_float(modelDTTFile) for _ in range(6)]
                 return boundingBox
+
+def linkAssetModel(modelName, isParentRotated: bool) -> bpy.types.Collection | None:
+    linkedCollName = f"{modelName}_linked"
+
+    # link file for first object
+    if linkedCollName not in bpy.data.collections:
+        searchDirs = getPreferences().assetBlendDirs
+        searchDirs = [dir.directory for dir in searchDirs]
+
+        filePath = ""
+        for pathName in searchDirs:
+            if not os.path.isdir(pathName):
+                continue
+
+            modelPath = searchDirForModel(pathName, modelName + ".blend")
+            if modelPath is not None:
+                filePath = modelPath
+                break
+
+        if not filePath:
+            return None
+
+        libName = f"{modelName}.blend"
+        if libName in bpy.data.libraries:
+            bpy.data.libraries.remove(bpy.data.libraries[libName])
+        with bpy.data.libraries.load(filepath = filePath, link = True, relative = True) as (data_from, data_to):
+            data_to.collections = [modelName]
+        if modelName in bpy.data.objects and bpy.data.objects[modelName].instance_type == "COLLECTION":
+            bpy.data.objects.remove(bpy.data.objects[modelName], do_unlink=True)
+        linkedColl = bpy.data.collections[modelName]
+        linkedColl.name = linkedCollName
+        if isParentRotated and len(linkedColl.objects) > 0:
+            linkedColl.objects[0].rotation_euler[0] = 0
+        linkedColl
+
+    return bpy.data.collections[linkedCollName]

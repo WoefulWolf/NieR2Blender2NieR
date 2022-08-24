@@ -1,40 +1,43 @@
 from .mesh import *
+from ....utils.util import allObjectsInCollectionInOrder
 
 class c_meshes(object):
     def __init__(self, offsetMeshes):
 
         def get_meshes(self, offsetMeshes):
             meshes = []
-            meshes_names_added = []
-            numMeshes = 0
 
-            for obj in bpy.data.collections['WMB'].all_objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('-')
-                    if obj_name[1] not in meshes_names_added:
-                        numMeshes += 1
-                        meshes_names_added.append(obj_name[1])
+            meshObjectNames = []
+            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                obj_name = obj.name.split('-')[1]
+                meshObjectNames.append(obj_name)
 
-            currentGroupIndex = 0
-            groupedMeshObjOrder = []
-            while len(groupedMeshObjOrder) < numMeshes:
-                for obj in bpy.data.collections['WMB'].all_objects:
-                    if obj.type == 'MESH':
-                        meshGroupIndex = obj["meshGroupIndex"]
-                        if meshGroupIndex == currentGroupIndex:
-                            groupedMeshObjOrder.append(obj)
-                            currentGroupIndex += 1
+            meshNames = [] 
+            [meshNames.append(i) for i in meshObjectNames if i not in meshNames]
+            numMeshes = len(meshNames)
 
-            meshes_names_added = []
-            for obj in groupedMeshObjOrder:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('-')
-                    if obj_name[1] not in meshes_names_added:
-                        print('[+] Generating Mesh', obj.name)
-                        mesh = c_mesh(offsetMeshes, numMeshes, obj)
-                        meshes.append(mesh)
-                        meshes_names_added.append(mesh.name)
-                        offsetMeshes += len(mesh.name) + 1 + mesh.numMaterials * 2 + mesh.numBones * 2
+            #sort mesh names by meshGroupIndex
+            meshNamesSorted = [None] * numMeshes
+            for meshName in meshNames:
+                for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                    obj_name = obj.name.split('-')[1]
+                    if obj_name == meshName:
+                        meshNamesSorted[obj["meshGroupIndex"]] = meshName
+                        break
+            print("Meshes to generate:", meshNamesSorted)
+
+            meshes_added = []
+            for meshName in meshNamesSorted:
+                for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                    obj_name = obj.name.split('-')[1]
+                    if obj_name == meshName:
+                        if obj_name not in meshes_added:
+                            print('[+] Generating Mesh', meshName)
+                            mesh = c_mesh(offsetMeshes, numMeshes, obj)
+                            meshes.append(mesh)
+                            meshes_added.append(obj_name)
+                            offsetMeshes += len(mesh.name) + 1 + mesh.numMaterials * 2 + mesh.numBones * 2
+                            break
 
             return meshes
 

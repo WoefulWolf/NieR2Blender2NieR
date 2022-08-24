@@ -1,8 +1,8 @@
 #encoding = utf-8
 import os
-import struct
 import sys
 
+from ...utils.util import saveDatInfo
 from ...utils.ioUtils import read_int32, read_uint32, read_uint16
 
 
@@ -19,16 +19,16 @@ def read_header(fp):
 		NameTableOffset = read_int32(fp)
 		SizeTableOffset = read_int32(fp)
 		hashMapOffset = read_int32(fp)
-		print(
-'''FileCount: %08x
-FileTableOffset: %08x
-ExtensionTableOffset:%08x
-NameTableOffset:%08x
-SizeTableOffset:%08x
-hashMapOffset:%08x
-'''%
-			(FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset)
-		)
+# 		print(
+# '''FileCount: %08x
+# FileTableOffset: %08x
+# ExtensionTableOffset:%08x
+# NameTableOffset:%08x
+# SizeTableOffset:%08x
+# hashMapOffset:%08x
+# '''%
+# 			(FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset)
+# 		)
 		return (FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset)
 	else:
 		print('[-] error magic number detected')
@@ -48,15 +48,15 @@ def get_fileinfo(fp, index, FileTableOffset, ExtensionTableOffset, NameTableOffs
 		if list(fp.read(FilenameAlignment))[FilenameAlignment-1] == 0:
 			i += 1
 	Filename = fp.read(256).split(b'\x00')[0].decode('ascii')
-	print(
-'''
-FileIndex: %d
-Filename: %s
-FileOffset: %08x
-Size: %08x
-Extension: %s'''%
-(index,Filename,FileOffset,Size,Extension)
-		)
+# 	print(
+# '''
+# FileIndex: %d
+# Filename: %s
+# FileOffset: %08x
+# Size: %08x
+# Extension: %s'''%
+# (index,Filename,FileOffset,Size,Extension)
+# 		)
 	return index,Filename,FileOffset,Size,Extension
 
 def extract_file(fp, filename, FileOffset, Size, extract_dir):
@@ -64,7 +64,7 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 	fp.seek(FileOffset)
 	FileContent = fp.read(Size)
 	with open(extract_dir + '/'+filename,'wb') as outfile:
-		print("extracting file %s to %s/%s"%(filename,extract_dir,filename))
+		# print("extracting file %s to %s/%s"%(filename,extract_dir,filename))
 		outfile.write(FileContent)
 	if filename.find('wtp') > -1 and False:  # Removed due to not needed anymore when using Blender DTT import.
 		wtp_fp = open(extract_dir + '/'+filename,"rb")
@@ -79,12 +79,12 @@ def extract_file(fp, filename, FileOffset, Size, extract_dir):
 			dds_fp.close()
 		wtp_fp.close()
 		#os.remove("%s/%s"%(extract_dir,filename))
-	print("done")
+	# print("done")
 
 def get_all_files(path):
 	pass
 
-def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
+def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset, filename):
 	create_dir(extract_dir)
 
 	# file_order.metadata
@@ -97,18 +97,12 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	for i in range(FileCount):
 		fileNames.append(fp.read(fileNameSize))
 
-	# Extraction
-	filename = 'file_order.metadata'
-	extract_dir_sub = os.path.join(extract_dir, filename)
-	with open(extract_dir_sub,'wb') as outfile:
-
-		# Header
-		outfile.write(struct.pack('<i', FileCount))
-		outfile.write(struct.pack('<i', fileNameSize))
-
-		#Filenames
-		for fileName in fileNames:
-			outfile.write(fileName)
+	# Write filenames to json
+	saveDatInfo(
+		extract_dir + '/dat_info.json',
+		[file.decode('utf-8').rstrip('\x00') for file in fileNames],
+		filename
+	)
 
 	# hash_data.metadata
 	# Header
@@ -135,32 +129,6 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset):
 	fileIndices = []
 	for i in range(FileCount):
 		fileIndices.append(read_uint16(fp))
- 
-	# Extraction
-	filename = 'hash_data.metadata'
-	extract_dir_sub = os.path.join(extract_dir, filename)
-	with open(extract_dir_sub,'wb') as outfile:
-
-			# Header
-		outfile.write(struct.pack('<i', preHashShift))
-		outfile.write(struct.pack('<i', bucketOffsetsOffset))
-		outfile.write(struct.pack('<i', hashesOffset))
-		outfile.write(struct.pack('<i', fileIndicesOffset))
-
-			# Bucket Offsets
-		for i in bucketOffsets:
-			#print(bucketOffsets)
-			outfile.write(struct.pack('<H', i))
-
-			# Hashes
-		for i in hashes:
-			outfile.write(i)
-
-			# File Indices
-		for i in fileIndices:
-			#print(i)
-			outfile.write(struct.pack('<H', i))
-
 
 def main(filename, extract_dir, ROOT_DIR):
 	with open(filename,"rb") as fp:
@@ -168,14 +136,17 @@ def main(filename, extract_dir, ROOT_DIR):
 		if headers:
 			FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset = headers
 
+			extractedFiles = 0
 			for i in range(FileCount):
 				extract_dir_sub = ''
 				index,Filename,FileOffset,Size,Extension = get_fileinfo(fp, i, FileTableOffset,ExtensionTableOffset, NameTableOffset,SizeTableOffset)
 				if extract_dir != '':
 					extract_dir_sub = os.path.join(extract_dir, filename.replace(ROOT_DIR ,''))
 					extract_file(fp, Filename, FileOffset, Size, extract_dir_sub)
+					extractedFiles += 1
 			
-			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset)
+			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset, os.path.basename(filename))
+			print(f"[+] {extractedFiles} files extracted from {filename}")
 	if (FileCount):
 		return Filename
 	return False

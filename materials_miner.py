@@ -3,6 +3,8 @@ import json
 import traceback
 import random
 
+verbose = False
+
 global_shaders = {}
 
 def shared_chars(s1, s2):
@@ -20,6 +22,9 @@ def find_pattern_count(pattern, list):
         if (list[i:i + len(pattern)] == pattern):
             count += 1
     return count
+
+def checkConsecutive(l):
+    return sorted(l) == list(range(min(l), max(l)+1))
 
 def extractMats(fp):
     file = open(fp)
@@ -54,7 +59,7 @@ def extractMats(fp):
 
         if shaderName not in shaders:
             shaders[shaderName] = {}
-            #shaders[shaderName]["Variables"] = list(variables.keys())
+            shaders[shaderName]["Variables"] = list(variables.keys())
             shaders[shaderName]["Parameters"] = ["Unknown"] * len(parameters[0])
 
         mappedParameters = ["Unknown"] * len(parameters[0])
@@ -106,41 +111,77 @@ def extractMats(fp):
     json.dump(shaders, dump, indent= 4)
     dump.close()
 
-def find_diffs(shaderName, shaders):
+def find_diffs(shaderName, instances):
     dump = open("./dump.json", "a+")
     dump.seek(0)    
     found_shaders = json.load(dump)
     found_params = found_shaders[shaderName]["Parameters"]
     
     changedIndices = []
-    for instance in shaders:
-        for otherInstance in shaders:
+    for instance in instances:
+        for otherInstance in instances:
             if instance == otherInstance:
                 continue
 
-            if (len(instance[1]) != len(otherInstance[1])) or (len(instance[0]) != len(otherInstance[0])):
+            variables = instance[0]
+            otherVariables = otherInstance[0]
+
+            paramGroups = instance[1]
+            otherParamGroups = otherInstance[1]
+
+            if (len(paramGroups) != len(otherParamGroups)) or (len(variables) != len(otherVariables)):
                 continue
 
-            if (len(instance[1]) != 2 or len(otherInstance[1]) != 2):
+            if (len(paramGroups) != 2 or len(otherParamGroups) != 2):
                 continue
 
             diffs = []
-            for i in range(len(instance[1][0])):
-                if (instance[1][0][i] != otherInstance[1][0][i]):
-                    if (found_params[i] == "Unknown"):
-                        diffs.append(i)
+            for index, (first, second) in enumerate(zip(paramGroups[0], otherParamGroups[0])):
+                if first != second:
+                    if (found_params[index] != "Unknown"):
+                        continue
+                    #print(index, first, second)
+                    diffs.append(index)
 
             diffs2 = []
-            for i in range(len(instance[1][1])):
-                if (instance[1][1][i] != otherInstance[1][1][i]):
+            for i in range(len(paramGroups[1])):
+                if (paramGroups[1][i] != otherParamGroups[1][i]):
                     diffs2.append(i)
 
             varDiffs = []
-            for key in instance[0].keys():
-                if key not in found_params:
-                    if (instance[0][key] != otherInstance[0][key]):
-                        varDiffs.append(key)
-            
+            for index, (first, second) in enumerate(zip(variables.values(), otherVariables.values())):
+                if first != second:
+                    if "g_" not in list(variables.keys())[index]:
+                        print(list(variables.keys())[index])
+                        continue
+                    #print(index, list(variables.keys())[index], first, second)
+                    varDiffs.append(index)
+
+
+            if (len(diffs) > 0):
+                if verbose:
+                    print('#'*25)
+                    print(len(diffs), "x Instance differences:")
+                    for diff in diffs:
+                        print(diff, ":", paramGroups[0][diff], otherParamGroups[0][diff])
+
+                    if (len(varDiffs) > 0):
+                        print('#'*25)
+                        print(len(varDiffs), "x Variable differences:")
+                        for diff in varDiffs:
+                            print(diff, ":", list(variables.keys())[diff])
+
+                if (len(diffs) == len(varDiffs)):
+                    if checkConsecutive(diffs) and checkConsecutive(varDiffs):
+                        print("Found differences in shader", shaderName, "for variable indices", varDiffs, "- parameter indices", diffs)
+                        for i, diff in enumerate(diffs):
+                            found_params[diff] = list(variables.keys())[varDiffs[i]]
+                            if (diff in changedIndices):
+                                print("THE SAME INDEX WAS CHANGED TWICE! MAJOR PROBLEM!")
+                                return
+                            else:
+                                changedIndices.append(diff)
+            """
             if (len(diffs) == 1 and len(varDiffs) == 1 and len(diffs2) == 0):
                 print("Found difference in shader", shaderName, "for variable", varDiffs[0], "index", diffs[0])
                 found_params[diffs[0]] = varDiffs[0]
@@ -149,30 +190,89 @@ def find_diffs(shaderName, shaders):
                     return
                 else:
                     changedIndices.append(diffs[0])
+            """
 
     dump.truncate(0)
     json.dump(found_shaders, dump, indent= 4)
     dump.close()
     return changedIndices
 
+def find_common_param_neighbours(shader_names):
+    dump = open("./dump.json", "a+")
+    dump.seek(0)    
+    found_shaders = json.load(dump)
+
+    params_before = {}
+    params_after = {}
+
+    inconsisstent_params = [] 
+
+    changes_found = 0
+    for shader_name in shader_names:
+        found_params = found_shaders[shader_name]["Parameters"]
+        for i in range(len(found_params)):
+            if found_params[i] == "Unknown":
+                continue
+            if i != 0 and found_params[i-1] != "Unknown":
+                if (found_params[i] in params_before) and params_before[found_params[i]] != found_params[i-1]:
+                    inconsisstent_params.append(found_params[i])
+                else:
+                    params_before[found_params[i]] = found_params[i-1]
+            if i+1 != len(found_params) and found_params[i+1] != "Unknown":
+                if (found_params[i] in params_after) and params_after[found_params[i]] != found_params[i+1]:
+                    inconsisstent_params.append(found_params[i])
+                else:
+                    params_after[found_params[i]] = found_params[i+1]
+
+    for param in found_params:
+        if (param != "Unknown") and (param not in inconsisstent_params):
+            if param in params_before:
+                for shader_name in shader_names:
+                    if param not in found_shaders[shader_name]["Parameters"] or params_before[param] not in found_shaders[shader_name]["Variables"]:
+                        continue
+                    param_index = found_shaders[shader_name]["Parameters"].index(param)
+                    if found_shaders[shader_name]["Parameters"][param_index - 1] == "Unknown":
+                        found_shaders[shader_name]["Parameters"][param_index - 1] = params_before[param]
+                        print("Identified common neighbour", params_before[param], "before", param, "in shader", shader_name)
+                        changes_found += 1
+
+            if param in params_after:
+                for shader_name in shader_names:
+                    if param not in found_shaders[shader_name]["Parameters"] or params_after[param] not in found_shaders[shader_name]["Variables"]:
+                        continue
+                    param_index = found_shaders[shader_name]["Parameters"].index(param)
+                    if found_shaders[shader_name]["Parameters"][param_index + 1] == "Unknown":
+                        found_shaders[shader_name]["Parameters"][param_index + 1] = params_after[param]
+                        print("Identified common neighbour", params_after[param], "after", param, "in shader", shader_name)
+                        changes_found += 1
+    dump.truncate(0)
+    json.dump(found_shaders, dump, indent= 4)
+    dump.close()
+    return changes_found
+
 if __name__ == "__main__":
     matFiles = sys.argv[1::]
     #random.shuffle(matFiles)
-    print(matFiles)
-    for matFile in matFiles:
-        print(matFile)
-        try:
-            extractMats(matFile)
-        except Exception as e:
-            traceback.print_exc()
-            break
-    
-    totalChanges = 1
-    while totalChanges > 0:
-        print("Starting diff finder pass...")
-        totalChanges = 0
-        for name, shaders in global_shaders.items():
-            totalChanges += len(find_diffs(name, shaders))
-        print("Diff finder found", totalChanges, "new parameters.")
-    
-    input("Press Enter to Exit")
+    try:
+        print(matFiles)
+        for matFile in matFiles:
+            print(matFile)
+            try:
+                extractMats(matFile)
+            except Exception as e:
+                traceback.print_exc()
+                break
+        totalChanges = 1
+        while totalChanges > 0:
+            print("Starting diff finder pass...")
+            totalChanges = 0
+            for name, instances in global_shaders.items():
+                print("Checking shader:", name)
+                totalChanges += len(find_diffs(name, instances))
+            totalChanges += find_common_param_neighbours(list(global_shaders.keys()))
+            print("Found", totalChanges, "new parameters.")
+        input("Press Enter to Exit")
+    except Exception as e:
+        traceback.print_exc()
+        print(e)
+        input("ERROR! Press Enter to Exit")

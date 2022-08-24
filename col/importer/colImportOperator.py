@@ -17,7 +17,7 @@ class ImportNierCol(bpy.types.Operator, ImportHelper):
     def execute(self, context):
         from . import col_importer
 
-        setExportFieldsFromImportFile(self.filepath)
+        setExportFieldsFromImportFile(self.filepath, False)
         enableCollisionTools()
 
         return col_importer.main(self.filepath)

@@ -759,6 +759,7 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
 				identifier = material.textureArray['g_NormalMap']
 				textureFile = "%s%s"%('out/texture/',identifier)
 				textureArray.append(textureFile)
+		"""
 		for textureFile in textureArray:
 			texture = wta.getTextureByIdentifier(textureFile.replace('out/texture/',''), wtp_fp)
 			if texture:
@@ -766,6 +767,7 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
 				print('dumping %s.dds'%textureFile)
 				texture_fp.write(texture)
 				texture_fp.close()
+		"""
 
 	mtl = open("%s.mtl"%obj_file, 'w')
 	for materialIndex in range(wmb.wmb3_header.materialCount):

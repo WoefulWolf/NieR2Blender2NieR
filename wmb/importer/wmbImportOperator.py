@@ -21,7 +21,7 @@ class ImportNierWmb(bpy.types.Operator, ImportHelper):
         if self.reset_blend:
             wmb_importer.reset_blend()
 
-        setExportFieldsFromImportFile(self.filepath)
+        setExportFieldsFromImportFile(self.filepath, False)
         enableVisibilitySelector()
 
         return wmb_importer.main(False, self.filepath)

@@ -16,7 +16,7 @@ def reset_blend():
 		for obj in collection.objects:
 			collection.objects.unlink(obj)
 		bpy.data.collections.remove(collection)
-	for bpy_data_iter in (bpy.data.objects,bpy.data.meshes,bpy.data.lights,bpy.data.cameras):
+	for bpy_data_iter in (bpy.data.objects, bpy.data.meshes, bpy.data.lights, bpy.data.cameras, bpy.data.libraries):
 		for id_data in bpy_data_iter:
 			bpy_data_iter.remove(id_data)
 	for material in bpy.data.materials:
@@ -107,7 +107,7 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name
+def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
@@ -159,6 +159,7 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	if mesh_data[5] != "None":
 		obj['boneSetIndex'] = mesh_data[5]
 	obj['meshGroupIndex'] = mesh_data[6]
+	obj['vertexGroup'] = mesh_data[13]
 	obj['LOD_Name'] = mesh_data[8]
 	obj['LOD_Level'] = mesh_data[9]
 	obj['colTreeNodeIndex'] = mesh_data[10]
@@ -550,7 +551,7 @@ def format_wmb_mesh(wmb, collection_name):
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox], collection_name)
+						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name)
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
@@ -575,9 +576,11 @@ def get_wmb_material(wmb, texture_dir):
 							if not os.path.exists(os.path.join(texture_dir, identifier + '.dds')):
 								create_dir(texture_dir)
 								texture_fp = open(os.path.join(texture_dir, identifier + '.dds'), "wb")
-								print('[+] dumping %s.dds'% identifier)
+								print('[+] could not find DDS texture, trying to find it in WTA; %s.dds'% identifier)
 								texture_fp.write(texture_stream)
 								texture_fp.close()
+							else:
+								print('[+] Found %s.dds'% identifier)
 					except:
 						continue
 				materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
