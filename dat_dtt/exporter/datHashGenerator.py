@@ -49,7 +49,6 @@ def generateHashData(files) -> bytes:
     hashes = [0] * len(files)
     fileIndices = list(range(len(files)))
     fileNames = [os.path.basename(i) for i in files.copy()]
-    print(fileNames)
 
     # generate hashes
     for i in range(len(files)):
@@ -65,17 +64,6 @@ def generateHashData(files) -> bytes:
         bucketOffsetsIndex = hashes[i] >> preHashShift
         if bucketOffsets[bucketOffsetsIndex] == -1:
             bucketOffsets[bucketOffsetsIndex] = i
-
-    # print bucket offsets, hashes, fileIndeces
-    print("bucketOffsets")
-    for i in range(len(bucketOffsets)):
-        print(f"{i}: {bucketOffsets[i]}")
-    print("hashes")
-    for i in range(len(hashes)):
-        print(f"{i}: 0x{hashes[i]:08X}")
-    print("fileIndices")
-    for i in range(len(fileIndices)):
-        print(f"{i}: {fileIndices[i]}")
 
     hashData = HashData(preHashShift)
     hashData.bucketOffsets = bucketOffsets
