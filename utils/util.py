@@ -21,6 +21,12 @@ class Vector3(object):
         self.z = z
         self.xyz = [x, y, z]
 
+    def __add__(self, other):
+        return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __sub__(self, other):
+        return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
+
 def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
     def draw(self, context):
         self.layout.label(text = message)
