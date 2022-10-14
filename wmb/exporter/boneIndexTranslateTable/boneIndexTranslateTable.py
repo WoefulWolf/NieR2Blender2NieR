@@ -10,14 +10,9 @@ class c_boneIndexTranslateTable(object):
 
         for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == 'ARMATURE':
-                for idx in range(len(obj.data['firstLevel'])):
-                    self.firstLevel.append(obj.data['firstLevel'][idx])
-
-                for idx in range(len(obj.data['secondLevel'])):
-                    self.secondLevel.append(obj.data['secondLevel'][idx])
-
-                for idx in range(len(obj.data['thirdLevel'])):
-                    self.thirdLevel.append(obj.data['thirdLevel'][idx])
+                self.firstLevel = obj.data['firstLevel']
+                self.secondLevel = obj.data['secondLevel']
+                self.thirdLevel = obj.data['thirdLevel']
 
         self.firstLevel_Size = len(self.firstLevel)
 
