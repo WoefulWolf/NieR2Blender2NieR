@@ -3,7 +3,7 @@ import bpy
 import bmesh
 import math
 from typing import List, Tuple
-from mathutils import Vector
+from mathutils import Quaternion, Vector, Matrix
 
 from ...utils.util import ShowMessageBox, getPreferences, printTimings
 from .wmb import *
@@ -45,17 +45,23 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	amt['secondLevel'] = secondLevel
 	amt['thirdLevel'] = thirdLevel
 
+	print(firstLevel)
+	print(secondLevel)
+	print(thirdLevel)
+
 	amt['boneMap'] = boneMap
+	print(boneMap)
 
 	amt['boneSetArray'] = boneSetArray
 
 	for bone_data in bone_data_array:
 		bone = amt.edit_bones.new(bone_data[1])
 		bone.head = Vector(bone_data[4]) 
-		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))				
-		bone['ID'] = bone_data[6]
+		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))
 
-		bone['localPosition'] = bone_data[7]
+		bone['ID'] = bone_data[6]
+		#bone['position'] = bone_data[4]
+		#bone['localPosition'] = bone_data[7]
 		bone['localRotation'] = bone_data[8]
 		bone['worldRotation'] = bone_data[9]
 		bone['TPOSE_worldPosition'] = bone_data[10]
@@ -70,6 +76,16 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 				bones[bone_data[3]].tail = bone.head
 
 	bpy.ops.object.mode_set(mode='OBJECT')
+
+	#for pose_bone in ob.pose.bones:
+	#	for bone_data in bone_data_array:
+	#		if pose_bone.name == bone_data[1]:
+	#			translation = pose_bone.bone.matrix_local.inverted() @ Vector(bone_data[10])
+	#			print(translation)
+	#			pose_bone.location += translation
+	#			for child in pose_bone.children:
+	#				child.location -= translation
+
 	ob.rotation_euler = (math.radians(90),0,0)
 	# split armature
 	return ob
