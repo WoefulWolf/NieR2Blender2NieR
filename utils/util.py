@@ -94,6 +94,16 @@ def allObjectsInCollectionInOrder(collectionName):
 def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
     return sorted(obj.children, key=getObjKey)
 
+def getAllBonesInOrder(collectionName):
+    for obj in bpy.data.collections[collectionName].all_objects:
+        if obj.type == 'ARMATURE':
+            return list(obj.data.bones)
+
+def getBoneIndexByName(collectionName, name):
+    for i, bone in enumerate(getAllBonesInOrder(collectionName)):
+        if bone.name == name:
+            return i
+
 def create_dir(dirpath):
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
