@@ -46,10 +46,22 @@ class c_b_boneSets(object):
             if obj.type == 'ARMATURE':
                 amt = obj
 
-        # Get boneMap
+        # Generate boneMap
         boneMap = []
-        for val in amt.data['boneMap']:
-            boneMap.append(val)
+        for obj in bpy.data.collections['WMB'].all_objects:
+            if obj.type == 'MESH':
+                for group in obj.vertex_groups:
+                    boneID = int(group.name.replace("bone", ""))
+                    if boneID not in boneMap:
+                            print("Adding ID to boneMap: " + str(boneID))
+                            boneMap.append(boneID)
+
+        # Set boneMap to armature
+        boneMap = sorted(boneMap)
+        for obj in bpy.data.collections['WMB'].all_objects:
+            if obj.type == 'ARMATURE':
+                obj.data['boneMap'] = boneMap
+                break
 
         # Get boneSets
         b_boneSets = []

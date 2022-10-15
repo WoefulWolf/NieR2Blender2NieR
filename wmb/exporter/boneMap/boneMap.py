@@ -1,24 +1,12 @@
 import bpy
 
-
+# I should really just move this in with the boneSets, no ned for shit to be separate
 class c_boneMap(object):
     def __init__(self, bones):
         boneMap = []
-        #for obj in bpy.data.collections['WMB'].all_objects:
-        #    if obj.type == 'ARMATURE':
-        #        boneMap = obj.data['boneMap']
-        for obj in bpy.data.collections['WMB'].all_objects:
-            if obj.type == 'MESH':
-                for group in obj.vertex_groups:
-                    boneID = int(group.name.replace("bone", ""))
-                    if boneID not in boneMap:
-                            print("Adding ID to boneMap: " + str(boneID))
-                            boneMap.append(boneID)
-
-        boneMap = sorted(boneMap)
         for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == 'ARMATURE':
-                obj.data['boneMap'] = boneMap
+                boneMap = obj.data['boneMap']
                 break
         
         self.boneMap = boneMap
