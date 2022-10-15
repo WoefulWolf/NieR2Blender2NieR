@@ -43,6 +43,8 @@ class c_generate_data(object):
         currentOffset += (currentOffset % 16)
 
         if hasArmature:
+            self.boneIndexTranslateTable = c_boneIndexTranslateTable()
+
             self.bones_Offset = currentOffset
             self.bones = c_bones()
             self.numBones = len(self.bones.bones)
@@ -53,7 +55,6 @@ class c_generate_data(object):
             currentOffset += (currentOffset % 16)
 
             self.boneIndexTranslateTable_Offset = currentOffset
-            self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones)
             self.boneIndexTranslateTable_Size = self.boneIndexTranslateTable.boneIndexTranslateTable_StructSize
             currentOffset += self.boneIndexTranslateTable_Size
             print('boneIndexTranslateTable_Size: ', self.boneIndexTranslateTable_Size)
