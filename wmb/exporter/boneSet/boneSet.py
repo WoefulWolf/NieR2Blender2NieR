@@ -53,8 +53,8 @@ class c_b_boneSets(object):
                 for group in obj.vertex_groups:
                     boneID = getBoneIndexByName("WMB", group.name)
                     if boneID not in boneMap:
-                            #print("Adding ID to boneMap: " + str(boneID))
-                            boneMap.append(boneID)
+                        #print("Adding ID to boneMap: " + str(boneID))
+                        boneMap.append(boneID)
 
         # Set boneMap to armature
         boneMap = sorted(boneMap)
