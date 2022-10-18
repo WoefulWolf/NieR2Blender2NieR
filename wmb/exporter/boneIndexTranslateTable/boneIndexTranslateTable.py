@@ -47,15 +47,46 @@ class c_boneIndexTranslateTable(object):
                     newThirdLevel[k * 16 + boneID - domain] = i
                     break
 
+        # Temp here for Baal
+        newBones = []
+
         # Add new bones that dont have ID
         for i, bone in enumerate(getAllBonesInOrder("WMB")):
             if 'ID' not in bone:
                 for k in range(len(newThirdLevel) - 1, 0, -1):
                     if newThirdLevel[k] == 4095:
                         newThirdLevel[k] = i
-                        bone['ID'] = 4095 - (len(newThirdLevel) - 1 - k)
-                        print("Added new bone to table", bone.name, "assigning ID", bone['ID'], "at index", k)
+                        bone['ID'] = thirdLevelRanges[k//16] + k%16
+                        print("Added new bone to table", bone.name, "assigning ID", bone['ID'], "at thirdLevel translateTableIndex", k)
+                        newBones.append(bone)
                         break
+
+        #Print the shit for the XML
+        for bone in newBones:
+            no = bone["ID"]
+            if bone.parent in newBones:
+                noUp = bone.parent['ID']
+            else:
+                noUp = 4095
+            if bone.children and bone.children[0] in newBones:
+                noDown = bone.children[0]['ID']
+            else:
+                noDown = 4095
+
+            out = """<CLOTH_WK>
+    <no>{}</no>
+    <noUp>{}</noUp>
+    <noDown>{}</noDown>
+    <noSide>4095</noSide>
+    <noPoly>4095</noPoly>
+    <noFix>4095</noFix>
+    <rotLimit>0.5236</rotLimit>
+    <offset>0 -0.1 0</offset>
+    <m_OriginalRate>0</m_OriginalRate>
+</CLOTH_WK>""".format(no, noUp, noDown)
+
+            print(out)
+        print("COPY TO YOUR <CLOTH_WK_LIST> AND REMEMBER TO ADD +{} TO THE <CLOTH_HEADER><m_Num> VALUE!".format(len(newBones)))
 
         self.thirdLevel = newThirdLevel
                 
