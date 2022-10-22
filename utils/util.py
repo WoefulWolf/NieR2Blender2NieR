@@ -3,8 +3,9 @@ from functools import wraps
 import json
 import os
 import textwrap
+from threading import Timer
 from time import time
-from typing import Dict, List
+from typing import Callable, Dict, List
 import bmesh
 import bpy
 import numpy as np
@@ -345,3 +346,84 @@ def saveDatInfo(filepath: str, files: List[str], filename: str):
             "ext": ext[1:]
         }
         json.dump(jsonFiles, f, indent=4)
+
+class throttle(object):
+    """
+    Decorator that prevents a function from being called more than once every
+    time period.
+    To create a function that cannot be called more than once a minute:
+        @throttle(minutes=1)
+        def my_fun():
+            pass
+    """
+
+    """
+void Function() throttle(void Function() func, int waitMs, { bool leading = true, bool trailing = false }) {
+  Timer? timeout;
+  int previous = 0;
+  void later() {
+		previous = leading == false ? 0 : DateTime.now().millisecondsSinceEpoch;
+		timeout = null;
+		func();
+	}
+	return () {
+		var now = DateTime.now().millisecondsSinceEpoch;
+		if (previous != 0 && leading == false)
+      previous = now;
+		var remaining = waitMs - (now - previous);
+		if (remaining <= 0 || remaining > waitMs) {
+			if (timeout != null) {
+				timeout!.cancel();
+				timeout = null;
+			}
+			previous = now;
+			func();
+		}
+    else if (timeout != null && trailing) {
+			timeout = Timer(Duration(milliseconds: remaining), later);
+		}
+	};
+}
+"""
+    leading: bool
+    trailing: bool
+
+    timeout: Timer
+    milliseconds: float
+    previous: float
+    function: Callable|None
+    args: List
+    kwargs: Dict
+
+    def __init__(self, milliseconds: float, leading=False, trailing=True):
+        self.leading = leading
+        self.trailing = trailing
+        self.milliseconds = milliseconds
+        self.timeout = None
+        self.previous = 0
+        self.function = None
+    
+    def later(self):
+        self.previous = time() if self.leading else 0
+        self.timeout = None
+        self.function(*self.args, **self.kwargs)
+    
+    def __call__(self, fn):
+        self.function = fn
+        def wrapper(*args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            now = time() * 1000
+            if self.previous != 0 and not self.leading:
+                self.previous = now
+            remaining = self.milliseconds - (now - self.previous)
+            if remaining <= 0 or remaining > self.milliseconds:
+                if self.timeout:
+                    self.timeout.cancel()
+                    self.timeout = None
+                self.previous = now
+                fn(*args, **kwargs)
+            elif not self.timeout and self.trailing:
+                self.timeout = Timer(remaining / 1000, self.later)
+                self.timeout.start()
+        return wrapper

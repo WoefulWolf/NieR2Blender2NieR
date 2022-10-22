@@ -2,6 +2,7 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
+from .sync.install_dependencies import EXAMPLE_OT_install_dependencies
 
 from .utils.util import drawMultilineLabel, getPreferences
 from .consts import ADDON_NAME
@@ -100,6 +101,9 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
             remOp.settingsType = 1
         addOp = box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
         addOp.settingsType = 1
+
+        row = layout.row()
+        row.operator(EXAMPLE_OT_install_dependencies.bl_idname, icon="CONSOLE")
 
 
 def register():

@@ -28,6 +28,7 @@ from .col.importer.colImportOperator import ImportNierCol
 from .dat_dtt.importer.datImportOperator import ImportNierDtt, ImportNierDat
 from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
+from .sync import install_dependencies
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
@@ -131,6 +132,7 @@ def register():
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
     preferences.register()
+    install_dependencies.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.types.VIEW3D_MT_object.append(menu_func_utils)
@@ -157,6 +159,7 @@ def unregister():
     col_ui_manager.unregister()
     visibilitySwitcher.unregister()
     preferences.unregister()
+    install_dependencies.unregister()
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
