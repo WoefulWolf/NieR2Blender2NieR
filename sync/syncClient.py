@@ -10,6 +10,7 @@ _ws: WebSocketApp = None
 _wsThread: WsThread = None
 _wsPort = 1547
 _onMsgListeners: List[callable] = []
+_onEndListeners: List[callable] = []
 
 class SyncMessage:
 	method: str
@@ -39,16 +40,50 @@ def isConnectedToWs() -> bool:
 def addOnMessageListener(listener: callable):
 	_onMsgListeners.append(listener)
 
+def addOnWsEndListener(listener: callable):
+	_onEndListeners.append(listener)
+
 def removeOnMessageListener(listener: callable):
 	_onMsgListeners.remove(listener)
 
+def removeOnWsEndListener(listener: callable):
+	_onEndListeners.remove(listener)
+
 def _onMessage(ws: WebSocketApp, message: str):
+	global _isConnectedToWs
 	msgData = SyncMessage.fromJson(json.loads(message))
+	if not _isConnectedToWs and msgData.method == "connected":
+		_isConnectedToWs = True
+		return
 	for listener in _onMsgListeners:
 		listener(msgData)
 
+def _onEnd():
+	global _isConnectedToWs, _ws, _wsThread
+	_isConnectedToWs = False
+	for listener in _onEndListeners:
+		listener()
+	if _ws is not None:
+		_ws.close()
+	_ws = None
+	_wsThread = None
+
+def _onError(ws: WebSocketApp, error: str):
+	print(error)
+	_onEnd()
+
+def _confirmIsConnected():
+	global _isConnectedToWs
+	if _isConnectedToWs or _ws is None:
+		return
+	print("Failed to connect to websocket server")
+	_onEnd()
+
 def sendMsgToServer(msg: SyncMessage):
 	if not _isConnectedToWs:
+		return
+	if _ws.sock is None:
+		_onEnd()
 		return
 	_ws.send(json.dumps(msg.toJson()))
 
@@ -65,10 +100,10 @@ def connectToWebsocket() -> bool:
 	if _isConnectedToWs:
 		return True
 	
-	_ws = WebSocketApp(f"ws://localhost:{_wsPort}", on_message=_onMessage)
+	_ws = WebSocketApp(f"ws://localhost:{_wsPort}", on_message=_onMessage, on_close=_onEnd, on_error=_onError)
 	_wsThread = WsThread()
-	
-	_isConnectedToWs = True
+	confirmConnectionTimer = threading.Timer(0.2, _confirmIsConnected)
+	confirmConnectionTimer.start()
 	
 	return True
 

@@ -186,6 +186,12 @@ def makeCircleMesh(name: str, radius: float, parent: bpy.types.Object, color: Li
     prepareObject(circleObj, name, parent, color)
     return circleObj
 
+def makeSphereMesh(name: str, radius: float, parent: bpy.types.Object, color: List[float]) -> bpy.types.Object:
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
+    sphereObj = bpy.context.active_object
+    prepareObject(sphereObj, name, parent, color)
+    return sphereObj
+
 # importing - misc
 
 seedOffsets: Dict[str, int] = {}

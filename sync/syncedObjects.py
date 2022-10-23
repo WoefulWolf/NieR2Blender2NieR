@@ -1,15 +1,17 @@
 
 import re
+import time
 from xml.etree import ElementTree
 
 import bpy
 from mathutils import Euler, Vector
 from ..utils.util import throttle
 from ..lay.importer.lay_importer import updateVisualizationObject
-from .syncClient import SyncMessage, disconnectFromWebsocket, sendMsgToServer, addOnMessageListener
+from .syncClient import SyncMessage, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, addOnMessageListener
 from .shared import SyncObjectsType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
-from .utils import findObject, newObjFromType
-from ..utils.xmlIntegrationUtils import vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
+from .utils import findObject, getSyncCollection
+from ..utils.xmlIntegrationUtils import floatToStr, makeSphereMesh, strToFloat, vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
+from ..dat_dtt.exporter.datHashGenerator import crc32
 from xml.etree.ElementTree import Element, SubElement
 
 class SyncedObject:
@@ -30,6 +32,8 @@ class SyncedObject:
 		nameHint = msg.args["nameHint"]
 		if type == "entity":
 			return SyncedEntityObject(uuid, xml, nameHint)
+		elif type == "area":
+			return SyncedAreaObject(uuid, xml, nameHint)
 		raise NotImplementedError()
 
 	def xmlCmp(self, el1: Element, el2: Element) -> bool:
@@ -43,9 +47,13 @@ class SyncedObject:
 			if not self.xmlCmp(el1[i], el2[i]):
 				return False
 		return True
-	
+
 	def update(self, msg: SyncMessage):
-		raise NotImplementedError()
+		xmlStr  = msg.args["propXml"]
+		xmlRoot = ElementTree.fromstring(xmlStr)
+		if not self.xmlCmp(self.xml, xmlRoot):
+			print(f"updating {self.uuid}")
+			self.updateWithXml(xmlRoot)
 	
 	def updateWithXml(self, xmlRoot: Element):
 		raise NotImplementedError()
@@ -72,6 +80,7 @@ class SyncedObject:
 		obj = findObject(self.objName, self.uuid)
 		if obj is not None:
 			bpy.data.objects.remove(obj)
+		del syncedObjects[self.uuid]
 
 class SyncedEntityObject(SyncedObject):
 	# syncable props: location{ position, rotation?, }, scale?, objId
@@ -79,23 +88,16 @@ class SyncedEntityObject(SyncedObject):
 	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
 		objId = xml.find("objId").text
 		super().__init__(uuid, xml, objId)
-		newObjFromType(SyncObjectsType["entity"], self.objName, modelName=self.xml.find("objId").text)
+		self.newObjFromType(SyncObjectsType["entity"], self.objName, modelName=self.xml.find("objId").text)
 		self.updateWithXml(self.xml)
 
-	def update(self, msg: SyncMessage):
-		xmlStr  = msg.args["propXml"]
-		xmlRoot = ElementTree.fromstring(xmlStr)
-		if not self.xmlCmp(self.xml, xmlRoot):
-			print(f"updating {self.uuid}")
-			self.updateWithXml(xmlRoot)
-	
 	def updateWithXml(self, xmlRoot: Element):
 		prevObjId = self.xml.find("objId").text
 		objId = xmlRoot.find("objId").text
 		self.xml = xmlRoot
 		obj = findObject(self.objName, self.uuid)
 		if not obj:
-			obj = newObjFromType(SyncObjectsType["entity"], self.objName, modelName=objId)
+			obj = self.newObjFromType(SyncObjectsType["entity"], self.objName, modelName=objId)
 		elif objId != prevObjId:
 			# update model
 			updateVisualizationObject(obj, objId, False)
@@ -142,7 +144,192 @@ class SyncedEntityObject(SyncedObject):
 			self.objName = obj.name
 			updateVisualizationObject(obj, obj.name.split(" ")[0], False)
 		super().onChanged()
+	
+	@classmethod
+	def newObjFromType(cls, type: int, name: str, modelName: str) -> bpy.types.Object:
+		obj = bpy.data.objects.new(name, None)
+		getSyncCollection().objects.link(obj)
+
+		if type == SyncObjectsType["entity"]:
+			updateVisualizationObject(obj, modelName, False)
+		else:
+			raise NotImplementedError(f"Object type {type} not implemented")
 		
+		return obj
+
+class SyncedAreaObject(SyncedObject):
+	_typeBoxArea = "app::area::BoxArea"
+	_typeCylinderArea = "app::area::CylinderArea"
+	_typeSphereArea = "app::area::SphereArea"
+	# syncable props: position, rotation, scale, points, height
+	_typeBoxAreaHash = crc32(_typeBoxArea)
+	# syncable props: position, rotation, scale, radius, height
+	_typeCylinderAreaHash = crc32(_typeCylinderArea)
+	# syncable props: position, radius
+	_typeSphereAreaHash = crc32(_typeSphereArea)
+
+	_objColor = (0, 0, 1, 0.333)
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
+		super().__init__(uuid, xml, None)
+		self.newAreaObjectFromType(int(xml.find("code").text, 16))
+		self.updateWithXml(self.xml)
+	
+	def selfToXml(self) -> Element:
+		root = Element("value")
+		obj = findObject(self.objName, self.uuid)
+		
+		code = self.xml.find("code").text
+		codeInt = int(code, 16)
+		SubElement(root, "code").text = code
+		
+		SubElement(root, "position").text = vecToXmlVec3(obj.location)
+		if codeInt != self._typeSphereAreaHash:
+			SubElement(root, "rotation").text = vecToXmlVec3(obj.rotation_euler)
+			SubElement(root, "scale").text = vecToXmlVec3Scale(obj.scale)
+
+			if codeInt == self._typeBoxAreaHash:
+				vertPoints = [v.co[:2] for v in obj.data.vertices]
+				points =  " ".join([floatToStr(v) for c in vertPoints for v in c])
+				SubElement(root, "points").text = points
+			elif codeInt == self._typeCylinderAreaHash:
+				geometryNodeTree = obj.modifiers[0].node_group
+				radiusIdentifier = geometryNodeTree.inputs[1].identifier
+				radius = obj.modifiers[0][radiusIdentifier]
+				SubElement(root, "radius").text = floatToStr(radius)
+
+			height = obj.modifiers["Solidify"].thickness
+			SubElement(root, "height").text = floatToStr(height)
+		else:
+			scale = obj.scale[0]
+			SubElement(root, "radius").text = floatToStr(scale)
+
+		return root
+	
+	def updateWithXml(self, xmlRoot: Element):
+		obj = findObject(self.objName, self.uuid)
+		if obj is None:
+			return
+
+		code = xmlRoot.find("code").text
+		codeInt = int(code, 16)
+		
+		# pos
+		pos = xmlVecToVec3(xmlRoot.find("position").text)
+		obj.location = pos
+
+		# rot, scale, height
+		if codeInt != self._typeSphereAreaHash:
+			rot = xmlVecToVec3(xmlRoot.find("rotation").text)
+			scale = xmlVecToVec3Scale(xmlRoot.find("scale").text)
+			obj.rotation_euler = rot
+			obj.scale = scale
+
+			height = strToFloat(xmlRoot.find("height").text)
+			obj.modifiers["Solidify"].thickness = height
+		
+		# points
+		if codeInt == self._typeBoxAreaHash:
+			points = self.xml.find("points").text.split(" ")
+			points = map(lambda x: strToFloat(x), points)
+			points = list(zip(*(iter(points),) * 2))
+			for i in range(4):
+				obj.data.vertices[i].co[0] = points[i][0]
+				obj.data.vertices[i].co[1] = points[i][1]
+		
+		# radius
+		if codeInt == self._typeCylinderAreaHash:
+			radius = strToFloat(xmlRoot.find("radius").text)
+			nodeTree = obj.modifiers[0].node_group
+			radiusIdentifier = nodeTree.inputs[1].identifier
+			obj.modifiers[0][radiusIdentifier] = radius
+			nodeTree.inputs[1].default_value = radius
+		elif codeInt == self._typeSphereAreaHash:
+			radius = strToFloat(xmlRoot.find("radius").text)
+			obj.scale = (radius, radius, radius)
+
+	def newAreaObjectFromType(self, type: int) -> bpy.types.Object:
+		name: str = "area"
+		if type == self._typeBoxAreaHash:
+			name = self._typeBoxArea
+		elif type == self._typeCylinderAreaHash:
+			name = self._typeCylinderArea
+		elif type == self._typeSphereAreaHash:
+			name = self._typeSphereArea
+		else:
+			raise NotImplementedError(f"Object type {type} not implemented")
+		
+		name += " " + self.uuid
+		mesh = bpy.data.meshes.new(name)
+		obj = bpy.data.objects.new(name, mesh)
+		obj.color = self._objColor
+		obj.show_wire = True
+		getSyncCollection().objects.link(obj)
+
+		# transforms
+		pos = xmlVecToVec3(self.xml.find("position").text)
+		obj.location = pos
+		if (type != self._typeSphereAreaHash):
+			rot = xmlVecToVec3(self.xml.find("rotation").text)
+			scale = xmlVecToVec3Scale(self.xml.find("scale").text)
+			obj.rotation_euler = rot
+			obj.scale = scale
+
+		if type == self._typeBoxAreaHash:
+			# base face
+			points = self.xml.find("points").text.split(" ")
+			points = map(lambda x: strToFloat(x), points)
+			points = list(zip(*(iter(points),) * 2))
+
+			vertices = [ point + (0,) for point in points ]
+			faces = [list(range(len(vertices)))]
+			mesh.from_pydata(vertices, [], faces)
+			mesh.update()
+		elif type == self._typeCylinderAreaHash or type == self._typeSphereAreaHash:
+			# use geometry nodes
+				# cylinder: first create a circle curve and then fill it
+				# sphere: just create a uv sphere
+			geometryNodesMod: bpy.types.NodesModifier = obj.modifiers.new("GeometryNodes", "NODES")
+			nodeTree = geometryNodesMod.node_group
+
+			inputNode = nodeTree.nodes["Group Input"]
+			outputNode = nodeTree.nodes["Group Output"]
+			if type == self._typeCylinderAreaHash:
+				circleNode = nodeTree.nodes.new("GeometryNodeCurvePrimitiveCircle")
+				fillNode = nodeTree.nodes.new("GeometryNodeFillCurve")
+				fillNode.mode = "NGONS"
+				circleNode.location = (-170, 0)
+				nodeTree.links.new(circleNode.outputs["Curve"], fillNode.inputs["Curve"])
+				nodeTree.links.new(fillNode.outputs["Mesh"], outputNode.inputs["Geometry"])
+			else:
+				sphereNode = nodeTree.nodes.new("GeometryNodeMeshUVSphere")
+				nodeTree.links.new(sphereNode.outputs["Mesh"], outputNode.inputs["Geometry"])
+
+			inputNode.outputs.new("VALUE", "Radius")
+			if type == self._typeCylinderAreaHash:
+				nodeTree.links.new(inputNode.outputs["Radius"], circleNode.inputs["Radius"])
+			else:
+				nodeTree.links.new(inputNode.outputs["Radius"], sphereNode.inputs["Radius"])
+			
+			nodeTree.inputs[1].hide_value = False
+			radiusIdentifier = nodeTree.inputs[1].identifier
+			radius = strToFloat(self.xml.find("radius").text) if type == self._typeCylinderAreaHash else 1
+			geometryNodesMod[radiusIdentifier] = radius
+			nodeTree.inputs[1].default_value = radius 
+			nodeTree.inputs[1].hide_value = type == self._typeSphereAreaHash
+		if type == self._typeSphereAreaHash:
+			radius = strToFloat(self.xml.find("radius").text)
+			obj.scale = (radius, radius, radius)
+
+		# height modifier
+		if (type != self._typeSphereAreaHash):
+			height = strToFloat(self.xml.find("height").text)
+			solidifyMod = obj.modifiers.new("Solidify", "SOLIDIFY")
+			solidifyMod.thickness = height
+			solidifyMod.offset = 1
+		
+		return obj
+
 
 syncedObjects: dict[str, SyncedObject] = {}
 
@@ -162,26 +349,36 @@ def onWsMsg(msg: SyncMessage):
 	elif msg.method == "endSync":
 		if msg.uuid in syncedObjects:
 			syncedObjects[msg.uuid].endSync()
-			del syncedObjects[msg.uuid]
 
 	setDisableDepsgraphUpdates(False)
 
-def onDepsgraphUpdate(scene: bpy.types.Scene):
+def onWsEnd():
+	global syncedObjects
+	for syncObj in list(syncedObjects.values()):
+		syncObj.endSync()
+	syncedObjects.clear()
+
+@throttle(10)
+def onDepsgraphUpdate(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
 	global syncedObjects
 	if getDisableDepsgraphUpdates():
 		return
 	for syncObj in list(syncedObjects.values()):
 		if findObject(syncObj.objName, syncObj.uuid) is None:
 			syncObj.endSync()
-			del syncedObjects[syncObj.uuid]
 		elif syncObj.hasChanged():
 			syncObj.onChanged()
 
+_isInited = False
 def initSyncedObjects():
+	global _isInited
+	if _isInited:
+		return
+	_isInited = True
 	addOnMessageListener(onWsMsg)
+	addOnWsEndListener(onWsEnd)
 	bpy.app.handlers.depsgraph_update_post.append(onDepsgraphUpdate)
 
 def unregisterSyncedObjects():
 	bpy.app.handlers.depsgraph_update_post.remove(onDepsgraphUpdate)
 	disconnectFromWebsocket()
-
