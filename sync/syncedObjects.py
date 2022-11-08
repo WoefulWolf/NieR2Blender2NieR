@@ -1,4 +1,5 @@
 
+from copy import deepcopy
 import re
 import time
 from xml.etree import ElementTree
@@ -34,6 +35,8 @@ class SyncedObject:
 			return SyncedEntityObject(uuid, xml, nameHint)
 		elif type == "area":
 			return SyncedAreaObject(uuid, xml, nameHint)
+		elif type == "bezier":
+			return SyncedBezierObject(uuid, xml, nameHint)
 		raise NotImplementedError()
 
 	def xmlCmp(self, el1: Element, el2: Element) -> bool:
@@ -330,6 +333,101 @@ class SyncedAreaObject(SyncedObject):
 		
 		return obj
 
+class SyncedBezierObject(SyncedObject):
+	# syncable props: attribute, parent?, controls, nodes
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
+		super().__init__(uuid, xml, nameHint)
+		self.makeBezierObject()
+		self.updateWithXml(self.xml)
+
+	def updateWithXml(self, xmlRoot: Element):
+		self.xml = xmlRoot
+
+		newPoints = xmlRoot.find("nodes").findall("value")
+		newPoints = [xmlVecToVec3(point.find("point").text) for point in newPoints]
+
+		newHandles = xmlRoot.find("controls").findall("value")
+		newHandles = [val.find("cp").text.split(" ") for val in newHandles]
+		newLeftHandles = [xmlVecToVec3(" ".join(handle[:3])) for handle in newHandles]
+		newRightHandles = [xmlVecToVec3(" ".join(handle[3:])) for handle in newHandles]
+		for i, invHandle in enumerate(newLeftHandles):
+			vecToPoint = Vector(newPoints[i]) - Vector(invHandle)
+			newLeftHandles[i] = Vector(newPoints[i]) + vecToPoint
+		
+		curve: bpy.types.Curve = findObject(self.objName, self.uuid).data
+		bezierPoints = curve.splines.active.bezier_points
+
+		minLen = min(len(bezierPoints), len(newPoints))
+		for i in range(minLen):
+			bezierPoints[i].co = newPoints[i]
+			bezierPoints[i].handle_left = newLeftHandles[i]
+			bezierPoints[i].handle_right = newRightHandles[i]
+		if len(bezierPoints) < len(newPoints):
+			bezierPoints.add(len(newPoints) - len(bezierPoints))
+			for i in range(minLen, len(newPoints)):
+				bezierPoints[i].co = newPoints[i]
+				bezierPoints[i].handle_left = newLeftHandles[i]
+				bezierPoints[i].handle_right = newRightHandles[i]
+		elif len(bezierPoints) > len(newPoints):
+			for i in range(len(newPoints), len(bezierPoints)):
+				bezierPoints.remove(bezierPoints[-1])
+	
+	def selfToXml(self) -> Element:
+		rootCopy = deepcopy(self.xml)
+		obj = findObject(self.objName, self.uuid)
+		
+		curve: bpy.types.Curve = findObject(self.objName, self.uuid).data
+		bezierCurvePoints = curve.splines.active.bezier_points
+		bezierPoints = [bp.co for bp in bezierCurvePoints]
+		bezierRightHandles = [bp.handle_right for bp in bezierCurvePoints]
+		bezierLeftHandles = [bp.handle_left for bp in bezierCurvePoints]
+		for i, invHandle in enumerate(bezierLeftHandles):
+			vecToPoint = Vector(bezierPoints[i]) - Vector(invHandle)
+			bezierLeftHandles[i] = Vector(bezierPoints[i]) + vecToPoint
+		curLen = len(bezierPoints)
+		bezierPointsStrs = [vecToXmlVec3(point) for point in bezierPoints]
+		bezierHandlesStrs = [
+			vecToXmlVec3(leftHandle) + " " + vecToXmlVec3(rightHandle)
+			for leftHandle, rightHandle in zip(bezierLeftHandles, bezierRightHandles)
+		]
+
+		nodes = rootCopy.find("nodes")
+		SyncedBezierObject.updateXmlChildren(nodes, curLen, "point", bezierPointsStrs)
+
+		controls = rootCopy.find("controls")
+		SyncedBezierObject.updateXmlChildren(controls, curLen, "cp", bezierHandlesStrs)
+
+		return rootCopy
+	
+	@staticmethod
+	def updateXmlChildren(root: Element, curLen: int, childTagName: str, newChildStrings: list[str]):
+		minLen = min(curLen, len(root.findall("value")))
+		for i in range(minLen):
+			point = root.findall("value")[i].find(childTagName)
+			point.text = newChildStrings[i]
+		if curLen < len(root.findall("value")):
+			for i in range(minLen, curLen):
+				root.remove(root[-1])
+		elif curLen > len(root.findall("value")):
+			for i in range(len(root.findall("value")), curLen):
+				newNode = deepcopy(root[-1])
+				newNode.find(childTagName).text = newChildStrings[i]
+
+	# def onChanged(self):
+	# 	super().onChanged()
+	
+	def makeBezierObject(self):
+		curve: bpy.types.Curve = bpy.data.curves.new(self.objName, "CURVE")
+		curveObj = bpy.data.objects.new(self.objName, curve)
+		getSyncCollection().objects.link(curveObj)
+
+		curve.dimensions = "3D"
+		curve.splines.new(type="BEZIER")
+
+		curve.bevel_mode = "ROUND"
+		curve.bevel_depth = 0.1
+		curve.bevel_resolution = 8
 
 syncedObjects: dict[str, SyncedObject] = {}
 
