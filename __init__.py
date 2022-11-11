@@ -15,7 +15,7 @@ from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionT
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
-    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands
+    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, ClearSelectedBoneIDs
 from .utils.visibilitySwitcher import enableVisibilitySelector, disableVisibilitySelector
 from .utils import visibilitySwitcher
 from .wta_wtp.exporter import wta_wtp_ui_manager
@@ -33,7 +33,6 @@ from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
 
-
 class NierObjectMenu(bpy.types.Menu):
     bl_idname = 'OBJECT_MT_n2b2n'
     bl_label = 'NieR Tools'
@@ -44,7 +43,13 @@ class NierObjectMenu(bpy.types.Menu):
         self.layout.operator(DeleteLooseGeometrySelected.bl_idname)
         self.layout.operator(DeleteLooseGeometryAll.bl_idname)
         self.layout.operator(RipMeshByUVIslands.bl_idname)
-        self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
+
+class NierArmatureMenu(bpy.types.Menu):
+    bl_idname = 'ARMATURE_MT_n2b2n'
+    bl_label = 'NieR Tools'
+    def draw(self, context):
+        self.layout.operator(ClearSelectedBoneIDs.bl_idname, icon='BONE_DATA')
+
 
 class CreateLayVisualization(bpy.types.Operator):
     """Create Layout Object Visualization"""
@@ -89,6 +94,11 @@ def menu_func_utils(self, context):
     yorha_icon = pcoll["yorha"]
     self.layout.menu(NierObjectMenu.bl_idname, icon_value=yorha_icon.icon_id)
 
+def menu_func_editbone_utils(self, context):
+    pcoll = preview_collections["main"]
+    yorha_icon = pcoll["yorha"]
+    self.layout.menu(NierArmatureMenu.bl_idname, icon_value=yorha_icon.icon_id)
+
 classes = (
     ImportNierWmb,
     ImportNierDtt,
@@ -106,12 +116,14 @@ classes = (
     ExtractNierWtaWtp,
     CreateLayVisualization,
     NierObjectMenu,
+    NierArmatureMenu,
     RecalculateObjectIndices,
     RemoveUnusedVertexGroups,
     MergeVertexGroupCopies,
     DeleteLooseGeometrySelected,
     DeleteLooseGeometryAll,
     RipMeshByUVIslands,
+    ClearSelectedBoneIDs,
 )
 
 preview_collections = {}
@@ -134,6 +146,7 @@ def register():
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.types.VIEW3D_MT_object.append(menu_func_utils)
+    bpy.types.VIEW3D_MT_edit_armature.append(menu_func_editbone_utils)
 
     bpy.types.Object.collisionType = bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType)
     bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
@@ -160,6 +173,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
+    bpy.types.VIEW3D_MT_edit_armature.remove(menu_func_editbone_utils)
 
     bpy.app.handlers.load_post.remove(checkCustomPanelsEnableDisable)
     bpy.app.handlers.load_post.remove(checkOldVersionMigration)
