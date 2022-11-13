@@ -171,6 +171,14 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
                     capsuleCap2Obj.parent = curveObj
                     capsuleCap2Obj.rotation_euler = rot
                     clhCollection.objects.link(capsuleCap2Obj)
+
+                bpy.ops.object.origin_set(
+                    {"object" : curveObj,
+                    "selected_objects" : [curveObj],
+                    "selected_editable_objects" : [curveObj],
+                    },
+                    type='ORIGIN_GEOMETRY'
+                )
                     
             else:
                 if capsule == 1:
@@ -189,14 +197,6 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
                     emptyObj.location = (pos1[0], -pos1[2], pos1[1])
                     emptyObj.show_name = True
                     clhCollection.objects.link(emptyObj)
-
-            bpy.ops.object.origin_set(
-                    {"object" : curveObj,
-                    "selected_objects" : [curveObj],
-                    "selected_editable_objects" : [curveObj],
-                    },
-                    type='ORIGIN_GEOMETRY'
-                )
 
         return {"FINISHED"}
 
