@@ -32,6 +32,7 @@ from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
+from .utils.physicsVisualiser import register as registerPhysicsVisualiser, unregister as unregisterPhysicsVisualiser
 
 class NierObjectMenu(bpy.types.Menu):
     bl_idname = 'OBJECT_MT_n2b2n'
@@ -157,6 +158,8 @@ def register():
     bpy.app.handlers.load_post.append(checkOldVersionMigration)
     bpy.app.handlers.depsgraph_update_post.append(initialCheckCustomPanelsEnableDisable)
 
+    registerPhysicsVisualiser()
+
 def unregister():
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
@@ -179,6 +182,8 @@ def unregister():
     bpy.app.handlers.load_post.remove(checkOldVersionMigration)
     if initialCheckCustomPanelsEnableDisable in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(initialCheckCustomPanelsEnableDisable)
+
+    unregisterPhysicsVisualiser()
 
 @persistent
 def checkCustomPanelsEnableDisable(_, __):
