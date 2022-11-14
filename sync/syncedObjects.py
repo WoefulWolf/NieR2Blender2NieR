@@ -239,7 +239,7 @@ class SyncedListObject(SyncedObject):
 			raise Exception(f"Collection {self.uuid} not found")
 		if len(coll.objects) != len(self.objects):
 			return True
-		blenderObjUuids = [obj["uuid"] for obj in coll.objects]
+		blenderObjUuids = [obj["uuid"] for obj in coll.objects if "uuid" in obj]
 		syncObjUuids = [obj.uuid for obj in self.objects]
 		blenderObjUuids.sort()
 		syncObjUuids.sort()
@@ -250,12 +250,23 @@ class SyncedListObject(SyncedObject):
 		if coll is None:
 			raise Exception(f"Collection {self.uuid} not found")
 		
-		blenderObjUuids = [obj["uuid"] for obj in coll.objects]
+		blenderObjects: list[bpy.types.Object|bpy.types.Collection] = [
+			*coll.objects, *coll.children
+		]
+		blenderObjects = [obj for obj in blenderObjects if "uuid" in obj]
+		blenderObjUuids = [obj["uuid"] for obj in blenderObjects]
 		syncObjUuids = [obj.uuid for obj in self.objects]
 
 		# removed objects
 		removedUuids = [uuid for uuid in syncObjUuids if uuid not in blenderObjUuids]
 		for removedUuid in removedUuids:
+			if findObject(removedUuid) is not None:
+				reparentedObj = findObject(removedUuid)
+				repObjCollUuid = reparentedObj.users_collection[0].get("uuid")
+				if repObjCollUuid is not None:
+					self.handleObjectReparent(removedUuid)
+					continue
+
 			removeSyncObj = [obj for obj in self.objects if obj.uuid == removedUuid][0]
 			self.objects.remove(removeSyncObj)
 			removeSyncObj.endSync(False)
@@ -269,7 +280,7 @@ class SyncedListObject(SyncedObject):
 		# duplicate objects
 		duplicateUuids = [uuid for uuid in set(blenderObjUuids) if blenderObjUuids.count(uuid) > 1]
 		duplicateBlenderObjects: dict[str, list[bpy.types.Object]] = {
-			uuid: [obj for obj in coll.objects if obj["uuid"] == uuid][1:]
+			uuid: [obj for obj in blenderObjects if obj["uuid"] == uuid][1:]
 			for uuid in duplicateUuids
 		}
 		for duplicateUuid in duplicateUuids:
@@ -293,8 +304,31 @@ class SyncedListObject(SyncedObject):
 
 		# added objects
 		addedUuids = [uuid for uuid in blenderObjUuids if uuid not in syncObjUuids]
-		print("Adding new objects is not allowed")	# TODO check if moved from other collection
-		
+		for addedUuid in addedUuids:
+			addedObj = findObject(addedUuid)
+			addedObjUuid = addedObj["uuid"]
+			if addedObjUuid not in syncedObjects:
+				print("added object not found in synced objects")
+				continue
+			self.handleObjectReparent(addedObjUuid)
+
+	@staticmethod
+	def handleObjectReparent(objUuid: str):
+		syncObj = syncedObjects[objUuid]
+		srcList = syncedObjects[syncObj.parentUuid]
+		blenderObj = findObject(objUuid)
+		objCollUuid = blenderObj.users_collection[0].get("uuid")
+		if objCollUuid is None:
+			raise Exception(f"Object {objUuid} not in collection")
+		destList = syncedObjects[objCollUuid]
+		srcList.objects.remove(syncObj)
+		destList.objects.append(syncObj)
+		syncObj.parentUuid = objCollUuid
+		sendMsgToServer(SyncMessage("reparent", objUuid, {
+			"srcListUuid": srcList.uuid,
+			"destListUuid": destList.uuid,
+		}))
+
 
 class SyncedEntityObject(SyncedXmlObject):
 	# syncable props: location{ position, rotation?, }, scale?, objId
