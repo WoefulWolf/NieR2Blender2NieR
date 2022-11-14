@@ -111,9 +111,18 @@ def copy_bone_tree(source_root, target_amt):
 
 def construct_mesh(mesh_data, collection_name):            # [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
     name = mesh_data[0]
+    matched_objs = 0
     for obj in bpy.data.objects:
-        if obj.name == name:
-            name = name + '-' + collection_name
+        if obj.name.split("-")[-1].isnumeric():
+            truename = obj.name.split("-")
+            truename.pop()
+            truename = "-".join(truename)
+        else:
+            truename = obj.name
+        if truename == name:
+            matched_objs += 1
+    if matched_objs > 0:
+        name += "-%d" % matched_objs
     vertices = mesh_data[1]
     faces = mesh_data[2]
     has_bone = mesh_data[3]
@@ -589,43 +598,40 @@ def format_wmb_mesh(wmb, collection_name):
                             boundingBox = meshGroup.boundingBox
                             obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name)
                             meshes.append(obj)
-        else: # wmb4
-            for meshIndex in range(wmb.wmb_header.meshCount):
-                mesh = wmb.meshArray[meshIndex]
-                meshInfo = wmb.clear_unused_vertex(meshIndex, meshVertexGroupIndex) # FIX VGI
-                usedVerticeIndexArrays.append(meshInfo[2]) # usedVerticeIndexArray
-                
-                obj = construct_mesh([ \
-                    # meshName
-                    mesh.name, \
-                    # vertices
-                    meshInfo[0], \
-                    # faces
-                    meshInfo[1], \
-                    # has_bone
-                    wmb.hasBone, \
-                    # boneWeightInfoArray
-                    meshInfo[3], \
-                    # boneSetIndex
-                    whatthefuckisboneSetIndex, \
-                    # meshGroupIndex
-                    whatthefuckismeshGroupIndex, \
-                    # vertex_colors
-                    meshInfo[4], \
-                    # LOD_name
-                    whatthefuckisLOD_name, \
-                    # LOD_level
-                    whatthefuckisLOD_level, \
-                    # colTreeNodeIndex
-                    whatthefuckiscolTreeNodeIndex, \
-                    # unknownWorldDataIndex
-                    whatthefuckisunknownWorldDataIndex, \
-                    # boundingBox
-                    whatthefuckisboundingBox, \
-                    # vertexGroupIndex
-                    whatthefuckisvertexGroupIndex \
-                ], collection_name)
-                meshes.append(obj)
+    if wmb.wmb_header.magicNumber == b'WMB4':
+        for batchIndex in range(len(wmb.batchArray)):
+            batch = wmb.batchArray[batchIndex]
+            batchData = wmb.batchDataArray[batchIndex]
+            vertexGroup = wmb.vertexGroupArray[batch.vertexGroupIndex]
+            
+            mesh = wmb.meshArray[batchData.meshIndex]
+            
+            mesh.faceStart = batch.indexStart
+            mesh.faceCount = batch.numIndexes
+            mesh.vertexStart = batch.vertexStart
+            mesh.vertexCount = batch.numVertexes
+            mesh.bonesetIndex = batchData.boneSetsIndex
+            
+            meshInfo = wmb.clear_unused_vertex(batchData.meshIndex, batch.vertexGroupIndex, True)
+            usedVerticeIndexArrays.append(meshInfo[2]) # usedVerticeIndexArray
+            
+            obj = construct_mesh([
+                mesh.name,   # meshName
+                meshInfo[0], # vertices
+                meshInfo[1], # faces
+                wmb.hasBone, # has_bone
+                meshInfo[3], # boneWeightInfoArray
+                batchData.boneSetsIndex, # boneSetIndex
+                None,        # meshGroupIndex
+                meshInfo[4], # vertex_colors
+                "NoLOD",     # LOD_name
+                -1,          # LOD_level
+                None,        # colTreeNodeIndex
+                None,        # unknownWorldDataIndex
+                mesh.boundingBox,       # boundingBox
+                batch.vertexGroupIndex  # vertexGroupIndex
+            ], collection_name)
+            meshes.append(obj)
     
     return meshes, uvMaps, usedVerticeIndexArrays
 

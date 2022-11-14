@@ -92,16 +92,16 @@ class WMB_Header(object):
             # probably padded somehow
             
             print("WMB4 header information")
-            print(" version       %s" % str(self.version))
+            print(" version       %s" % self.version)
             print(" vertexFormat  %s" % hex(self.vertexFormat))
-            print(" referenceBone %s" % str(self.referenceBone))
+            print(" referenceBone %d" % self.referenceBone)
             print(" flags         %s" % hex(self.flags))
-            print(" bounding_box1 %s" % str(self.bounding_box1))
-            print(" bounding_box2 %s" % str(self.bounding_box2))
-            print(" bounding_box3 %s" % str(self.bounding_box3))
-            print(" bounding_box4 %s" % str(self.bounding_box4))
-            print(" bounding_box5 %s" % str(self.bounding_box5))
-            print(" bounding_box6 %s" % str(self.bounding_box6))
+            print(" bounding_box1 %d" % self.bounding_box1)
+            print(" bounding_box2 %d" % self.bounding_box2)
+            print(" bounding_box3 %d" % self.bounding_box3)
+            print(" bounding_box4 %d" % self.bounding_box4)
+            print(" bounding_box5 %d" % self.bounding_box5)
+            print(" bounding_box6 %d" % self.bounding_box6)
             print()
             print(" Name               Pointer Count")
             print(" vertexGroup        " + hex(self.vertexGroupPointer).rjust(7, " ") + str(self.vertexGroupCount).rjust(6, " "))
@@ -115,6 +115,281 @@ class WMB_Header(object):
             print(" mesh               " + hex(self.meshPointer).rjust(7, " ") + str(self.meshCount).rjust(6, " "))
             print()
 
+
+
+class wmb3_bone(object):
+    """docstring for wmb3_bone"""
+    def __init__(self, wmb_fp,index):
+        super(wmb3_bone, self).__init__()
+        self.boneIndex = index
+        self.boneNumber = read_uint16(wmb_fp)                
+        self.parentIndex = read_uint16(wmb_fp)
+
+        local_positionX = read_float(wmb_fp)         
+        local_positionY = read_float(wmb_fp)        
+        local_positionZ = read_float(wmb_fp)    
+        
+        local_rotationX = read_float(wmb_fp)         
+        local_rotationY = read_float(wmb_fp)         
+        local_rotationZ = read_float(wmb_fp)        
+
+        self.local_scaleX = read_float(wmb_fp)
+        self.local_scaleY = read_float(wmb_fp)
+        self.local_scaleZ = read_float(wmb_fp)
+
+        world_positionX = read_float(wmb_fp)
+        world_positionY = read_float(wmb_fp)
+        world_positionZ = read_float(wmb_fp)
+        
+        world_rotationX = read_float(wmb_fp)
+        world_rotationY = read_float(wmb_fp)
+        world_rotationZ = read_float(wmb_fp)
+
+        world_scaleX = read_float(wmb_fp)
+        world_scaleY = read_float(wmb_fp)
+        world_scaleZ = read_float(wmb_fp)
+
+        world_position_tposeX = read_float(wmb_fp)
+        world_position_tposeY = read_float(wmb_fp)
+        world_position_tposeZ = read_float(wmb_fp)
+
+        self.local_position = (local_positionX, local_positionY, local_positionZ)
+        self.local_rotation = (local_rotationX, local_rotationY, local_rotationZ)
+
+        self.world_position = (world_positionX, world_positionY, world_positionZ)
+        self.world_rotation = (world_rotationX, world_rotationY, world_rotationZ)
+        self.world_scale = (world_scaleX, world_scaleY, world_scaleZ)
+
+        self.world_position_tpose = (world_position_tposeX, world_position_tposeY, world_position_tposeZ)
+
+class wmb3_boneMap(object):
+    """docstring for wmb3_boneMap"""
+    def __init__(self, wmb_fp):
+        super(wmb3_boneMap, self).__init__()
+        self.boneMapPointer = read_uint32(wmb_fp)                    
+        self.boneMapCount = read_uint32(wmb_fp)    
+
+class wmb3_boneSet(object):
+    """docstring for wmb3_boneSet"""
+    def __init__(self, wmb_fp, boneSetCount):
+        super(wmb3_boneSet, self).__init__()
+        self.boneSetArray = []
+        self.boneSetCount = boneSetCount
+        boneSetInfoArray = []
+        #print("Iterating over boneSetCount, length %d" % boneSetCount)
+        for index in range(boneSetCount):
+            offset = read_uint32(wmb_fp)
+            count = read_uint32(wmb_fp)
+            boneSetInfoArray.append([offset, count])
+        #print("Iterating, really, not using range(), over boneSetInfoArray, length " + str(len(boneSetInfoArray)))
+        for boneSetInfo in boneSetInfoArray:
+            wmb_fp.seek(boneSetInfo[0])
+            #print("Seeking to boneSetInfo[0]: %s" % hex(boneSetInfo[0]))
+            boneSet = []
+            #print("Iterating over boneSetInfo[1], length %d" % boneSetInfo[1])
+            for index in range(boneSetInfo[1]):
+                boneSet.append(read_uint16(wmb_fp))
+            self.boneSetArray.append(boneSet)
+
+class wmb3_colTreeNode(object):
+    """docstring for colTreeNode"""
+    def __init__(self, wmb_fp):
+        p1_x = read_float(wmb_fp)
+        p1_y = read_float(wmb_fp)
+        p1_z = read_float(wmb_fp)
+        self.p1 = (p1_x, p1_y, p1_z)
+
+        p2_x = read_float(wmb_fp)
+        p2_y = read_float(wmb_fp)
+        p2_z = read_float(wmb_fp)
+        self.p2 = (p2_x, p2_y, p2_z)
+
+        self.left = read_uint32(wmb_fp)
+        if self.left == 4294967295:
+            self.left = -1
+
+        self.right = read_uint32(wmb_fp)
+        if self.right == 4294967295:
+            self.right = -1
+
+class wmb3_material(object):
+    """docstring for wmb3_material"""
+    def __init__(self, wmb_fp):
+        super(wmb3_material, self).__init__()
+        read_uint16(wmb_fp)
+        read_uint16(wmb_fp)
+        read_uint16(wmb_fp)
+        read_uint16(wmb_fp)
+        materialNameOffset = read_uint32(wmb_fp)
+        effectNameOffset = read_uint32(wmb_fp)
+        techniqueNameOffset = read_uint32(wmb_fp)
+        read_uint32(wmb_fp)
+        textureOffset = read_uint32(wmb_fp)
+        textureNum = read_uint32(wmb_fp)
+        paramterGroupsOffset = read_uint32(wmb_fp)
+        numParameterGroups = read_uint32(wmb_fp)
+        varOffset = read_uint32(wmb_fp)
+        varNum = read_uint32(wmb_fp)
+        wmb_fp.seek(materialNameOffset)
+        #print("Seeking to materialNameOffset: %s" % hex(materialNameOffset))
+        self.materialName = to_string(wmb_fp.read(0x100))
+        wmb_fp.seek(effectNameOffset)
+        #print("Seeking to effectNameOffset: %s" % hex(effectNameOffset))
+        self.effectName = to_string(wmb_fp.read(0x100))
+        wmb_fp.seek(techniqueNameOffset)
+        #print("Seeking to techniqueNameOffset: %s" % hex(techniqueNameOffset))
+        self.techniqueName = to_string(wmb_fp.read(0x100))
+        self.textureArray = {}
+
+        path_split = wmb_fp.name.split(os.sep)
+        mat_list_filepath = os.sep.join(path_split[:-3])
+        mat_list_file = open(os.path.join(mat_list_filepath, 'materials.json'), 'a+')
+        mat_list_file.seek(0)
+        file_dict = {}
+        # Try to load json from pre-existing file
+        try:
+            file_dict = json.load(mat_list_file)
+        except Exception as ex:
+            ##print("Could not load json: " , ex)
+            pass
+        
+        # Clear file contents
+        mat_list_file.truncate(0)
+        file_dict[self.materialName] = {}
+        # Append textures to materials in the dictionary
+        #print("Iterating over textureNum, length %d" % textureNum)
+        for i in range(textureNum):
+            wmb_fp.seek(textureOffset + i * 8)
+            #print("Seeking to textureOffset + i * 8: %s" % hex(textureOffset + i * 8))
+            offset = read_uint32(wmb_fp)
+            identifier = "%08x"%read_uint32(wmb_fp)
+            wmb_fp.seek(offset)
+            #print("Seeking to offset: %s" % hex(offset))
+            textureTypeName = to_string(wmb_fp.read(256))
+            self.textureArray[textureTypeName] = identifier
+            # Add new texture to nested material dictionary
+
+        file_dict[self.materialName]["Textures"] = self.textureArray
+
+        file_dict[self.materialName]["Shader_Name"] = self.effectName
+        file_dict[self.materialName]["Technique_Name"] = self.techniqueName
+        wmb_fp.seek(paramterGroupsOffset)
+        #print("Seeking to paramterGroupsOffset: %s" % hex(paramterGroupsOffset))
+        self.parameterGroups = []
+        #print("Iterating over numParameterGroups, length %d" % numParameterGroups)
+        for i in range(numParameterGroups):
+            wmb_fp.seek(paramterGroupsOffset + i * 12)
+            #print("Seeking to paramterGroupsOffset + i * 12: %s" % hex(paramterGroupsOffset + i * 12))
+            parameters = []
+            index = read_uint32(wmb_fp)
+            offset = read_uint32(wmb_fp)
+            num = read_uint32(wmb_fp)
+            wmb_fp.seek(offset)
+            #print("Seeking to offset: %s" % hex(offset))
+            #print("Iterating over num, length %d" % num)
+            for k in range(num):
+                param = read_float(wmb_fp)
+                parameters.append(param)
+            self.parameterGroups.append(parameters)
+
+        wmb_fp.seek(varOffset)
+        #print("Seeking to varOffset: %s" % hex(varOffset))
+        self.uniformArray = {}
+        #print("Iterating over varNum, length %d" % varNum)
+        for i in range(varNum):
+            wmb_fp.seek(varOffset + i * 8)
+            #print("Seeking to varOffset + i * 8: %s" % hex(varOffset + i * 8))
+            offset = read_uint32(wmb_fp)
+            value = read_float(wmb_fp)
+            wmb_fp.seek(offset)
+            #print("Seeking to offset: %s" % hex(offset))
+            name = to_string(wmb_fp.read(0x100))
+            self.uniformArray[name] = value
+
+        file_dict[self.materialName]["ParameterGroups"] = self.parameterGroups
+        file_dict[self.materialName]["Variables"] = self.uniformArray
+
+        # Write the current material to materials.json
+        json.dump(file_dict, mat_list_file, indent= 4)
+        mat_list_file.close()
+
+class wmb3_mesh(object):
+    """docstring for wmb3_mesh"""
+    def __init__(self, wmb_fp):
+        super(wmb3_mesh, self).__init__()
+        self.vertexGroupIndex = read_uint32(wmb_fp)
+        self.bonesetIndex = read_uint32(wmb_fp)                    
+        self.vertexStart = read_uint32(wmb_fp)                
+        self.faceStart = read_uint32(wmb_fp)                    
+        self.vertexCount = read_uint32(wmb_fp)                
+        self.faceCount = read_uint32(wmb_fp)                    
+        self.unknown18 = read_uint32(wmb_fp)
+
+class wmb3_meshGroup(object):
+    """docstring for wmb3_meshGroupInfo"""
+    def __init__(self, wmb_fp):
+        super(wmb3_meshGroup, self).__init__()
+        nameOffset = read_uint32(wmb_fp)
+        self.boundingBox = []
+        #print("Iterating over 6, length %d" % 6)
+        for i in range(6):
+            self.boundingBox.append(read_float(wmb_fp))                                
+        materialIndexArrayOffset = read_uint32(wmb_fp)
+        materialIndexArrayCount = read_uint32(wmb_fp)
+        boneIndexArrayOffset = read_uint32(wmb_fp)
+        boneIndexArrayCount = read_uint32(wmb_fp)
+        wmb_fp.seek(nameOffset)
+        #print("Seeking to nameOffset: %s" % hex(nameOffset))
+        self.meshGroupname = to_string(wmb_fp.read(256))
+        self.materialIndexArray = []
+        self.boneIndexArray = []
+        wmb_fp.seek(materialIndexArrayOffset)
+        #print("Seeking to materialIndexArrayOffset: %s" % hex(materialIndexArrayOffset))
+        #print("Iterating over materialIndexArrayCount, length %d" % materialIndexArrayCount)
+        for i in range(materialIndexArrayCount):
+            self.materialIndexArray.append(read_uint16(wmb_fp))
+        wmb_fp.seek(boneIndexArrayOffset)
+        #print("Seeking to boneIndexArrayOffset: %s" % hex(boneIndexArrayOffset))
+        #print("Iterating over boneIndexArrayCount, length %d" % boneIndexArrayCount)
+        for i in range(boneIndexArrayCount):
+            self.boneIndexArray.append(read_uint16(wmb_fp))
+
+class wmb3_groupedMesh(object):
+    """docstring for wmb3_groupedMesh"""
+    def __init__(self, wmb_fp):
+        super(wmb3_groupedMesh, self).__init__()
+        self.vertexGroupIndex = read_uint32(wmb_fp)
+        self.meshGroupIndex = read_uint32(wmb_fp)
+        self.materialIndex = read_uint32(wmb_fp)
+        self.colTreeNodeIndex = read_uint32(wmb_fp) 
+        if self.colTreeNodeIndex == 0xffffffff:    
+            self.colTreeNodeIndex = -1                    
+        self.meshGroupInfoMaterialPair = read_uint32(wmb_fp)
+        self.unknownWorldDataIndex = read_uint32(wmb_fp)
+        if self.unknownWorldDataIndex == 0xffffffff:    
+            self.unknownWorldDataIndex = -1
+
+class wmb3_meshGroupInfo(object):
+    """docstring for wmb3_meshGroupInfo"""
+    def __init__(self, wmb_fp):
+        super(wmb3_meshGroupInfo, self).__init__()
+        self.nameOffset = read_uint32(wmb_fp)                    
+        self.lodLevel = read_uint32(wmb_fp)
+        if self.lodLevel == 0xffffffff:    
+            self.lodLevel = -1                
+        self.meshStart = read_uint32(wmb_fp)                        
+        meshGroupInfoOffset = read_uint32(wmb_fp)            
+        self.meshCount = read_uint32(wmb_fp)                        
+        wmb_fp.seek(self.nameOffset)
+        #print("Seeking to self.nameOffset: %s" % hex(self.nameOffset))
+        self.meshGroupInfoname = to_string(wmb_fp.read(0x100))
+        wmb_fp.seek(meshGroupInfoOffset)
+        #print("Seeking to meshGroupInfoOffset: %s" % hex(meshGroupInfoOffset))
+        self.groupedMeshArray = []
+        #print("Iterating over self.meshCount, length %d" % self.meshCount)
+        for i in range(self.meshCount):
+            groupedMesh = wmb3_groupedMesh(wmb_fp)
+            self.groupedMeshArray.append(groupedMesh)
 
 class wmb3_vertexHeader(object):
     """docstring for wmb3_vertexHeader"""
@@ -132,6 +407,40 @@ class wmb3_vertexHeader(object):
         self.vertexFlags = read_uint32(wmb_fp)
         self.faceArrayOffset = read_uint32(wmb_fp)        
         self.faceCount = read_uint32(wmb_fp)                
+
+class wmb3_vertexGroup(object):
+    """docstring for wmb3_vertexGroup"""
+    def __init__(self, wmb_fp, faceSize):
+        super(wmb3_vertexGroup, self).__init__()
+        self.faceSize = faceSize
+        self.vertexGroupHeader = wmb3_vertexHeader(wmb_fp)
+
+        self.vertexFlags = self.vertexGroupHeader.vertexFlags    
+        
+        self.vertexArray = [None] * self.vertexGroupHeader.vertexCount
+        wmb_fp.seek(self.vertexGroupHeader.vertexArrayOffset)
+        #print("Seeking to self.vertexGroupHeader.vertexArrayOffset: %s" % hex(self.vertexGroupHeader.vertexArrayOffset))
+        #print("Iterating over self.vertexGroupHeader.vertexCount, length %d" % self.vertexGroupHeader.vertexCount)
+        for vertex_index in range(self.vertexGroupHeader.vertexCount):
+            vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexFlags)
+            self.vertexArray[vertex_index] = vertex
+
+        self.vertexesExDataArray = [None] * self.vertexGroupHeader.vertexCount
+        wmb_fp.seek(self.vertexGroupHeader.vertexExDataArrayOffset)
+        #print("Seeking to self.vertexGroupHeader.vertexExDataArrayOffset: %s" % hex(self.vertexGroupHeader.vertexExDataArrayOffset))
+        #print("Iterating over self.vertexGroupHeader.vertexCount, length %d" % self.vertexGroupHeader.vertexCount)
+        for vertexIndex in range(self.vertexGroupHeader.vertexCount):
+            self.vertexesExDataArray[vertexIndex] = wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags)
+
+        self.faceRawArray = [None] * self.vertexGroupHeader.faceCount
+        wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
+        #print("Seeking to self.vertexGroupHeader.faceArrayOffset: %s" % hex(self.vertexGroupHeader.faceArrayOffset))
+        #print("Iterating over self.vertexGroupHeader.faceCount, length %d" % self.vertexGroupHeader.faceCount)
+        for face_index in range(self.vertexGroupHeader.faceCount):
+            if faceSize == 2:
+                self.faceRawArray[face_index] = read_uint16(wmb_fp) + 1
+            else:
+                self.faceRawArray[face_index] = read_uint32(wmb_fp) + 1
 
 class wmb3_vertex(object):
     smartRead = SmartIO.makeFormat(
@@ -327,39 +636,216 @@ class wmb3_vertexExData(object):
             self.textureV4 = wmb3_vertexExData.smartRead14.read(wmb_fp)
             self.normal = hex(self.normal)
 
-class wmb3_vertexGroup(object):
-    """docstring for wmb3_vertexGroup"""
-    def __init__(self, wmb_fp, faceSize):
-        super(wmb3_vertexGroup, self).__init__()
-        self.faceSize = faceSize
-        self.vertexGroupHeader = wmb3_vertexHeader(wmb_fp)
+class wmb3_worldData(object):
+    """docstring for wmb3_unknownWorldData"""
+    def __init__(self, wmb_fp):
+        self.unknownWorldData = []
+        #print("Iterating over 6, length %d" % 6)
+        for entry in range(6):
+            self.unknownWorldData.append(wmb_fp.read(4))
 
-        self.vertexFlags = self.vertexGroupHeader.vertexFlags    
+
+class wmb4_batch(object):
+    """docstring for wmb4_batch"""
+    def __init__(self, wmb_fp):
+        self.vertexGroupIndex = read_uint32(wmb_fp)
+        self.vertexStart = read_int32(wmb_fp)
+        self.indexStart = read_int32(wmb_fp)
+        self.numVertexes = read_uint32(wmb_fp)
+        self.numIndexes = read_uint32(wmb_fp)
+        """
+        print("vertexGroupIndex: %d" % self.vertexGroupIndex)
+        print("vertexStart:      %d" % self.vertexStart)
+        print("vertexCount:      %d" % self.numVertexes)
+        print("indexStart:       %d" % self.indexStart)
+        print("indexCount:       %d" % self.numIndexes)
+        """
+
+class wmb4_batchDescription(object):
+    """docstring for wmb4_batchDescription"""
+    def __init__(self, wmb_fp):
+        self.batchDataPointers = []
+        self.batchDataCounts = []
+        self.batchData = []
+        #print("Iterating over 4, length %d" % 4)
+        for dataNum in range(4):
+            self.batchDataPointers.append(read_uint32(wmb_fp))
+            self.batchDataCounts.append(read_uint32(wmb_fp))
+            self.batchData.append(load_data_array(wmb_fp, self.batchDataPointers[-1], self.batchDataCounts[-1], wmb4_batchData))
+
+class wmb4_batchData(object):
+    """docstring for wmb4_batchData"""
+    def __init__(self, wmb_fp):
+        self.batchIndex = read_uint32(wmb_fp)
+        self.meshIndex = read_uint32(wmb_fp)
+        self.materialIndex = read_uint16(wmb_fp)
+        self.boneSetsIndex = read_uint16(wmb_fp)
+        self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
+        """
+        print("Batch index:    %d" % self.batchIndex)
+        print("Mesh index:     %d" % self.meshIndex)
+        print("Material index: %d" % self.materialIndex)
+        print("Bone set index: %d\n" % self.boneSetsIndex)
+        """
+
+class wmb4_bone(object):
+    """docstring for wmb4_bone"""
+    def __init__(self, wmb_fp, index):
+        super(wmb4_bone, self).__init__()
+        self.boneIndex = index # not sure what we need this for
+        self.unknown00 = read_int16(wmb_fp)
+        self.unknown02 = read_int16(wmb_fp) # one is global index
+        self.parentIndex = read_int16(wmb_fp)
+        self.unknownRoation = read_int16(wmb_fp) # rotation order or smth
+
+        relativePositionX = read_float(wmb_fp)
+        relativePositionY = read_float(wmb_fp)
+        relativePositionZ = read_float(wmb_fp)
         
-        self.vertexArray = [None] * self.vertexGroupHeader.vertexCount
-        wmb_fp.seek(self.vertexGroupHeader.vertexArrayOffset)
-        #print("Seeking to self.vertexGroupHeader.vertexArrayOffset: %s" % hex(self.vertexGroupHeader.vertexArrayOffset))
-        #print("Iterating over self.vertexGroupHeader.vertexCount, length %s" % str(self.vertexGroupHeader.vertexCount))
-        for vertex_index in range(self.vertexGroupHeader.vertexCount):
-            vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexFlags)
-            self.vertexArray[vertex_index] = vertex
+        positionX = read_float(wmb_fp)
+        positionY = read_float(wmb_fp)
+        positionZ = read_float(wmb_fp)
 
-        self.vertexesExDataArray = [None] * self.vertexGroupHeader.vertexCount
-        wmb_fp.seek(self.vertexGroupHeader.vertexExDataArrayOffset)
-        #print("Seeking to self.vertexGroupHeader.vertexExDataArrayOffset: %s" % hex(self.vertexGroupHeader.vertexExDataArrayOffset))
-        #print("Iterating over self.vertexGroupHeader.vertexCount, length %s" % str(self.vertexGroupHeader.vertexCount))
-        for vertexIndex in range(self.vertexGroupHeader.vertexCount):
-            self.vertexesExDataArray[vertexIndex] = wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags)
+        self.local_position = (relativePositionX, relativePositionY, relativePositionZ)
+        self.local_rotation = (positionX, positionY, positionZ)
+        
+        #unused in WMB4, probably fine, needed by wmb_importer.py
+        self.world_position = (0, 0, 0)
+        self.world_rotation = (0, 0, 0)
+        self.boneNumber = self.boneIndex
+        # self... wait, why is world_rotation used twice?
+        self.world_position_tpose = (0, 0, 0)
 
-        self.faceRawArray = [None] * self.vertexGroupHeader.faceCount
-        wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
-        #print("Seeking to self.vertexGroupHeader.faceArrayOffset: %s" % hex(self.vertexGroupHeader.faceArrayOffset))
-        #print("Iterating over self.vertexGroupHeader.faceCount, length %s" % str(self.vertexGroupHeader.faceCount))
-        for face_index in range(self.vertexGroupHeader.faceCount):
-            if faceSize == 2:
-                self.faceRawArray[face_index] = read_uint16(wmb_fp) + 1
-            else:
-                self.faceRawArray[face_index] = read_uint32(wmb_fp) + 1
+class wmb4_material(object):
+    """docstring for wmb4_material"""
+    def __init__(self, wmb_fp):
+        super(wmb4_material, self).__init__()
+        self.shaderNamePointer = read_uint32(wmb_fp)
+        self.texturesPointer = read_uint32(wmb_fp)
+        # by context, probably another offset.
+        # check for unread data in the file.
+        self.unknown08 = read_uint32(wmb_fp)
+        self.parametersPointer = read_uint32(wmb_fp)
+        
+        self.texturesCount = read_uint16(wmb_fp)
+        self.unknown12 = read_uint16(wmb_fp) # texture count, always 1, I would guess.
+        self.unknown14 = read_uint16(wmb_fp) # and the mystery count.
+        self.parametersCount = read_uint16(wmb_fp)
+        
+        # return here for the next group header
+        nextMaterialPointer = wmb_fp.tell()
+        
+        # todo: somehow do this stuff with the general read function. More classes!
+        wmb_fp.seek(self.texturesPointer)
+        #print("Seeking to self.texturesPointer: %s" % hex(self.texturesPointer))
+        self.tex0 = read_uint32(wmb_fp)
+        self.albedoMap = read_uint32(wmb_fp)
+        self.tex2 = read_uint32(wmb_fp)
+        self.tex3 = read_uint32(wmb_fp)
+        self.tex4 = read_uint32(wmb_fp)
+        self.tex5 = read_uint32(wmb_fp)
+        self.tex6 = read_uint32(wmb_fp)
+        self.normalMap = read_uint32(wmb_fp)
+        
+        wmb_fp.seek(self.parametersPointer)
+        #print("Seeking to self.parametersPointer: %s" % hex(self.parametersPointer))
+        self.parameters = []
+        if self.parametersCount/4 % 1 != 0:
+            print("Hey, idiot, you have incomplete parameters in your materials. It's gonna read some garbage data, since each one should have exactly four attributes: xyzw. Actually, I'm not sure if it'll read garbage or stop early. Idiot.")
+        #print("Iterating over int(self.parametersCount/4), length %d" % int(self.parametersCount/4))
+        for param in range(int(self.parametersCount/4)):
+            thisparam = []
+            thisparam.append(read_uint32(wmb_fp)) # x
+            thisparam.append(read_uint32(wmb_fp)) # y
+            thisparam.append(read_uint32(wmb_fp)) # z
+            thisparam.append(read_uint32(wmb_fp)) # w
+            self.parameters.append(thisparam)
+        
+        wmb_fp.seek(nextMaterialPointer)
+        #print("Seeking to nextMaterialPointer: %s" % hex(nextMaterialPointer))
+
+class wmb4_mesh(object):
+    """docstring for wmb4_mesh"""
+    def __init__(self, wmb_fp):
+        super(wmb4_mesh, self).__init__()
+        self.namePointer = read_uint32(wmb_fp)
+        self.boundingBox = []
+        #print("Iterating over 6, length %d" % 6)
+        for i in range(6):
+            self.boundingBox.append(read_float(wmb_fp))
+        
+        self.batch0Pointer = read_uint32(wmb_fp)
+        self.batch0Count = read_uint32(wmb_fp)
+        self.batch1Pointer = read_uint32(wmb_fp)
+        self.batch1Count = read_uint32(wmb_fp)
+        self.batch2Pointer = read_uint32(wmb_fp)
+        self.batch2Count = read_uint32(wmb_fp)
+        self.batch3Pointer = read_uint32(wmb_fp)
+        self.batch3Count = read_uint32(wmb_fp)
+        
+        self.materialsPointer = read_uint32(wmb_fp)
+        self.materialsCount = read_uint32(wmb_fp)
+        
+        # return here for the next group header
+        nextMeshPointer = wmb_fp.tell()
+        
+        wmb_fp.seek(self.namePointer)
+        #print("Seeking to self.namePointer: %s" % hex(self.namePointer))
+        self.name = read_string(wmb_fp)
+        #print("\nMesh name: %s" % self.name)
+        
+        self.batches0 = []
+        if self.batch0Pointer > 0:
+            wmb_fp.seek(self.batch0Pointer)
+            #print("Seeking to self.batch0Pointer: %s" % hex(self.batch0Pointer))
+            #print("Iterating over self.batch0Count, length %d" % self.batch0Count)
+            for batch in range(self.batch0Count):
+                self.batches0.append(read_uint16(wmb_fp))
+            #print("Batches 0: %d" % self.batches0)
+        
+        self.batches1 = []
+        if self.batch1Pointer > 0:
+            wmb_fp.seek(self.batch1Pointer)
+            #print("Seeking to self.batch1Pointer: %s" % hex(self.batch1Pointer))
+            #print("Iterating over self.batch1Count, length %d" % self.batch1Count)
+            for batch in range(self.batch1Count):
+                self.batches1.append(read_uint16(wmb_fp))
+            #print("Batches 1: %d" % self.batches1)
+        
+        self.batches2 = []
+        if self.batch2Pointer > 0:
+            wmb_fp.seek(self.batch2Pointer)
+            #print("Seeking to self.batch2Pointer: %s" % hex(self.batch2Pointer))
+            #print("Iterating over self.batch2Count, length %d" % self.batch2Count)
+            for batch in range(self.batch2Count):
+                self.batches2.append(read_uint16(wmb_fp))
+            #print("Batches 2: %d" % self.batches2)
+        
+        self.batches3 = []
+        if self.batch3Pointer > 0:
+            wmb_fp.seek(self.batch3Pointer)
+            #print("Seeking to self.batch3Pointer: %s" % hex(self.batch3Pointer))
+            #print("Iterating over self.batch3Count, length %d" % self.batch3Count)
+            for batch in range(self.batch3Count):
+                self.batches3.append(read_uint16(wmb_fp))
+            #print("Batches 3: %d" % self.batches3)
+        
+        wmb_fp.seek(self.materialsPointer)
+        #print("Seeking to self.materialsPointer: %s" % hex(self.materialsPointer))
+        self.materials = []
+        #print("Iterating over self.materialsCount, length %d" % self.materialsCount)
+        for material in range(self.materialsCount):
+            self.materials.append(read_uint16(wmb_fp))
+        
+        wmb_fp.seek(nextMeshPointer)
+        #print("Seeking to nextMeshPointer: %s" % hex(nextMeshPointer))
+
+class wmb4_texture(object):
+    """The WMB4 texture is delightfully simple."""
+    def __init__(self, wmb_fp):
+        super(wmb4_texture, self).__init__()
+        self.flags = read_uint32(wmb_fp)
+        self.id = read_uint32(wmb_fp)
 
 class wmb4_vertexGroup(object):
     """docstring for wmb4_vertexGroup"""
@@ -369,45 +855,27 @@ class wmb4_vertexGroup(object):
         self.unknownPointer08 = read_uint32(wmb_fp)
         self.unknownPointer0C = read_uint32(wmb_fp)
         self.vertexesCount = read_uint32(wmb_fp)
-        self.unknownIndexesPointer = read_uint32(wmb_fp)
-        self.unknownIndexesCount = read_uint32(wmb_fp)
-        # return here for the next group header
-        nextVertexGroupPointer = wmb_fp.tell()
+        self.faceIndexesPointer = read_uint32(wmb_fp)
+        self.faceIndexesCount = read_uint32(wmb_fp)
         
-        #print("Vertex group information    Pointer Count")
-        #print(" vertexesData            " + hex(self.vertexesDataPointer).rjust(10, " ") + str(self.vertexesCount).rjust(6, " "))
-        #print(" extraVertexesData       " + hex(self.extraVertexesDataPointer).rjust(10, " "))
-        #print(" unknown08               " + hex(self.unknownPointer08).rjust(10, " "))
-        #print(" unknown0C               " + hex(self.unknownPointer0C).rjust(10, " "))
-        #print(" unknownIndexes          " + hex(self.unknownIndexesPointer).rjust(10, " ") + str(self.unknownIndexesCount).rjust(6, " "))
-        ##print(" nextVertexGroup         " + hex(self.nextVertexGroupPointer).rjust(10, " "))
-        #print()
+        """
+        print("Vertex group information    Pointer Count")
+        print(" vertexesData            " + hex(self.vertexesDataPointer).rjust(10, " ") + str(self.vertexesCount).rjust(6, " "))
+        print(" extraVertexesData       " + hex(self.extraVertexesDataPointer).rjust(10, " "))
+        print(" unknown08               " + hex(self.unknownPointer08).rjust(10, " "))
+        print(" unknown0C               " + hex(self.unknownPointer0C).rjust(10, " "))
+        print(" unknownIndexes          " + hex(self.faceIndexesPointer).rjust(10, " ") + str(self.faceIndexesCount).rjust(6, " "))
+        print(" nextVertexGroup         " + hex(self.nextVertexGroupPointer).rjust(10, " "))
+        print()
+        """
         
-        wmb_fp.seek(self.vertexesDataPointer)
-        #print("Seeking to self.vertexesDataPointer: %s" % hex(self.vertexesDataPointer))
-        self.vertexArray = []
-        #print("Iterating over self.vertexesCount, length %s" % str(self.vertexesCount))
-        for vertex in range(self.vertexesCount):
-            self.vertexArray.append(wmb4_vertex(wmb_fp, vertexFormat))
-        if vertexFormat in [0x10337, 0x10137, 0x00337]:
-            wmb_fp.seek(self.extraVertexesDataPointer)
-            #print("Seeking to self.extraVertexesDataPointer: %s" % hex(self.extraVertexesDataPointer))
-            self.vertexExData = []
-            #print("Iterating over self.vertexesCount, length %s" % str(self.vertexesCount))
-            for vertex in range(self.vertexesCount):
-                self.vertexExData.append(wmb4_vertexExData(wmb_fp, vertexFormat))
+        self.vertexArray = load_data_array(wmb_fp, self.vertexesDataPointer, self.vertexesCount, wmb4_vertex, vertexFormat)
+        if vertexFormat in {0x10337, 0x10137, 0x00337}:
+            self.vertexesExDataArray = load_data_array(wmb_fp, self.extraVertexesDataPointer, self.vertexesCount, wmb4_vertexExData, vertexFormat)
         else:
-            self.vertexExData = None
+            self.vertexesExDataArray = [None] * self.vertexesCount
         
-        self.unknownVertexIndexes = []
-        wmb_fp.seek(self.unknownIndexesPointer)
-        #print("Seeking to self.unknownIndexesPointer: %s" % hex(self.unknownIndexesPointer))
-        #print("Iterating over self.unknownIndexesCount, length %s" % str(self.unknownIndexesCount))
-        for unknownIndex in range(self.unknownIndexesCount):
-            self.unknownVertexIndexes.append(read_uint16(wmb_fp))
-        
-        wmb_fp.seek(nextVertexGroupPointer)
-        #print("Seeking to nextVertexGroupPointer: %s" % hex(nextVertexGroupPointer))
+        self.faceRawArray = load_data_array(wmb_fp, self.faceIndexesPointer, self.faceIndexesCount, read_uint16)
         
         self.vertexFlags = None # <trollface>
 
@@ -533,480 +1001,12 @@ class wmb4_vertexExData(object):
             return
         
         else:
-            #print("How the FUCK did you get here, the function call is *directly* inside a check for vertexFormat matching... Somehow, it's %s" % hex(vertexFormat))
+            print("How the FUCK did you get here, the function call is *directly* inside a check for vertexFormat matching... Somehow, it's %s" % hex(vertexFormat))
             return
 
-class wmb4_batch(object):
-    """docstring for wmb4_batch"""
-    def __init__(self, wmb_fp):
-        self.vertexGroupIndex = read_uint32(wmb_fp)
-        self.vertexStart = read_int32(wmb_fp)
-        self.indexStart = read_int32(wmb_fp)
-        self.numVertexes = read_uint32(wmb_fp)
-        self.numIndexes = read_uint32(wmb_fp)
 
-class wmb4_batchDescriptionHeader(object):
-    """docstring for wmb4_batchDescriptionHeader"""
-    def __init__(self, wmb_fp):
-        self.batchDataPointers = []
-        self.batchDataCounts = []
-        #print("Iterating over 4, length %s" % str(4))
-        for dataNum in range(4):
-            self.batchDataPointers.append(read_uint32(wmb_fp))
-            self.batchDataCounts.append(read_uint32(wmb_fp))
-
-class wmb4_batchData(object):
-    """docstring for wmb4_batchData"""
-    def __init__(self, wmb_fp):
-        self.batchIndex = read_uint32(wmb_fp)
-        self.meshIndex = read_uint32(wmb_fp)
-        self.materialIndex = read_uint16(wmb_fp)
-        self.boneSetsIndex = read_uint16(wmb_fp)
-        self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
-
-class wmb3_mesh(object):
-    """docstring for wmb3_mesh"""
-    def __init__(self, wmb_fp):
-        super(wmb3_mesh, self).__init__()
-        self.vertexGroupIndex = read_uint32(wmb_fp)
-        self.bonesetIndex = read_uint32(wmb_fp)                    
-        self.vertexStart = read_uint32(wmb_fp)                
-        self.faceStart = read_uint32(wmb_fp)                    
-        self.vertexCount = read_uint32(wmb_fp)                
-        self.faceCount = read_uint32(wmb_fp)                    
-        self.unknown18 = read_uint32(wmb_fp)
-
-class wmb3_bone(object):
-    """docstring for wmb3_bone"""
-    def __init__(self, wmb_fp,index):
-        super(wmb3_bone, self).__init__()
-        self.boneIndex = index
-        self.boneNumber = read_uint16(wmb_fp)                
-        self.parentIndex = read_uint16(wmb_fp)
-
-        local_positionX = read_float(wmb_fp)         
-        local_positionY = read_float(wmb_fp)        
-        local_positionZ = read_float(wmb_fp)    
-        
-        local_rotationX = read_float(wmb_fp)         
-        local_rotationY = read_float(wmb_fp)         
-        local_rotationZ = read_float(wmb_fp)        
-
-        self.local_scaleX = read_float(wmb_fp)
-        self.local_scaleY = read_float(wmb_fp)
-        self.local_scaleZ = read_float(wmb_fp)
-
-        world_positionX = read_float(wmb_fp)
-        world_positionY = read_float(wmb_fp)
-        world_positionZ = read_float(wmb_fp)
-        
-        world_rotationX = read_float(wmb_fp)
-        world_rotationY = read_float(wmb_fp)
-        world_rotationZ = read_float(wmb_fp)
-
-        world_scaleX = read_float(wmb_fp)
-        world_scaleY = read_float(wmb_fp)
-        world_scaleZ = read_float(wmb_fp)
-
-        world_position_tposeX = read_float(wmb_fp)
-        world_position_tposeY = read_float(wmb_fp)
-        world_position_tposeZ = read_float(wmb_fp)
-
-        self.local_position = (local_positionX, local_positionY, local_positionZ)
-        self.local_rotation = (local_rotationX, local_rotationY, local_rotationZ)
-
-        self.world_position = (world_positionX, world_positionY, world_positionZ)
-        self.world_rotation = (world_rotationX, world_rotationY, world_rotationZ)
-        self.world_scale = (world_scaleX, world_scaleY, world_scaleZ)
-
-        self.world_position_tpose = (world_position_tposeX, world_position_tposeY, world_position_tposeZ)
-
-class wmb4_bone(object):
-    """docstring for wmb4_bone"""
-    def __init__(self, wmb_fp, index):
-        super(wmb4_bone, self).__init__()
-        self.boneIndex = index # not sure what we need this for
-        self.unknown00 = read_int16(wmb_fp)
-        self.unknown02 = read_int16(wmb_fp) # one is global index
-        self.parentIndex = read_int16(wmb_fp)
-        self.unknownRoation = read_int16(wmb_fp) # rotation order or smth
-
-        relativePositionX = read_float(wmb_fp)
-        relativePositionY = read_float(wmb_fp)
-        relativePositionZ = read_float(wmb_fp)
-        
-        positionX = read_float(wmb_fp)
-        positionY = read_float(wmb_fp)
-        positionZ = read_float(wmb_fp)
-
-        self.local_position = (relativePositionX, relativePositionY, relativePositionZ)
-        self.local_rotation = (positionX, positionY, positionZ)
-        
-        #unused in WMB4, probably fine, needed by wmb_importer.py
-        self.world_position = (0, 0, 0)
-        self.world_rotation = (0, 0, 0)
-        self.boneNumber = self.boneIndex
-        # self... wait, why is world_rotation used twice?
-        self.world_position_tpose = (0, 0, 0)
-
-class wmb3_boneMap(object):
-    """docstring for wmb3_boneMap"""
-    def __init__(self, wmb_fp):
-        super(wmb3_boneMap, self).__init__()
-        self.boneMapPointer = read_uint32(wmb_fp)                    
-        self.boneMapCount = read_uint32(wmb_fp)    
-
-class wmb3_boneSet(object):
-    """docstring for wmb3_boneSet"""
-    def __init__(self, wmb_fp, boneSetCount):
-        super(wmb3_boneSet, self).__init__()
-        self.boneSetArray = []
-        self.boneSetCount = boneSetCount
-        boneSetInfoArray = []
-        #print("Iterating over boneSetCount, length %s" % str(boneSetCount))
-        for index in range(boneSetCount):
-            offset =  read_uint32(wmb_fp)
-            count = read_uint32(wmb_fp)
-            boneSetInfoArray.append([offset, count])
-        #print("Iterating, really, not using range(), over boneSetInfoArray, length " + str(len(boneSetInfoArray)))
-        for boneSetInfo in boneSetInfoArray:
-            wmb_fp.seek(boneSetInfo[0])
-            #print("Seeking to boneSetInfo[0]: %s" % hex(boneSetInfo[0]))
-            boneSet = []
-            #print("Iterating over boneSetInfo[1], length %s" % str(boneSetInfo[1]))
-            for index in range(boneSetInfo[1]):
-                boneSet.append(read_uint16(wmb_fp))
-            self.boneSetArray.append(boneSet)
-
-class wmb3_material(object):
-    """docstring for wmb3_material"""
-    def __init__(self, wmb_fp):
-        super(wmb3_material, self).__init__()
-        read_uint16(wmb_fp)
-        read_uint16(wmb_fp)
-        read_uint16(wmb_fp)
-        read_uint16(wmb_fp)
-        materialNameOffset = read_uint32(wmb_fp)
-        effectNameOffset = read_uint32(wmb_fp)
-        techniqueNameOffset = read_uint32(wmb_fp)
-        read_uint32(wmb_fp)
-        textureOffset = read_uint32(wmb_fp)
-        textureNum = read_uint32(wmb_fp)
-        paramterGroupsOffset = read_uint32(wmb_fp)
-        numParameterGroups = read_uint32(wmb_fp)
-        varOffset = read_uint32(wmb_fp)
-        varNum = read_uint32(wmb_fp)
-        wmb_fp.seek(materialNameOffset)
-        #print("Seeking to materialNameOffset: %s" % hex(materialNameOffset))
-        self.materialName = to_string(wmb_fp.read(0x100))
-        wmb_fp.seek(effectNameOffset)
-        #print("Seeking to effectNameOffset: %s" % hex(effectNameOffset))
-        self.effectName = to_string(wmb_fp.read(0x100))
-        wmb_fp.seek(techniqueNameOffset)
-        #print("Seeking to techniqueNameOffset: %s" % hex(techniqueNameOffset))
-        self.techniqueName = to_string(wmb_fp.read(0x100))
-        self.textureArray = {}
-
-        path_split = wmb_fp.name.split(os.sep)
-        mat_list_filepath = os.sep.join(path_split[:-3])
-        mat_list_file = open(os.path.join(mat_list_filepath, 'materials.json'), 'a+')
-        mat_list_file.seek(0)
-        file_dict = {}
-        # Try to load json from pre-existing file
-        try:
-            file_dict = json.load(mat_list_file)
-        except Exception as ex:
-            ##print("Could not load json: " , ex)
-            pass
-        
-        # Clear file contents
-        mat_list_file.truncate(0)
-        file_dict[self.materialName] = {}
-        # Append textures to materials in the dictionary
-        #print("Iterating over textureNum, length %s" % str(textureNum))
-        for i in range(textureNum):
-            wmb_fp.seek(textureOffset + i * 8)
-            #print("Seeking to textureOffset + i * 8: %s" % hex(textureOffset + i * 8))
-            offset = read_uint32(wmb_fp)
-            identifier = "%08x"%read_uint32(wmb_fp)
-            wmb_fp.seek(offset)
-            #print("Seeking to offset: %s" % hex(offset))
-            textureTypeName = to_string(wmb_fp.read(256))
-            self.textureArray[textureTypeName] = identifier
-            # Add new texture to nested material dictionary
-
-        file_dict[self.materialName]["Textures"] = self.textureArray
-
-        file_dict[self.materialName]["Shader_Name"] = self.effectName
-        file_dict[self.materialName]["Technique_Name"] = self.techniqueName
-        wmb_fp.seek(paramterGroupsOffset)
-        #print("Seeking to paramterGroupsOffset: %s" % hex(paramterGroupsOffset))
-        self.parameterGroups = []
-        #print("Iterating over numParameterGroups, length %s" % str(numParameterGroups))
-        for i in range(numParameterGroups):
-            wmb_fp.seek(paramterGroupsOffset + i * 12)
-            #print("Seeking to paramterGroupsOffset + i * 12: %s" % hex(paramterGroupsOffset + i * 12))
-            parameters = []
-            index = read_uint32(wmb_fp)
-            offset = read_uint32(wmb_fp)
-            num = read_uint32(wmb_fp)
-            wmb_fp.seek(offset)
-            #print("Seeking to offset: %s" % hex(offset))
-            #print("Iterating over num, length %s" % str(num))
-            for k in range(num):
-                param = read_float(wmb_fp)
-                parameters.append(param)
-            self.parameterGroups.append(parameters)
-
-        wmb_fp.seek(varOffset)
-        #print("Seeking to varOffset: %s" % hex(varOffset))
-        self.uniformArray = {}
-        #print("Iterating over varNum, length %s" % str(varNum))
-        for i in range(varNum):
-            wmb_fp.seek(varOffset + i * 8)
-            #print("Seeking to varOffset + i * 8: %s" % hex(varOffset + i * 8))
-            offset = read_uint32(wmb_fp)
-            value = read_float(wmb_fp)
-            wmb_fp.seek(offset)
-            #print("Seeking to offset: %s" % hex(offset))
-            name = to_string(wmb_fp.read(0x100))
-            self.uniformArray[name] = value
-
-        file_dict[self.materialName]["ParameterGroups"] = self.parameterGroups
-        file_dict[self.materialName]["Variables"] = self.uniformArray
-
-        # Write the current material to materials.json
-        json.dump(file_dict, mat_list_file, indent= 4)
-        mat_list_file.close()
-
-class wmb4_material(object):
-    """docstring for wmb4_material"""
-    def __init__(self, wmb_fp):
-        super(wmb4_material, self).__init__()
-        self.shaderNamePointer = read_uint32(wmb_fp)
-        self.texturesPointer = read_uint32(wmb_fp)
-        # by context, probably another offset.
-        # check for unread data in the file.
-        self.unknown08 = read_uint32(wmb_fp)
-        self.parametersPointer = read_uint32(wmb_fp)
-        
-        self.texturesCount = read_uint16(wmb_fp)
-        self.unknown12 = read_uint16(wmb_fp) # texture count, always 1, I would guess.
-        self.unknown14 = read_uint16(wmb_fp) # and the mystery count.
-        self.parametersCount = read_uint16(wmb_fp)
-        
-        # return here for the next group header
-        nextMaterialPointer = wmb_fp.tell()
-        
-        wmb_fp.seek(self.texturesPointer)
-        #print("Seeking to self.texturesPointer: %s" % hex(self.texturesPointer))
-        self.tex0 = read_uint32(wmb_fp)
-        self.albedoMap = read_uint32(wmb_fp)
-        self.tex2 = read_uint32(wmb_fp)
-        self.tex3 = read_uint32(wmb_fp)
-        self.tex4 = read_uint32(wmb_fp)
-        self.tex5 = read_uint32(wmb_fp)
-        self.tex6 = read_uint32(wmb_fp)
-        self.normalMap = read_uint32(wmb_fp)
-        
-        wmb_fp.seek(self.parametersPointer)
-        #print("Seeking to self.parametersPointer: %s" % hex(self.parametersPointer))
-        self.parameters = []
-        if self.parametersCount/4 % 1 != 0:
-            print("Hey, idiot, you have incomplete parameters in your materials. It's gonna read some garbage data, since each one should have exactly four attributes: xyzw. Actually, I'm not sure if it'll read garbage or stop early. Idiot.")
-        #print("Iterating over int(self.parametersCount/4), length %s" % str(int(self.parametersCount/4)))
-        for param in range(int(self.parametersCount/4)):
-            thisparam = []
-            thisparam.append(read_uint32(wmb_fp)) # x
-            thisparam.append(read_uint32(wmb_fp)) # y
-            thisparam.append(read_uint32(wmb_fp)) # z
-            thisparam.append(read_uint32(wmb_fp)) # w
-            self.parameters.append(thisparam)
-        
-        wmb_fp.seek(nextMaterialPointer)
-        #print("Seeking to nextMaterialPointer: %s" % hex(nextMaterialPointer))
-
-class wmb4_mesh(object):
-    """docstring for wmb4_mesh"""
-    def __init__(self, wmb_fp):
-        super(wmb4_mesh, self).__init__()
-        self.namePointer = read_uint32(wmb_fp)
-        self.boundingBox = []
-        #print("Iterating over 6, length %s" % str(6))
-        for i in range(6):
-            self.boundingBox.append(read_float(wmb_fp))
-        
-        self.batch0Pointer = read_uint32(wmb_fp)
-        self.batch0Count = read_uint32(wmb_fp)
-        self.batch1Pointer = read_uint32(wmb_fp)
-        self.batch1Count = read_uint32(wmb_fp)
-        self.batch2Pointer = read_uint32(wmb_fp)
-        self.batch2Count = read_uint32(wmb_fp)
-        self.batch3Pointer = read_uint32(wmb_fp)
-        self.batch3Count = read_uint32(wmb_fp)
-        
-        self.materialsPointer = read_uint32(wmb_fp)
-        self.materialsCount = read_uint32(wmb_fp)
-        
-        # return here for the next group header
-        nextMeshPointer = wmb_fp.tell()
-        
-        wmb_fp.seek(self.namePointer)
-        #print("Seeking to self.namePointer: %s" % hex(self.namePointer))
-        self.name = read_string(wmb_fp)
-        print()
-        print("Mesh name: %s" % self.name)
-        
-        if self.batch0Pointer > 0:
-            wmb_fp.seek(self.batch0Pointer)
-            #print("Seeking to self.batch0Pointer: %s" % hex(self.batch0Pointer))
-            self.batches0 = []
-            #print("Iterating over self.batch0Count, length %s" % str(self.batch0Count))
-            for batch in range(self.batch0Count):
-                self.batches0.append(read_uint16(wmb_fp))
-            print("Batches 0: %s" % str(self.batches0))
-        
-        if self.batch1Pointer > 0:
-            wmb_fp.seek(self.batch1Pointer)
-            #print("Seeking to self.batch1Pointer: %s" % hex(self.batch1Pointer))
-            self.batches1 = []
-            #print("Iterating over self.batch1Count, length %s" % str(self.batch1Count))
-            for batch in range(self.batch1Count):
-                self.batches1.append(read_uint16(wmb_fp))
-            print("Batches 1: %s" % str(self.batches1))
-        
-        if self.batch2Pointer > 0:
-            wmb_fp.seek(self.batch2Pointer)
-            #print("Seeking to self.batch2Pointer: %s" % hex(self.batch2Pointer))
-            self.batches2 = []
-            #print("Iterating over self.batch2Count, length %s" % str(self.batch2Count))
-            for batch in range(self.batch2Count):
-                self.batches2.append(read_uint16(wmb_fp))
-            print("Batches 2: %s" % str(self.batches2))
-        
-        if self.batch3Pointer > 0:
-            wmb_fp.seek(self.batch3Pointer)
-            #print("Seeking to self.batch3Pointer: %s" % hex(self.batch3Pointer))
-            self.batches3 = []
-            #print("Iterating over self.batch3Count, length %s" % str(self.batch3Count))
-            for batch in range(self.batch3Count):
-                self.batches3.append(read_uint16(wmb_fp))
-            print("Batches 3: %s" % str(self.batches3))
-        
-        wmb_fp.seek(self.materialsPointer)
-        #print("Seeking to self.materialsPointer: %s" % hex(self.materialsPointer))
-        self.materials = []
-        #print("Iterating over self.materialsCount, length %s" % str(self.materialsCount))
-        for material in range(self.materialsCount):
-            self.materials.append(read_uint16(wmb_fp))
-        
-        wmb_fp.seek(nextMeshPointer)
-        #print("Seeking to nextMeshPointer: %s" % hex(nextMeshPointer))
-
-class wmb4_texture(object):
-    """The WMB4 texture is delightfully simple."""
-    def __init__(self, wmb_fp):
-        super(wmb4_texture, self).__init__()
-        self.flags = read_uint32(wmb_fp)
-        self.id = read_uint32(wmb_fp)
-
-class wmb3_meshGroup(object):
-    """docstring for wmb3_meshGroupInfo"""
-    def __init__(self, wmb_fp):
-        super(wmb3_meshGroup, self).__init__()
-        nameOffset = read_uint32(wmb_fp)
-        self.boundingBox = []
-        #print("Iterating over 6, length %s" % str(6))
-        for i in range(6):
-            self.boundingBox.append(read_float(wmb_fp))                                
-        materialIndexArrayOffset = read_uint32(wmb_fp)
-        materialIndexArrayCount = read_uint32(wmb_fp)
-        boneIndexArrayOffset = read_uint32(wmb_fp)
-        boneIndexArrayCount = read_uint32(wmb_fp)
-        wmb_fp.seek(nameOffset)
-        #print("Seeking to nameOffset: %s" % hex(nameOffset))
-        self.meshGroupname = to_string(wmb_fp.read(256))
-        self.materialIndexArray = []
-        self.boneIndexArray = []
-        wmb_fp.seek(materialIndexArrayOffset)
-        #print("Seeking to materialIndexArrayOffset: %s" % hex(materialIndexArrayOffset))
-        #print("Iterating over materialIndexArrayCount, length %s" % str(materialIndexArrayCount))
-        for i in range(materialIndexArrayCount):
-            self.materialIndexArray.append(read_uint16(wmb_fp))
-        wmb_fp.seek(boneIndexArrayOffset)
-        #print("Seeking to boneIndexArrayOffset: %s" % hex(boneIndexArrayOffset))
-        #print("Iterating over boneIndexArrayCount, length %s" % str(boneIndexArrayCount))
-        for i in range(boneIndexArrayCount):
-            self.boneIndexArray.append(read_uint16(wmb_fp))
-
-class wmb3_groupedMesh(object):
-    """docstring for wmb3_groupedMesh"""
-    def __init__(self, wmb_fp):
-        super(wmb3_groupedMesh, self).__init__()
-        self.vertexGroupIndex = read_uint32(wmb_fp)
-        self.meshGroupIndex = read_uint32(wmb_fp)
-        self.materialIndex = read_uint32(wmb_fp)
-        self.colTreeNodeIndex = read_uint32(wmb_fp) 
-        if self.colTreeNodeIndex == 4294967295:    
-            self.colTreeNodeIndex = -1                    
-        self.meshGroupInfoMaterialPair = read_uint32(wmb_fp)
-        self.unknownWorldDataIndex = read_uint32(wmb_fp)
-        if self.unknownWorldDataIndex == 4294967295:    
-            self.unknownWorldDataIndex = -1
-
-class wmb3_meshGroupInfo(object):
-    """docstring for wmb3_meshGroupInfo"""
-    def __init__(self, wmb_fp):
-        super(wmb3_meshGroupInfo, self).__init__()
-        self.nameOffset = read_uint32(wmb_fp)                    
-        self.lodLevel = read_uint32(wmb_fp)
-        if self.lodLevel == 0xffffffff:    
-            self.lodLevel = -1                
-        self.meshStart = read_uint32(wmb_fp)                        
-        meshGroupInfoOffset = read_uint32(wmb_fp)            
-        self.meshCount = read_uint32(wmb_fp)                        
-        wmb_fp.seek(self.nameOffset)
-        #print("Seeking to self.nameOffset: %s" % hex(self.nameOffset))
-        self.meshGroupInfoname = to_string(wmb_fp.read(0x100))
-        wmb_fp.seek(meshGroupInfoOffset)
-        #print("Seeking to meshGroupInfoOffset: %s" % hex(meshGroupInfoOffset))
-        self.groupedMeshArray = []
-        #print("Iterating over self.meshCount, length %s" % str(self.meshCount))
-        for i in range(self.meshCount):
-            groupedMesh = wmb3_groupedMesh(wmb_fp)
-            self.groupedMeshArray.append(groupedMesh)
-
-class wmb3_colTreeNode(object):
-    """docstring for colTreeNode"""
-    def __init__(self, wmb_fp):
-        p1_x = read_float(wmb_fp)
-        p1_y = read_float(wmb_fp)
-        p1_z = read_float(wmb_fp)
-        self.p1 = (p1_x, p1_y, p1_z)
-
-        p2_x = read_float(wmb_fp)
-        p2_y = read_float(wmb_fp)
-        p2_z = read_float(wmb_fp)
-        self.p2 = (p2_x, p2_y, p2_z)
-
-        self.left = read_uint32(wmb_fp)
-        if self.left == 4294967295:
-            self.left = -1
-
-        self.right = read_uint32(wmb_fp)
-        if self.right == 4294967295:
-            self.right = -1
-
-class wmb3_worldData(object):
-    """docstring for wmb3_unknownWorldData"""
-    def __init__(self, wmb_fp):
-        self.unknownWorldData = []
-        #print("Iterating over 6, length %s" % str(6))
-        for entry in range(6):
-            self.unknownWorldData.append(wmb_fp.read(4))
-
-class WMB3(object):
-    """docstring for WMB3"""
+class WMB(object):
+    """docstring for WMB"""
     def __init__(self, wmb_file, only_extract):
         super(WMB3, self).__init__()
         wmb_fp = 0
@@ -1037,6 +1037,8 @@ class WMB3(object):
             #print("DTT/DAT does not contain WMB file.")
             return
         
+        
+        
         self.wmb_header = WMB_Header(wmb_fp)
         if self.wmb_header.magicNumber == b'WMB3':
             self.hasBone = False
@@ -1046,7 +1048,7 @@ class WMB3(object):
             wmb_fp.seek(self.wmb_header.bonePointer)
             #print("Seeking to self.wmb_header.bonePointer: %s" % hex(self.wmb_header.bonePointer))
             self.boneArray = []
-            #print("Iterating over self.wmb_header.boneCount, length %s" % str(self.wmb_header.boneCount))
+            #print("Iterating over self.wmb_header.boneCount, length %d" % self.wmb_header.boneCount)
             for boneIndex in range(self.wmb_header.boneCount):
                 self.boneArray.append(wmb3_bone(wmb_fp,boneIndex))
             
@@ -1057,7 +1059,7 @@ class WMB3(object):
             if self.wmb_header.boneTranslateTablePointer > 0:
                 wmb_fp.seek(self.wmb_header.boneTranslateTablePointer)
                 #print("Seeking to self.wmb_header.boneTranslateTablePointer: %s" % hex(self.wmb_header.boneTranslateTablePointer))
-                #print("Iterating over 16, length %s" % str(16))
+                #print("Iterating over 16, length %d" % 16)
                 for entry in range(16):
                     self.firstLevel.append(read_uint16(wmb_fp))
                     if self.firstLevel[-1] == 65535:
@@ -1068,7 +1070,7 @@ class WMB3(object):
                     if entry != -1:
                         firstLevel_Entry_Count += 1
 
-                #print("Iterating over firstLevel_Entry_Count * 16, length %s" % str(firstLevel_Entry_Count * 16))
+                #print("Iterating over firstLevel_Entry_Count * 16, length %d" % firstLevel_Entry_Count * 16)
                 for entry in range(firstLevel_Entry_Count * 16):
                     self.secondLevel.append(read_uint16(wmb_fp))
                     if self.secondLevel[-1] == 65535:
@@ -1079,7 +1081,7 @@ class WMB3(object):
                     if entry != -1:
                         secondLevel_Entry_Count += 1
 
-                #print("Iterating over secondLevel_Entry_Count * 16, length %s" % str(secondLevel_Entry_Count * 16))
+                #print("Iterating over secondLevel_Entry_Count * 16, length %d" % secondLevel_Entry_Count * 16)
                 for entry in range(secondLevel_Entry_Count * 16):
                     self.thirdLevel.append(read_uint16(wmb_fp))
                     if self.thirdLevel[-1] == 65535:
@@ -1089,12 +1091,12 @@ class WMB3(object):
                 wmb_fp.seek(self.wmb_header.boneTranslateTablePointer)
                 #print("Seeking to self.wmb_header.boneTranslateTablePointer: %s" % hex(self.wmb_header.boneTranslateTablePointer))
                 unknownData1Array = []
-                #print("Iterating over self.wmb_header.boneTranslateTableSize, length %s" % str(self.wmb_header.boneTranslateTableSize))
+                #print("Iterating over self.wmb_header.boneTranslateTableSize, length %d" % self.wmb_header.boneTranslateTableSize)
                 for i in range(self.wmb_header.boneTranslateTableSize):
                     unknownData1Array.append(read_uint8(wmb_fp))
 
             self.materialArray = []
-            #print("Iterating over self.wmb_header.materialCount, length %s" % str(self.wmb_header.materialCount))
+            #print("Iterating over self.wmb_header.materialCount, length %d" % self.wmb_header.materialCount)
             for materialIndex in range(self.wmb_header.materialCount):
                 wmb_fp.seek(self.wmb_header.materialPointer + materialIndex * 0x30)
                 #print("Seeking to self.wmb_header.materialPointer + materialIndex * 0x30: %s" % hex(self.wmb_header.materialPointer + materialIndex * 0x30))
@@ -1105,7 +1107,7 @@ class WMB3(object):
                 return
 
             self.vertexGroupArray = []
-            #print("Iterating over self.wmb_header.vertexGroupCount, length %s" % str(self.wmb_header.vertexGroupCount))
+            #print("Iterating over self.wmb_header.vertexGroupCount, length %d" % self.wmb_header.vertexGroupCount)
             for vertexGroupIndex in range(self.wmb_header.vertexGroupCount):
                 wmb_fp.seek(self.wmb_header.vertexGroupPointer + 0x30 * vertexGroupIndex)
                 #print("Seeking to self.wmb_header.vertexGroupPointer + 0x30 * vertexGroupIndex: %s" % hex(self.wmb_header.vertexGroupPointer + 0x30 * vertexGroupIndex))
@@ -1116,13 +1118,13 @@ class WMB3(object):
             self.meshArray = []
             wmb_fp.seek(self.wmb_header.meshPointer)
             #print("Seeking to self.wmb_header.meshPointer: %s" % hex(self.wmb_header.meshPointer))
-            #print("Iterating over self.wmb_header.meshCount, length %s" % str(self.wmb_header.meshCount))
+            #print("Iterating over self.wmb_header.meshCount, length %d" % self.wmb_header.meshCount)
             for meshIndex in range(self.wmb_header.meshCount):
                 mesh = wmb3_mesh(wmb_fp)
                 self.meshArray.append(mesh)
 
             self.meshGroupInfoArray = []
-            #print("Iterating over self.wmb_header.meshGroupInfoCount, length %s" % str(self.wmb_header.meshGroupInfoCount))
+            #print("Iterating over self.wmb_header.meshGroupInfoCount, length %d" % self.wmb_header.meshGroupInfoCount)
             for meshGroupInfoArrayIndex in range(self.wmb_header.meshGroupInfoCount):
                 wmb_fp.seek(self.wmb_header.meshGroupInfoPointer + meshGroupInfoArrayIndex * 0x14)
                 #print("Seeking to self.wmb_header.meshGroupInfoPointer + meshGroupInfoArrayIndex * 0x14: %s" % hex(self.wmb_header.meshGroupInfoPointer + meshGroupInfoArrayIndex * 0x14))
@@ -1130,7 +1132,7 @@ class WMB3(object):
                 self.meshGroupInfoArray.append(meshGroupInfo)
 
             self.meshGroupArray = []
-            #print("Iterating over self.wmb_header.meshGroupCount, length %s" % str(self.wmb_header.meshGroupCount))
+            #print("Iterating over self.wmb_header.meshGroupCount, length %d" % self.wmb_header.meshGroupCount)
             for meshGroupIndex in range(self.wmb_header.meshGroupCount):
                 wmb_fp.seek(self.wmb_header.meshGroupPointer + meshGroupIndex * 0x2c)
                 #print("Seeking to self.wmb_header.meshGroupPointer + meshGroupIndex * 0x2c: %s" % hex(self.wmb_header.meshGroupPointer + meshGroupIndex * 0x2c))
@@ -1141,7 +1143,7 @@ class WMB3(object):
             wmb_fp.seek(self.wmb_header.boneMapPointer)
             #print("Seeking to self.wmb_header.boneMapPointer: %s" % hex(self.wmb_header.boneMapPointer))
             self.boneMap = []
-            #print("Iterating over self.wmb_header.boneMapCount, length %s" % str(self.wmb_header.boneMapCount))
+            #print("Iterating over self.wmb_header.boneMapCount, length %d" % self.wmb_header.boneMapCount)
             for index in range(self.wmb_header.boneMapCount):
                 self.boneMap.append(read_uint32(wmb_fp))
             wmb_fp.seek(self.wmb_header.boneSetPointer)
@@ -1155,7 +1157,7 @@ class WMB3(object):
                 self.colTreeNodes = []
                 wmb_fp.seek(self.wmb_header.colTreeNodesPointer)
                 #print("Seeking to self.wmb_header.colTreeNodesPointer: %s" % hex(self.wmb_header.colTreeNodesPointer))
-                #print("Iterating over self.wmb_header.colTreeNodesCount, length %s" % str(self.wmb_header.colTreeNodesCount))
+                #print("Iterating over self.wmb_header.colTreeNodesCount, length %d" % self.wmb_header.colTreeNodesCount)
                 for index in range(self.wmb_header.colTreeNodesCount):
                     self.colTreeNodes.append(wmb3_colTreeNode(wmb_fp))
             
@@ -1166,55 +1168,25 @@ class WMB3(object):
                 self.unknownWorldDataArray = []
                 wmb_fp.seek(self.wmb_header.unknownWorldDataPointer)
                 #print("Seeking to self.wmb_header.unknownWorldDataPointer: %s" % hex(self.wmb_header.unknownWorldDataPointer))
-                #print("Iterating over self.wmb_header.unknownWorldDataCount, length %s" % str(self.wmb_header.unknownWorldDataCount))
+                #print("Iterating over self.wmb_header.unknownWorldDataCount, length %d" % self.wmb_header.unknownWorldDataCount)
                 for index in range(self.wmb_header.unknownWorldDataCount):
                     self.unknownWorldDataArray.append(wmb3_worldData(wmb_fp))
         
         elif self.wmb_header.magicNumber == b'WMB4':
-            # vertexGroup
-            self.vertexGroupArray = []
-            if self.wmb_header.vertexGroupPointer > 0:
-                wmb_fp.seek(self.wmb_header.vertexGroupPointer)
-                #print("Seeking to self.wmb_header.vertexGroupPointer: %s" % hex(self.wmb_header.vertexGroupPointer))
-                #print("Iterating over self.wmb_header.vertexGroupCount, length %s" % str(self.wmb_header.vertexGroupCount))
-                for vertexGroupIndex in range(self.wmb_header.vertexGroupCount):
-                    self.vertexGroupArray.append(wmb4_vertexGroup(wmb_fp, self.wmb_header.vertexFormat))
+            self.vertexGroupArray = load_data_array(wmb_fp, self.wmb_header.vertexGroupPointer, self.wmb_header.vertexGroupCount, wmb4_vertexGroup, self.wmb_header.vertexFormat)
             
-            # batch
-            self.batchArray = []
-            if self.wmb_header.batchPointer > 0:
-                wmb_fp.seek(self.wmb_header.batchPointer)
-                #print("Seeking to self.wmb_header.batchPointer: %s" % hex(self.wmb_header.batchPointer))
-                #print("Iterating over self.wmb_header.batchCount, length %s" % str(self.wmb_header.batchCount))
-                for batch in range(self.wmb_header.batchCount):
-                    self.batchArray.append(wmb4_batch(wmb_fp))
+            self.batchArray = load_data_array(wmb_fp, self.wmb_header.batchPointer, self.wmb_header.batchCount, wmb4_batch)
             
-            # batchDescription
-            self.batchDescription = [None] * 4
-            if self.wmb_header.batchDescriptionPointer > 0:
-                wmb_fp.seek(self.wmb_header.batchDescriptionPointer)
-                #print("Seeking to self.wmb_header.batchDescriptionPointer: %s" % hex(self.wmb_header.batchDescriptionPointer))
-                batchDescriptionHeader = wmb4_batchDescriptionHeader(wmb_fp)
-                #print("Iterating over 4, length %s" % str(4))
-                for dataNum in range(4):
-                    if batchDescriptionHeader.batchDataPointers[dataNum] > 0:
-                        wmb_fp.seek(batchDescriptionHeader.batchDataPointers[dataNum])
-                        #print("Seeking to batchDescriptionHeader.batchDataPointers[dataNum]: %s" % hex(batchDescriptionHeader.batchDataPointers[dataNum]))
-                        #print("Iterating over batchDescriptionHeader.batchDataCounts[dataNum], length %s" % str(batchDescriptionHeader.batchDataCounts[dataNum]))
-                        for batchDataEntry in range(batchDescriptionHeader.batchDataCounts[dataNum]):
-                            self.batchDescription[dataNum] = wmb4_batchData(wmb_fp)
+            # note: will have to replace references to batchDescription with batchDescription.batchData
+            self.batchDescription = load_data(wmb_fp, self.wmb_header.batchDescriptionPointer, wmb4_batchDescription)
+            self.batchDataArray = []
+            for batchDataSubgroup in self.batchDescription.batchData:
+                self.batchDataArray.extend(batchDataSubgroup)
             
-            # bone
-            self.hasBone = self.wmb_header.boneCount > 0
-            self.boneArray = []
-            if self.wmb_header.bonePointer > 0:
-                wmb_fp.seek(self.wmb_header.bonePointer)
-                #print("Seeking to self.wmb_header.bonePointer: %s" % hex(self.wmb_header.bonePointer))
-                #print("Iterating over self.wmb_header.boneCount, length %s" % str(self.wmb_header.boneCount))
-                for boneIndex in range(self.wmb_header.boneCount):
-                    self.boneArray.append(wmb4_bone(wmb_fp,boneIndex))
+            #self.hasBone = self.wmb_header.boneCount > 0
+            self.hasBone = False # might be needed later. in the meantime gtfo
+            self.boneArray = load_data_array(wmb_fp, self.wmb_header.bonePointer, self.wmb_header.boneCount, wmb4_bone)
             
-            # boneTranslateTable
             # I should probably make a class for this, for consistency if nothing else
             self.firstLevel = []
             self.secondLevel = []
@@ -1222,7 +1194,7 @@ class WMB3(object):
             if self.wmb_header.boneTranslateTablePointer > 0:
                 wmb_fp.seek(self.wmb_header.boneTranslateTablePointer)
                 #print("Seeking to self.wmb_header.boneTranslateTablePointer: %s" % hex(self.wmb_header.boneTranslateTablePointer))
-                #print("Iterating over 16, length %s" % str(16))
+                #print("Iterating over 16, length %d" % 16)
                 for entry in range(16):
                     self.firstLevel.append(read_int16(wmb_fp))
 
@@ -1231,7 +1203,7 @@ class WMB3(object):
                     if entry != -1:
                         firstLevel_Entry_Count += 1
 
-                #print("Iterating over firstLevel_Entry_Count * 16, length %s" % str(firstLevel_Entry_Count * 16))
+                #print("Iterating over firstLevel_Entry_Count * 16, length %d" % firstLevel_Entry_Count * 16)
                 for entry in range(firstLevel_Entry_Count * 16):
                     self.secondLevel.append(read_int16(wmb_fp))
 
@@ -1240,74 +1212,39 @@ class WMB3(object):
                     if entry != -1:
                         secondLevel_Entry_Count += 1
 
-                #print("Iterating over secondLevel_Entry_Count * 16, length %s" % str(secondLevel_Entry_Count * 16))
+                #print("Iterating over secondLevel_Entry_Count * 16, length %d" % secondLevel_Entry_Count * 16)
                 for entry in range(secondLevel_Entry_Count * 16):
                     self.thirdLevel.append(read_int16(wmb_fp))
-
-                
-                # Isn't this just doing the above but worse or for debugging
-                #wmb_fp.seek(self.wmb_header.boneTranslateTablePointer)
-                ##print("Seeking to self.wmb_header.boneTranslateTablePointer: %s" % hex(self.wmb_header.boneTranslateTablePointer))
-                #unknownData1Array = []
-                ##print("Iterating over self.wmb_header.boneTranslateTableSize, length %s" % str(self.wmb_header.boneTranslateTableSize))
-                #for i in range(self.wmb_header.boneTranslateTableSize):
-                #    unknownData1Array.append(read_uint8(wmb_fp))
-                collapse_this_if = True # i love notepad++
             
-            # boneSet
-            self.boneSetArray = None
-            if self.wmb_header.boneSetPointer > 0:
-                wmb_fp.seek(self.wmb_header.boneSetPointer)
-                #print("Seeking to self.wmb_header.boneSetPointer: %s" % hex(self.wmb_header.boneSetPointer))
-                # using wmb3 because it ain't broke
-                self.boneSetArray = wmb3_boneSet(wmb_fp, self.wmb_header.boneSetCount).boneSetArray
+            # todo: make a new boneSet format that loops normally
+            self.boneSetArray = load_data(wmb_fp, self.wmb_header.boneSetPointer, wmb3_boneSet, self.wmb_header.boneSetCount)
             
-            # material
-            self.materialArray = []
-            if self.wmb_header.materialPointer > 0:
-                wmb_fp.seek(self.wmb_header.materialPointer)
-                #print("Seeking to self.wmb_header.materialPointer: %s" % hex(self.wmb_header.materialPointer))
-                #print("Iterating over self.wmb_header.materialCount, length %s" % str(self.wmb_header.materialCount))
-                for materialIndex in range(self.wmb_header.materialCount):
-                    self.materialArray.append(wmb4_material(wmb_fp))
-
-            # texture
-            self.textureArray = []
-            if self.wmb_header.texturePointer > 0:
-                wmb_fp.seek(self.wmb_header.texturePointer)
-                #print("Seeking to self.wmb_header.texturePointer: %s" % hex(self.wmb_header.texturePointer))
-                #print("Iterating over self.wmb_header.textureCount, length %s" % str(self.wmb_header.textureCount))
-                for textureIndex in range(self.wmb_header.textureCount):
-                    self.textureArray.append(wmb4_texture(wmb_fp))
+            self.materialArray = load_data_array(wmb_fp, self.wmb_header.materialPointer, self.wmb_header.materialCount, wmb4_material)
             
-            # mesh
-            self.meshArray = []
-            if self.wmb_header.meshPointer > 0:
-                wmb_fp.seek(self.wmb_header.meshPointer)
-                #print("Seeking to self.wmb_header.meshPointer: %s" % hex(self.wmb_header.meshPointer))
-                #print("Iterating over self.wmb_header.meshCount, length %s" % str(self.wmb_header.meshCount))
-                for meshIndex in range(self.wmb_header.meshCount):
-                    self.meshArray.append(wmb4_mesh(wmb_fp))
+            self.textureArray = load_data_array(wmb_fp, self.wmb_header.texturePointer, self.wmb_header.textureCount, wmb4_texture)
+            
+            self.meshArray = load_data_array(wmb_fp, self.wmb_header.meshPointer, self.wmb_header.meshCount, wmb4_mesh)
             
             self.boneMap = None # <trollface>
         
         else:
             print("You madman! This isn't WMB3 or WMB4, but %s!" % self.wmb_header.magicNumber.decode("ascii"))
 
-    def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex):
+    def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex, wmb4=False):
         mesh = self.meshArray[meshArrayIndex]
+        vertexGroup = self.vertexGroupArray[vertexGroupIndex]
+        
         faceRawStart = mesh.faceStart
         faceRawCount = mesh.faceCount
         vertexStart = mesh.vertexStart
         vertexCount = mesh.vertexCount
 
-        vertexesExDataArray = self.vertexGroupArray[vertexGroupIndex].vertexesExDataArray
-        vertexesExData = vertexesExDataArray[vertexStart : vertexStart + vertexCount]
+        vertexesExData = vertexGroup.vertexesExDataArray[vertexStart : vertexStart + vertexCount]
 
         vertex_colors = []
 
-        faceRawArray = self.vertexGroupArray[vertexGroupIndex].faceRawArray
-        facesRaw = faceRawArray[faceRawStart : faceRawStart + faceRawCount ]
+        facesRaw = vertexGroup.faceRawArray[faceRawStart : faceRawStart + faceRawCount ]
+        faceRawCount = len(facesRaw) # wmb4 hack
         facesRaw = [index - 1 for index in facesRaw]
         usedVertexIndexArray = sorted(list(set(facesRaw)))
         mappingDict = {}
@@ -1318,10 +1255,10 @@ class WMB3(object):
         faces = [0] * int(faceRawCount / 3)
         usedVertices = [0] * len(usedVertexIndexArray)
         boneWeightInfos = [[],[]]
-        #print("Iterating over 0, faceRawCount, 3, length %s" % str(0, faceRawCount, 3))
+        #print("Iterating over 0, faceRawCount, 3, length %d" % 0, faceRawCount, 3)
         for i in range(0, faceRawCount, 3):
             faces[int(i/3)] = (facesRaw[i]  , facesRaw[i + 1]  , facesRaw[i + 2] )
-        meshVertices = self.vertexGroupArray[vertexGroupIndex].vertexArray
+        meshVertices = vertexGroup.vertexArray
 
         if self.hasBone:
             boneWeightInfos = [0] * len(usedVertexIndexArray)
@@ -1330,27 +1267,49 @@ class WMB3(object):
             usedVertices[newIndex] = (meshVertices[i].positionX, meshVertices[i].positionY, meshVertices[i].positionZ)
 
             # Vertex_Colors are stored in VertexData
-            if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {4, 5, 12, 14}:
+            if vertexGroup.vertexFlags in {4, 5, 12, 14}:
                 vertex_colors.append(meshVertices[i].color)
             # Vertex_Colors are stored in VertexExData
-            if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {10, 11}:
+            if vertexGroup.vertexFlags in {10, 11}:
                 vertex_colors.append(vertexesExData[i].color)
 
             if self.hasBone:
                 bonesetIndex = mesh.bonesetIndex
-                boneSetArray = self.boneSetArray
-                boneMap = self.boneMap
                 if bonesetIndex < 0xffffffff:
-                    boneSet = boneSetArray[bonesetIndex]
-                    boneIndices = [boneMap[boneSet[index]] for index in  meshVertices[i].boneIndices]
+                    boneSet = self.boneSetArray[bonesetIndex]
+                    if not wmb4:
+                        boneIndices = [self.boneMap[boneSet[index]] for index in meshVertices[i].boneIndices]
+                    else:
+                        print("Fuck this, removing hasBone from WMB4. It's gonna crash on the next line anyway.")
                     boneWeightInfos[newIndex] = [boneIndices, meshVertices[i].boneWeights]
-                    s = sum([weight for weight in meshVertices[i].boneWeights]) 
+                    s = sum(meshVertices[i].boneWeights)
                     if s > 1.000000001 or s < 0.999999:
                         print('[-] error weight detect %f' % s)
                         print(meshVertices[i].boneWeights) 
                 else:
                     self.hasBone = False
         return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors
+
+def load_data(wmb_fp, pointer, chunkClass, other=None):
+    if pointer > 0:
+        wmb_fp.seek(pointer)
+        #print("Seeking to %sPointer: %s" % (chunkClass.__name__, hex(pointer)))
+        return chunkClass(wmb_fp, other)
+    return None
+
+def load_data_array(wmb_fp, pointer, count, chunkClass, other=None):
+    array = []
+    pos = wmb_fp.tell()
+    if pointer > 0:
+        wmb_fp.seek(pointer)
+        #print("Seeking to %sPointer: %s" % (chunkClass.__name__, hex(pointer)))
+        #print("Iterating over %sCount, length %d" % (chunkClass.__name__, count))
+        for itemIndex in range(count):
+            #print("This could be a print. %d" % item)
+            array.append(chunkClass(wmb_fp, other)
+        wmb_fp.seek(pos)
+        #print("Seeking to return position: %s" % hex(pos))
+    return array
 
 
 def export_obj(wmb, wta, wtp_fp, obj_file):
@@ -1361,7 +1320,7 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
     textureArray = []
     
     if (wta and wtp_fp):
-        #print("Iterating over wmb.wmb_header.materialCount, length %s" % str(wmb.wmb_header.materialCount))
+        #print("Iterating over wmb.wmb_header.materialCount, length %d" % wmb.wmb_header.materialCount)
         for materialIndex in range(wmb.wmb_header.materialCount):
             material = wmb.materialArray[materialIndex]
             materialName = material.materialName
@@ -1384,7 +1343,7 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
         """
 
     mtl = open("%s.mtl"%obj_file, 'w')
-    #print("Iterating over wmb.wmb_header.materialCount, length %s" % str(wmb.wmb_header.materialCount))
+    #print("Iterating over wmb.wmb_header.materialCount, length %d" % wmb.wmb_header.materialCount)
     for materialIndex in range(wmb.wmb_header.materialCount):
         material = wmb.materialArray[materialIndex]
         materialName = material.materialName
@@ -1402,10 +1361,10 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
     mtl.close()
 
     
-    #print("Iterating over wmb.wmb_header.vertexGroupCount, length %s" % str(wmb.wmb_header.vertexGroupCount))
+    #print("Iterating over wmb.wmb_header.vertexGroupCount, length %d" % wmb.wmb_header.vertexGroupCount)
     for vertexGroupIndex in range(wmb.wmb_header.vertexGroupCount):
         
-        #print("Iterating over wmb.wmb_header.meshGroupCount, length %s" % str(wmb.wmb_header.meshGroupCount))
+        #print("Iterating over wmb.wmb_header.meshGroupCount, length %d" % wmb.wmb_header.meshGroupCount)
         for meshGroupIndex in range(wmb.wmb_header.meshGroupCount):
             meshIndexArray = []
             
@@ -1420,7 +1379,7 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
                     if  not os.path.exists('%s_%s_%d.obj'%(obj_file,meshGroup.meshGroupname,vertexGroupIndex)):
                         obj = open('%s_%s_%d.obj'%(obj_file,meshGroup.meshGroupname,vertexGroupIndex),"w")
                         obj.write('mtllib ./%s.mtl\n'%obj_file.split('/')[-1])
-                        #print("Iterating over wmb.vertexGroupArray[vertexGroupIndex].vertexGroupHeader.vertexCount, length %s" % str(wmb.vertexGroupArray[vertexGroupIndex].vertexGroupHeader.vertexCount))
+                        #print("Iterating over wmb.vertexGroupArray[vertexGroupIndex].vertexGroupHeader.vertexCount, length %d" % wmb.vertexGroupArray[vertexGroupIndex].vertexGroupHeader.vertexCount)
                         for vertexIndex in range(wmb.vertexGroupArray[vertexGroupIndex].vertexGroupHeader.vertexCount):
                             vertex = wmb.vertexGroupArray[vertexGroupIndex].vertexArray[vertexIndex]
                             obj.write('v %f %f %f\n'%(vertex.positionX,vertex.positionY,vertex.positionZ))
@@ -1449,7 +1408,7 @@ def export_obj(wmb, wta, wtp_fp, obj_file):
                     obj.close()
 
 def main(arg, wmb_fp, wta_fp, wtp_fp, dump):
-    wmb = WMB3(wmb_fp)
+    wmb = WMB(wmb_fp)
     wmb_fp.close()
     wta = 0
     if wta_fp:
