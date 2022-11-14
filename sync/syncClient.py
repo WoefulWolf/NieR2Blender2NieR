@@ -58,7 +58,7 @@ def _onMessage(ws: WebSocketApp, message: str):
 	for listener in _onMsgListeners:
 		listener(msgData)
 
-def _onEnd():
+def _onEnd(_=None, __=None, ___=None):
 	global _isConnectedToWs, _ws, _wsThread
 	_isConnectedToWs = False
 	for listener in _onEndListeners:

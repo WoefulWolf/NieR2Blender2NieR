@@ -1,14 +1,28 @@
+from __future__ import annotations
+from enum import Enum
+
 
 dependencies_installed = False
 
-SyncObjectsType = {
-	0: "area",
-	1: "entity",
-	2: "bezier",
-	"area": 0,
-	"entity": 1,
-	"bezier": 2,
-}
+class SyncObjectsType(Enum):
+	list = 0
+	area = 1
+	entity = 2
+	bezier = 3
+
+	@staticmethod
+	def fromInt(i: int) -> SyncObjectsType:
+		return SyncObjectsType(i)
+
+class SyncUpdateType(Enum):
+	prop = 0
+	add = 1
+	remove = 2
+	duplicate = 3
+
+	@staticmethod
+	def fromInt(i: int) -> SyncUpdateType:
+		return SyncUpdateType(i)
 
 _disableDepsgraphUpdates = False
 def getDisableDepsgraphUpdates():

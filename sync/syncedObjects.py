@@ -1,43 +1,141 @@
-
+from __future__ import annotations
 from copy import deepcopy
 import re
 import time
 from xml.etree import ElementTree
+from uuid import uuid4
 
 import bpy
 from mathutils import Euler, Vector
 from ..utils.util import throttle
 from ..lay.importer.lay_importer import updateVisualizationObject
 from .syncClient import SyncMessage, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, addOnMessageListener
-from .shared import SyncObjectsType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
-from .utils import findObject, getSyncCollection
+from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
+from .utils import findObject, getSyncCollection, makeSyncCollection, updateXmlChildWithStr
 from ..utils.xmlIntegrationUtils import floatToStr, makeSphereMesh, strToFloat, vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
 from ..dat_dtt.exporter.datHashGenerator import crc32
 from xml.etree.ElementTree import Element, SubElement
 
+syncedObjects: dict[str, SyncedObject] = {}
+
+def onWsMsg(msg: SyncMessage):
+	global syncedObjects
+	setDisableDepsgraphUpdates(True)
+
+	if msg.method == "update":
+		if msg.uuid in syncedObjects:
+			syncObj = syncedObjects[msg.uuid]
+			syncObj.update(msg)
+		else:
+			sendMsgToServer(SyncMessage("endSync", msg.uuid, {}))
+	elif msg.method == "startSync":
+		newObj = SyncedObject.fromType(msg)
+		syncedObjects[msg.uuid] = newObj
+	elif msg.method == "endSync":
+		if msg.uuid in syncedObjects:
+			syncedObjects[msg.uuid].endSync(False)
+
+	setDisableDepsgraphUpdates(False)
+
+def onWsEnd():
+	for syncObj in list(syncedObjects.values()):
+		syncObj.endSync(False)
+	syncedObjects.clear()
+
+def onDepsgraphUpdate(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
+	if getDisableDepsgraphUpdates():
+		return
+	_onDepsgraphUpdateThrottled(scene, depsgraph)
+@throttle(10)
+def _onDepsgraphUpdateThrottled(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
+	setDisableDepsgraphUpdates(True)
+	try:
+		pendingObjectsQueue: list[SyncedObject] = []
+		# check for changes in hierarchical order (breadth-first)
+		# root objects don't have parents, so they are processed first
+		rootSyncObjects = [syncObj for syncObj in syncedObjects.values() if not syncObj.parentUuid]
+		for syncObj in rootSyncObjects:
+			if isinstance(syncObj, SyncedXmlObject):
+				if not findObject(syncObj.uuid):
+					syncObj.endSync()
+					continue
+			elif isinstance(syncObj, SyncedListObject):
+				if not getSyncCollection(syncObj.uuid):
+					syncObj.endSync()
+					continue
+			pendingObjectsQueue.append(syncObj)
+		
+		processedObjectsOnDepsgraphUpdate = set(syncedObjects.keys())
+		while pendingObjectsQueue:
+			syncObj = pendingObjectsQueue.pop(0)
+			
+			if isinstance(syncObj, SyncedListObject):
+				newPendingObjects = list(syncObj.objects)
+			if syncObj.hasChanged():
+				syncObj.onChanged()
+			if isinstance(syncObj, SyncedListObject):
+				updatedPendingObjects = list(syncObj.objects)
+				pendingObjects = [obj for obj in updatedPendingObjects if obj in newPendingObjects]
+				removedObjects = [obj for obj in newPendingObjects if obj not in updatedPendingObjects]
+				pendingObjectsQueue.extend(pendingObjects)
+				for obj in removedObjects:
+					processedObjectsOnDepsgraphUpdate.remove(obj.uuid)
+			
+			processedObjectsOnDepsgraphUpdate.remove(syncObj.uuid)
+	
+		for uuid in processedObjectsOnDepsgraphUpdate:
+			# dangling objects
+			print("dangling object", uuid)
+			syncedObjects[uuid].endSync()
+	finally:
+		setDisableDepsgraphUpdates(False)
+
 class SyncedObject:
 	uuid: str
-	xml: Element
-	objName: str
+	nameHint: str|None = None
+	parentUuid: str|None = None
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
+	def __init__(self, uuid: str, nameHint: str|None, parentUuid: str|None):
 		self.uuid = uuid
-		self.xml = xml
-		self.objName = (nameHint or "") + " " + uuid
+		self.nameHint = nameHint
+		self.parentUuid = parentUuid
 	
 	@classmethod
 	def fromType(cls, msg: SyncMessage):
 		uuid = msg.uuid
-		type = SyncObjectsType[msg.args["type"]]
-		xml = ElementTree.fromstring(msg.args["propXml"])
-		nameHint = msg.args["nameHint"]
-		if type == "entity":
-			return SyncedEntityObject(uuid, xml, nameHint)
-		elif type == "area":
-			return SyncedAreaObject(uuid, xml, nameHint)
-		elif type == "bezier":
-			return SyncedBezierObject(uuid, xml, nameHint)
+		type = SyncObjectsType.fromInt(msg.args["type"])
+		nameHint = msg.args.get("nameHint", None)
+		parentUuid = msg.args.get("parentUuid", None)
+		if type == SyncObjectsType.list:
+			return SyncedListObject(uuid, msg, nameHint, parentUuid)
+		else:
+			xml = ElementTree.fromstring(msg.args["propXml"])
+			if type == SyncObjectsType.entity:
+				return SyncedEntityObject(uuid, xml, nameHint, parentUuid)
+			elif type == SyncObjectsType.area:
+				return SyncedAreaObject(uuid, xml, nameHint, parentUuid)
+			elif type == SyncObjectsType.bezier:
+				return SyncedBezierObject(uuid, xml, nameHint, parentUuid)
 		raise NotImplementedError()
+
+	def update(self, msg: SyncMessage):
+		raise NotImplementedError()
+	
+	def hasChanged(self) -> bool:
+		raise NotImplementedError()
+	
+	def onChanged(self):
+		raise NotImplementedError()
+	
+	def endSync(self, sendMsg: bool = True):
+		raise NotImplementedError()
+
+class SyncedXmlObject(SyncedObject):
+	xml: Element
+	
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None):
+		super().__init__(uuid, nameHint, parentUuid)
+		self.xml = xml
 
 	def xmlCmp(self, el1: Element, el2: Element) -> bool:
 		if el1.tag != el2.tag:
@@ -57,16 +155,16 @@ class SyncedObject:
 		if not self.xmlCmp(self.xml, xmlRoot):
 			print(f"updating {self.uuid}")
 			self.updateWithXml(xmlRoot)
-	
-	def updateWithXml(self, xmlRoot: Element):
-		raise NotImplementedError()
-	
-	def selfToXml(self) -> Element:
-		raise NotImplementedError()
-	
-	def hasChanged(self) -> bool:
-		return not self.xmlCmp(self.xml, self.selfToXml())
-	
+
+	def endSync(self, sendMsg: bool = True):
+		if sendMsg:
+			sendMsgToServer(SyncMessage("endSync", self.uuid, {}))
+		obj = findObject(self.uuid)
+		if obj is not None:
+			bpy.data.objects.remove(obj)
+		if self.uuid in syncedObjects:
+			del syncedObjects[self.uuid]
+
 	@throttle(0.04)
 	def onChanged(self):
 		self.xml = self.selfToXml()
@@ -78,35 +176,147 @@ class SyncedObject:
 			}
 		))
 	
-	def endSync(self):
-		sendMsgToServer(SyncMessage("endSync", self.uuid, {}))
-		obj = findObject(self.objName, self.uuid)
-		if obj is not None:
-			bpy.data.objects.remove(obj)
-		del syncedObjects[self.uuid]
+	def updateWithXml(self, xmlRoot: Element):
+		raise NotImplementedError()
+	
+	def selfToXml(self) -> Element:
+		raise NotImplementedError()
+	
+	def hasChanged(self) -> bool:
+		return not self.xmlCmp(self.xml, self.selfToXml())
 
-class SyncedEntityObject(SyncedObject):
+class SyncedListObject(SyncedObject):
+	objects: list[SyncedObject]
+	listType: str
+	
+	def __init__(self, uuid: str, msg: SyncMessage, nameHint: str|None, parentUuid: str|None):
+		super().__init__(uuid, nameHint, parentUuid)
+		self.listType = msg.args["listType"]
+		self.objects = []
+		makeSyncCollection(uuid, self.parentUuid, nameHint)
+
+		for child in msg.args["children"]:
+			childMsg = SyncMessage.fromJson(child)
+			syncObj = SyncedObject.fromType(childMsg)
+			self.objects.append(syncObj)
+			syncedObjects[syncObj.uuid] = syncObj
+	
+	def update(self, msg: SyncMessage):
+		updateType = SyncUpdateType.fromInt(msg.args["type"])
+		if updateType == SyncUpdateType.add:
+			self.updateAdd(msg)
+		elif updateType == SyncUpdateType.remove:
+			self.updateRemove(msg)
+		else:
+			raise Exception(f"Unknown update type {updateType}")
+	
+	def updateAdd(self, msg: SyncMessage):
+		startSyncMsg = SyncMessage.fromJson(msg.args["syncObj"])
+		syncObj = SyncedObject.fromType(startSyncMsg)
+		self.objects.append(syncObj)
+		objUuid = msg.args["uuid"]
+		syncedObjects[objUuid] = syncObj
+	
+	def updateRemove(self, msg: SyncMessage):
+		uuid = msg.args["uuid"]
+		removedObj = [obj for obj in self.objects if obj.uuid == uuid][0]
+		self.objects.remove(removedObj)
+		removedObj.endSync(False)
+	
+	def endSync(self, sendMsg: bool = True):
+		if sendMsg:
+			sendMsgToServer(SyncMessage("endSync", self.uuid, {}))
+		collection = getSyncCollection(self.uuid)
+		if collection is not None:
+			bpy.data.collections.remove(collection)
+		del syncedObjects[self.uuid]
+		for obj in self.objects:
+			obj.endSync(sendMsg)
+	
+	def hasChanged(self) -> bool:
+		coll = getSyncCollection(self.uuid)
+		if coll is None:
+			raise Exception(f"Collection {self.uuid} not found")
+		if len(coll.objects) != len(self.objects):
+			return True
+		blenderObjUuids = [obj["uuid"] for obj in coll.objects]
+		syncObjUuids = [obj.uuid for obj in self.objects]
+		blenderObjUuids.sort()
+		syncObjUuids.sort()
+		return blenderObjUuids != syncObjUuids
+	
+	def onChanged(self):
+		coll = getSyncCollection(self.uuid)
+		if coll is None:
+			raise Exception(f"Collection {self.uuid} not found")
+		
+		blenderObjUuids = [obj["uuid"] for obj in coll.objects]
+		syncObjUuids = [obj.uuid for obj in self.objects]
+
+		# removed objects
+		removedUuids = [uuid for uuid in syncObjUuids if uuid not in blenderObjUuids]
+		for removedUuid in removedUuids:
+			removeSyncObj = [obj for obj in self.objects if obj.uuid == removedUuid][0]
+			self.objects.remove(removeSyncObj)
+			removeSyncObj.endSync(False)
+			if removedUuid in syncedObjects:
+				del syncedObjects[removedUuid]
+			sendMsgToServer(SyncMessage("update", self.uuid, {
+				"type": SyncUpdateType.remove.value,
+				"uuid": removedUuid
+			}))
+		
+		# duplicate objects
+		duplicateUuids = [uuid for uuid in set(blenderObjUuids) if blenderObjUuids.count(uuid) > 1]
+		duplicateBlenderObjects: dict[str, list[bpy.types.Object]] = {
+			uuid: [obj for obj in coll.objects if obj["uuid"] == uuid][1:]
+			for uuid in duplicateUuids
+		}
+		for duplicateUuid in duplicateUuids:
+			srcSyncObj = [obj for obj in self.objects if obj.uuid == duplicateUuid]
+			if len(srcSyncObj) == 0:
+				print("duplicate object not found in sync list")
+				continue
+			srcSyncObj = srcSyncObj[0]
+			for obj in duplicateBlenderObjects[duplicateUuid]:
+				newUuid = str(uuid4())
+				obj["uuid"] = newUuid
+				newSyncObj = deepcopy(srcSyncObj)
+				newSyncObj.uuid = newUuid
+				self.objects.append(newSyncObj)
+				syncedObjects[newUuid] = newSyncObj
+				sendMsgToServer(SyncMessage("update", self.uuid, {
+					"type": SyncUpdateType.duplicate.value,
+					"srcObjUuid": duplicateUuid,
+					"newObjUuid": newUuid,
+				}))
+
+		# added objects
+		addedUuids = [uuid for uuid in blenderObjUuids if uuid not in syncObjUuids]
+		print("Adding new objects is not allowed")	# TODO check if moved from other collection
+		
+
+class SyncedEntityObject(SyncedXmlObject):
 	# syncable props: location{ position, rotation?, }, scale?, objId
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None):
 		objId = xml.find("objId").text
-		super().__init__(uuid, xml, objId)
-		self.newObjFromType(SyncObjectsType["entity"], self.objName, modelName=self.xml.find("objId").text)
+		super().__init__(uuid, xml, objId, parentUuid)
+		self.newObjFromType(SyncObjectsType.entity, objId + " Entity", modelName=self.xml.find("objId").text)
 		self.updateWithXml(self.xml)
 
 	def updateWithXml(self, xmlRoot: Element):
 		prevObjId = self.xml.find("objId").text
 		objId = xmlRoot.find("objId").text
 		self.xml = xmlRoot
-		obj = findObject(self.objName, self.uuid)
+		obj = findObject(self.uuid)
 		if not obj:
-			obj = self.newObjFromType(SyncObjectsType["entity"], self.objName, modelName=objId)
+			obj = self.newObjFromType(SyncObjectsType.entity, objId + " Entity", modelName=objId)
 		elif objId != prevObjId:
 			# update model
 			updateVisualizationObject(obj, objId, False)
 			# update name
-			self.objName = objId + self.objName[len(prevObjId):]
-			obj.name = self.objName
+			obj.name = objId + " Entity"
 
 		pos = xmlVecToVec3(xmlRoot.find("location/position").text)
 		obj.location = pos
@@ -122,45 +332,55 @@ class SyncedEntityObject(SyncedObject):
 			obj.scale = scale
 	
 	def selfToXml(self) -> Element:
-		root = Element("value")
-		obj = findObject(self.objName, self.uuid)
+		root = deepcopy(self.xml)
+		obj = findObject(self.uuid)
 		
-		location = SubElement(root, "location")
-		SubElement(location, "position").text = vecToXmlVec3(obj.location)
-		if obj.rotation_euler != Euler((0, 0, 0)):
-			SubElement(location, "rotation").text = vecToXmlVec3(obj.rotation_euler)
-		if obj.scale != Vector((1, 1, 1)):
-			SubElement(root, "scale").text = vecToXmlVec3Scale(obj.scale)
+		location = root.find("location")
+		updateXmlChildWithStr(location, "position", vecToXmlVec3(obj.location))
+		updateXmlChildWithStr(
+			location, "rotation",
+			vecToXmlVec3(obj.rotation_euler) if obj.rotation_euler != Euler((0, 0, 0)) else None
+		)
+		updateXmlChildWithStr(
+			root,
+			"scale",
+			vecToXmlVec3Scale(obj.scale) if obj.scale != Vector((1, 1, 1)) else None
+		)
 		
 		objId = obj.name.split(" ")[0]
-		if re.match(r"[a-z]{2}[a-f0-9]{4}", objId):
-			SubElement(root, "objId").text = objId
-		else:
-			SubElement(root, "objId").text = self.xml.find("objId").text
+		if not re.match(r"[a-z]{2}[a-f0-9]{4}", objId):
+			objId = self.xml.find("objId").text
+		updateXmlChildWithStr(root, "objId", objId)
 
 		return root
 
 	def onChanged(self):
-		obj = findObject(self.objName, self.uuid)
-		if obj is not None and bpy.data.objects.get(self.objName) is None:
+		obj = findObject(self.uuid)
+		if obj is not None and self.objIdFromName(obj.name) != self.objIdFromXml():
 			# name was changed
-			self.objName = obj.name
 			updateVisualizationObject(obj, obj.name.split(" ")[0], False)
 		super().onChanged()
 	
-	@classmethod
-	def newObjFromType(cls, type: int, name: str, modelName: str) -> bpy.types.Object:
+	def newObjFromType(self, type: SyncObjectsType, name: str, modelName: str) -> bpy.types.Object:
 		obj = bpy.data.objects.new(name, None)
-		getSyncCollection().objects.link(obj)
+		obj["uuid"] = self.uuid
+		getSyncCollection(self.parentUuid).objects.link(obj)
 
-		if type == SyncObjectsType["entity"]:
+		if type == SyncObjectsType.entity:
 			updateVisualizationObject(obj, modelName, False)
 		else:
 			raise NotImplementedError(f"Object type {type} not implemented")
 		
 		return obj
+	
+	@staticmethod
+	def objIdFromName(name: str) -> str:
+		return name.split(" ")[0]
+	
+	def objIdFromXml(self) -> str:
+		return self.xml.find("objId").text
 
-class SyncedAreaObject(SyncedObject):
+class SyncedAreaObject(SyncedXmlObject):
 	_typeBoxArea = "app::area::BoxArea"
 	_typeCylinderArea = "app::area::CylinderArea"
 	_typeSphereArea = "app::area::SphereArea"
@@ -173,14 +393,14 @@ class SyncedAreaObject(SyncedObject):
 
 	_objColor = (0, 0, 1, 0.333)
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
-		super().__init__(uuid, xml, None)
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None):
+		super().__init__(uuid, xml, nameHint, parentUuid)
 		self.newAreaObjectFromType(int(xml.find("code").text, 16))
 		self.updateWithXml(self.xml)
 	
 	def selfToXml(self) -> Element:
 		root = Element("value")
-		obj = findObject(self.objName, self.uuid)
+		obj = findObject(self.uuid)
 		
 		code = self.xml.find("code").text
 		codeInt = int(code, 16)
@@ -210,7 +430,7 @@ class SyncedAreaObject(SyncedObject):
 		return root
 	
 	def updateWithXml(self, xmlRoot: Element):
-		obj = findObject(self.objName, self.uuid)
+		obj = findObject(self.uuid)
 		if obj is None:
 			return
 
@@ -265,9 +485,10 @@ class SyncedAreaObject(SyncedObject):
 		name += " " + self.uuid
 		mesh = bpy.data.meshes.new(name)
 		obj = bpy.data.objects.new(name, mesh)
+		obj["uuid"] = self.uuid
 		obj.color = self._objColor
 		obj.show_wire = True
-		getSyncCollection().objects.link(obj)
+		getSyncCollection(self.parentUuid).objects.link(obj)
 
 		# transforms
 		pos = xmlVecToVec3(self.xml.find("position").text)
@@ -333,11 +554,11 @@ class SyncedAreaObject(SyncedObject):
 		
 		return obj
 
-class SyncedBezierObject(SyncedObject):
+class SyncedBezierObject(SyncedXmlObject):
 	# syncable props: attribute, parent?, controls, nodes
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None):
-		super().__init__(uuid, xml, nameHint)
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None):
+		super().__init__(uuid, xml, nameHint, parent)
 		self.makeBezierObject()
 		self.updateWithXml(self.xml)
 
@@ -355,7 +576,7 @@ class SyncedBezierObject(SyncedObject):
 			vecToPoint = Vector(newPoints[i]) - Vector(invHandle)
 			newLeftHandles[i] = Vector(newPoints[i]) + vecToPoint
 		
-		curve: bpy.types.Curve = findObject(self.objName, self.uuid).data
+		curve: bpy.types.Curve = findObject(self.uuid).data
 		bezierPoints = curve.splines.active.bezier_points
 
 		minLen = min(len(bezierPoints), len(newPoints))
@@ -375,9 +596,8 @@ class SyncedBezierObject(SyncedObject):
 	
 	def selfToXml(self) -> Element:
 		rootCopy = deepcopy(self.xml)
-		obj = findObject(self.objName, self.uuid)
 		
-		curve: bpy.types.Curve = findObject(self.objName, self.uuid).data
+		curve: bpy.types.Curve = findObject(self.uuid).data
 		bezierCurvePoints = curve.splines.active.bezier_points
 		bezierPoints = [bp.co for bp in bezierCurvePoints]
 		bezierRightHandles = [bp.handle_right for bp in bezierCurvePoints]
@@ -402,6 +622,7 @@ class SyncedBezierObject(SyncedObject):
 	
 	@staticmethod
 	def updateXmlChildren(root: Element, curLen: int, childTagName: str, newChildStrings: list[str]):
+		root.find("size").text = str(curLen)
 		minLen = min(curLen, len(root.findall("value")))
 		for i in range(minLen):
 			point = root.findall("value")[i].find(childTagName)
@@ -414,13 +635,11 @@ class SyncedBezierObject(SyncedObject):
 				newNode = deepcopy(root[-1])
 				newNode.find(childTagName).text = newChildStrings[i]
 
-	# def onChanged(self):
-	# 	super().onChanged()
-	
 	def makeBezierObject(self):
-		curve: bpy.types.Curve = bpy.data.curves.new(self.objName, "CURVE")
-		curveObj = bpy.data.objects.new(self.objName, curve)
-		getSyncCollection().objects.link(curveObj)
+		curve: bpy.types.Curve = bpy.data.curves.new(self.nameHint or "bezier", "CURVE")
+		curveObj = bpy.data.objects.new(self.nameHint or "bezier", curve)
+		curveObj["uuid"] = self.uuid
+		getSyncCollection(self.parentUuid).objects.link(curveObj)
 
 		curve.dimensions = "3D"
 		curve.splines.new(type="BEZIER")
@@ -428,44 +647,6 @@ class SyncedBezierObject(SyncedObject):
 		curve.bevel_mode = "ROUND"
 		curve.bevel_depth = 0.1
 		curve.bevel_resolution = 8
-
-syncedObjects: dict[str, SyncedObject] = {}
-
-def onWsMsg(msg: SyncMessage):
-	global syncedObjects
-	setDisableDepsgraphUpdates(True)
-
-	if msg.method == "update":
-		if msg.uuid in syncedObjects:
-			syncObj = syncedObjects[msg.uuid]
-			syncObj.update(msg)
-		else:
-			sendMsgToServer(SyncMessage("endSync", msg.uuid, {}))
-	elif msg.method == "startSync":
-		newObj = SyncedObject.fromType(msg)
-		syncedObjects[msg.uuid] = newObj
-	elif msg.method == "endSync":
-		if msg.uuid in syncedObjects:
-			syncedObjects[msg.uuid].endSync()
-
-	setDisableDepsgraphUpdates(False)
-
-def onWsEnd():
-	global syncedObjects
-	for syncObj in list(syncedObjects.values()):
-		syncObj.endSync()
-	syncedObjects.clear()
-
-@throttle(10)
-def onDepsgraphUpdate(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
-	global syncedObjects
-	if getDisableDepsgraphUpdates():
-		return
-	for syncObj in list(syncedObjects.values()):
-		if findObject(syncObj.objName, syncObj.uuid) is None:
-			syncObj.endSync()
-		elif syncObj.hasChanged():
-			syncObj.onChanged()
 
 _isInited = False
 def initSyncedObjects():
