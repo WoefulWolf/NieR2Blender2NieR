@@ -11,7 +11,7 @@ from ..utils.util import throttle
 from ..lay.importer.lay_importer import updateVisualizationObject
 from .syncClient import SyncMessage, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, addOnMessageListener
 from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
-from .utils import findObject, getSyncCollection, makeSyncCollection, updateXmlChildWithStr
+from .utils import findObject, getSyncCollection, getTransparentMat, makeSyncCollection, updateXmlChildWithStr
 from ..utils.xmlIntegrationUtils import floatToStr, makeSphereMesh, strToFloat, vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
 from ..dat_dtt.exporter.datHashGenerator import crc32
 from xml.etree.ElementTree import Element, SubElement
@@ -79,14 +79,16 @@ def _onDepsgraphUpdateThrottled(scene: bpy.types.Scene, depsgraph: bpy.types.Dep
 				removedObjects = [obj for obj in newPendingObjects if obj not in updatedPendingObjects]
 				pendingObjectsQueue.extend(pendingObjects)
 				for obj in removedObjects:
-					processedObjectsOnDepsgraphUpdate.remove(obj.uuid)
+					if obj.uuid in processedObjectsOnDepsgraphUpdate:
+						processedObjectsOnDepsgraphUpdate.remove(obj.uuid)
 			
-			processedObjectsOnDepsgraphUpdate.remove(syncObj.uuid)
+			if syncObj.uuid in processedObjectsOnDepsgraphUpdate:
+				processedObjectsOnDepsgraphUpdate.remove(syncObj.uuid)
 	
-		for uuid in processedObjectsOnDepsgraphUpdate:
-			# dangling objects
-			print("dangling object", uuid)
-			syncedObjects[uuid].endSync()
+		# for uuid in processedObjectsOnDepsgraphUpdate:
+		# 	# dangling objects
+		# 	print("dangling object", uuid)
+		# 	syncedObjects[uuid].endSync()
 	finally:
 		setDisableDepsgraphUpdates(False)
 
@@ -219,7 +221,7 @@ class SyncedListObject(SyncedObject):
 	
 	def updateRemove(self, msg: SyncMessage):
 		uuid = msg.args["uuid"]
-		removedObj = [obj for obj in self.objects if obj.uuid == uuid][0]
+		removedObj = next(obj for obj in self.objects if obj.uuid == uuid)
 		self.objects.remove(removedObj)
 		removedObj.endSync(False)
 	
@@ -229,7 +231,8 @@ class SyncedListObject(SyncedObject):
 		collection = getSyncCollection(self.uuid)
 		if collection is not None:
 			bpy.data.collections.remove(collection)
-		del syncedObjects[self.uuid]
+		if self.uuid in syncedObjects:
+			del syncedObjects[self.uuid]
 		for obj in self.objects:
 			obj.endSync(sendMsg)
 	
@@ -237,9 +240,14 @@ class SyncedListObject(SyncedObject):
 		coll = getSyncCollection(self.uuid)
 		if coll is None:
 			raise Exception(f"Collection {self.uuid} not found")
-		if len(coll.objects) != len(self.objects):
+		
+		blenderObjects: list[bpy.types.Object|bpy.types.Collection] = [
+			*coll.objects, *coll.children
+		]
+		blenderObjects = [obj for obj in blenderObjects if "uuid" in obj]
+		if len(blenderObjects) != len(self.objects):
 			return True
-		blenderObjUuids = [obj["uuid"] for obj in coll.objects if "uuid" in obj]
+		blenderObjUuids = [obj["uuid"] for obj in blenderObjects]
 		syncObjUuids = [obj.uuid for obj in self.objects]
 		blenderObjUuids.sort()
 		syncObjUuids.sort()
@@ -267,7 +275,7 @@ class SyncedListObject(SyncedObject):
 					self.handleObjectReparent(removedUuid)
 					continue
 
-			removeSyncObj = [obj for obj in self.objects if obj.uuid == removedUuid][0]
+			removeSyncObj = next(obj for obj in self.objects if obj.uuid == removedUuid)
 			self.objects.remove(removeSyncObj)
 			removeSyncObj.endSync(False)
 			if removedUuid in syncedObjects:
@@ -521,6 +529,7 @@ class SyncedAreaObject(SyncedXmlObject):
 		obj = bpy.data.objects.new(name, mesh)
 		obj["uuid"] = self.uuid
 		obj.color = self._objColor
+		obj.data.materials.append(getTransparentMat())
 		obj.show_wire = True
 		getSyncCollection(self.parentUuid).objects.link(obj)
 

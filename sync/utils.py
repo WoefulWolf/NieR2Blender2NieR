@@ -21,7 +21,8 @@ def _makeSyncCollection(
 			coll = bpy.data.collections.new(nameHint or uuid)
 			coll["uuid"] = uuid
 			collection.children.link(coll)
-		return collection.children[uuid]
+			return coll
+		return next(coll for coll in collection.children if coll["uuid"] == uuid)
 
 	for child in collection.children:
 		found = _makeSyncCollection(uuid, parentUuid, nameHint, child)
@@ -61,3 +62,14 @@ def updateXmlChildWithStr(root: Element, tagName: str, newValue: str|None):
 		root.remove(curChild)
 	elif curChild is None and newValue is not None:
 		SubElement(root, tagName).text = newValue
+
+transparentMatName = "SyncTransparent"
+transparentMatColor = (0, 0, 1, 0.333)
+def getTransparentMat() -> bpy.types.Material:
+	if transparentMatName in bpy.data.materials:
+		return bpy.data.materials[transparentMatName]
+	mat = bpy.data.materials.new(transparentMatName)
+	mat.use_nodes = True
+	mat.blend_method = "BLEND"
+	mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = transparentMatColor
+	return mat
