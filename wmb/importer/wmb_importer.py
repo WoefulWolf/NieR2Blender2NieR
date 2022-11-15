@@ -246,6 +246,9 @@ def construct_materials(texture_dir, material):
             if (gindx == 0) and (shader_name in shaders):
                 material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
             else:
+                print("gindx: %d" % gindx)
+                print("pindx: %d" % pindx)
+                print("param: %s" % str(parameter))
                 material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
 
     albedo_maps = {}
@@ -475,35 +478,8 @@ def format_wmb_mesh(wmb, collection_name):
             uvMaps[2].append(None)
             uvMaps[3].append(None)
             uvMaps[4].append(None)
-            
-        if vertex_flags == -2:
-            uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-            uvMaps[0].append(uv)
-            uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-            uvMaps[1].append(uv)
-            uvMaps[2].append(None)
-            uvMaps[3].append(None)
-            uvMaps[4].append(None)
-            
-        if vertex_flags == -1:
-            uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-            uvMaps[0].append(uv)
-            uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-            uvMaps[1].append(uv)
-            uvMaps[2].append(None)
-            uvMaps[3].append(None)
-            uvMaps[4].append(None)
-        
-        elif vertex_flags == 0:
-            uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-            uvMaps[0].append(uv)
-            uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-            uvMaps[1].append(uv)
-            uvMaps[2].append(None)
-            uvMaps[3].append(None)
-            uvMaps[4].append(None)
 
-        elif vertex_flags in {1, 4}: # this is the same?
+        elif vertex_flags in {-2, 0, 1, 4}:
             uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
             uvMaps[0].append(uv)
             uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
@@ -522,7 +498,7 @@ def format_wmb_mesh(wmb, collection_name):
             uvMaps[3].append(None)
             uvMaps[4].append(None)
 
-        elif vertex_flags in {7, 10}:
+        elif vertex_flags in {-1, 7, 10}:
             uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
             uvMaps[0].append(uv)
             uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
@@ -741,7 +717,7 @@ def import_unknowWorldDataArray(wmb):
 
 def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb')):
     #reset_blend()
-    wmb = WMB3(wmb_file, only_extract)
+    wmb = WMB(wmb_file, only_extract)
     wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
 
     if only_extract:
@@ -766,7 +742,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
         boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
         armature_no_wmb = wmbname.replace('.wmb','')
         armature_name_split = armature_no_wmb.split('/')
-        armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
+        armature_name = armature_name_split[-1]
         construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
     meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
     wmb_materials = get_wmb_material(wmb, texture_dir)
@@ -777,20 +753,23 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
         addWtaExportMaterial(texture_dir, material)
         materials.append(construct_materials(texture_dir, material))
     print('Linking materials to objects...')
-    for meshGroupInfo in wmb.meshGroupInfoArray:
-        for Index in range(len(meshGroupInfo.groupedMeshArray)):
-            mesh_start = meshGroupInfo.meshStart
-            meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
-            materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
-            groupIndex = int(meshes[Index + mesh_start].name.split('-')[2])
-            uvMaps = [[], [], [], [], []]
-            for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
-                VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
-                for k in range(5):
-                    if uvs[k][groupIndex] != None:
-                        uvMaps[k].append( uvs[k][groupIndex][VertexIndex])
-            if len(materials) > 0:
-                add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uvMaps)
+    if hasattr(wmb, "meshGroupInfoArray"):
+        for meshGroupInfo in wmb.meshGroupInfoArray:
+            for Index in range(len(meshGroupInfo.groupedMeshArray)):
+                mesh_start = meshGroupInfo.meshStart
+                meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
+                materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
+                groupIndex = int(meshes[Index + mesh_start].name.split('-')[2])
+                uvMaps = [[], [], [], [], []]
+                for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
+                    VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
+                    for k in range(5):
+                        if uvs[k][groupIndex] != None:
+                            uvMaps[k].append( uvs[k][groupIndex][VertexIndex])
+                if len(materials) > 0:
+                    add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uvMaps)
+    else:
+        print("Skipping linking, likely WMB4...")
     if wmb.hasBone:
         amt = bpy.data.objects.get(armature_name)
     if wmb.hasBone:
