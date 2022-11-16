@@ -679,7 +679,7 @@ class wmb4_batchData(object):
         self.batchIndex = read_uint32(wmb_fp)
         self.meshIndex = read_uint32(wmb_fp)
         self.materialIndex = read_uint16(wmb_fp)
-        self.boneSetsIndex = read_uint16(wmb_fp)
+        self.boneSetsIndex = read_int16(wmb_fp)
         self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
         """
         print("Batch index:    %d" % self.batchIndex)
@@ -693,7 +693,7 @@ class wmb4_bone(object):
     def __init__(self, wmb_fp, index):
         super(wmb4_bone, self).__init__()
         self.boneIndex = index # not sure what we need this for
-        self.unknown00 = read_int16(wmb_fp)
+        self.boneNumber = read_int16(wmb_fp)
         self.unknown02 = read_int16(wmb_fp) # one is global index
         self.parentIndex = read_int16(wmb_fp)
         self.unknownRotation = read_int16(wmb_fp) # rotation order or smth
@@ -707,12 +707,11 @@ class wmb4_bone(object):
         positionZ = read_float(wmb_fp)
 
         self.local_position = (relativePositionX, relativePositionY, relativePositionZ)
-        self.local_rotation = (positionX, positionY, positionZ)
+        self.local_rotation = (0, 0, 0)
         
-        #unused in WMB4, probably fine, needed by wmb_importer.py
-        self.world_position = (0, 0, 0)
-        self.world_rotation = (0, 0, 0)
-        self.boneNumber = self.boneIndex
+        self.world_position = (positionX, positionY, positionZ)
+        self.world_rotation = (relativePositionX, relativePositionY, relativePositionZ)
+        #self.boneNumber = self.boneIndex
         # self... wait, why is world_rotation used twice?
         self.world_position_tpose = (0, 0, 0)
 
@@ -1207,8 +1206,8 @@ class WMB(object):
             self.meshArray = load_data_array(wmb_fp, self.wmb_header.meshPointer, self.wmb_header.meshCount, wmb4_mesh)
             
             for mesh in self.meshArray:
-                for materialIndex in range(len(mesh.materials)):
-                    self.materialArray[mesh.materials[materialIndex]].materialName = mesh.name + "-%d" % materialIndex
+                for materialIndex, material in enumerate(mesh.materials):
+                    self.materialArray[material].materialName = mesh.name + "-%d" % materialIndex
             
             self.boneMap = None # <trollface>
             self.hasColTreeNodes = False # maybe this could be before the version check
@@ -1250,8 +1249,7 @@ class WMB(object):
 
         if self.hasBone:
             boneWeightInfos = [0] * len(usedVertexIndexArray)
-        for newIndex in range(len(usedVertexIndexArray)):
-            i = usedVertexIndexArray[newIndex]
+        for newIndex, i in enumerate(usedVertexIndexArray):
             usedVertices[newIndex] = (meshVertices[i].positionX, meshVertices[i].positionY, meshVertices[i].positionZ)
 
             # Vertex_Colors are stored in VertexData
@@ -1263,7 +1261,7 @@ class WMB(object):
 
             if self.hasBone:
                 bonesetIndex = mesh.bonesetIndex
-                if bonesetIndex < 0xffffffff: # would this false positive if I 'fixed' it to convert to -1?
+                if bonesetIndex != -1:
                     boneSet = self.boneSetArray[bonesetIndex]
                     if not wmb4:
                         boneIndices = [self.boneMap[boneSet[index]] for index in meshVertices[i].boneIndices]
