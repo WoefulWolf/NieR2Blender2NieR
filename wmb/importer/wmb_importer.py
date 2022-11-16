@@ -49,9 +49,13 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
         amt['boneMap'] = boneMap
 
     amt['boneSetArray'] = boneSetArray
-
+    
     for bone_data in bone_data_array:
-        bone = amt.edit_bones.new(bone_data[1])
+        if bone_data[6] < len(bone_data_array):
+            bone = amt.edit_bones.new(bone_data[1])
+        else:
+            bone = amt.edit_bones.new("fakeBone%d"%bone_data[6])
+            bone_data[1] = "fakeBone%d"%bone_data[6]
         bone.head = Vector(bone_data[4]) 
         bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))                
         bone['ID'] = bone_data[6]
@@ -63,11 +67,10 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 
     bones = amt.edit_bones
     for bone_data in bone_data_array:
-        if bone_data[2] < 0xffff:                        #this value need to edit in different games
+        if bone_data[2] != -1:
             bone = bones[bone_data[1]]
-            if bone_data[2] != -1:
-                bone.parent = bones[bone_data[3]]
-                #if bones[bone_data[3]]['ID'] != 0:
+            bone.parent = bones[bone_data[3]]
+            if bone['ID'] < len(bones): # probably make this be boneCount
                 if bones[bone_data[3]].head != bone.head:
                     bones[bone_data[3]].tail = bone.head
 
