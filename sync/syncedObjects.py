@@ -9,7 +9,7 @@ import bpy
 from mathutils import Euler, Vector
 from ..utils.util import throttle
 from ..lay.importer.lay_importer import updateVisualizationObject
-from .syncClient import SyncMessage, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, addOnMessageListener
+from .syncClient import SyncMessage, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, msgQueue
 from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
 from .utils import findObject, getSyncCollection, getTransparentMat, makeSyncCollection, updateXmlChildWithStr
 from ..utils.xmlIntegrationUtils import floatToStr, makeSphereMesh, strToFloat, vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
@@ -17,6 +17,13 @@ from ..dat_dtt.exporter.datHashGenerator import crc32
 from xml.etree.ElementTree import Element, SubElement
 
 syncedObjects: dict[str, SyncedObject] = {}
+
+def processMsgQueue():
+	while len(msgQueue) > 0:
+		msg = msgQueue.pop(0)
+		onWsMsg(msg)
+	
+	return 0.1
 
 def onWsMsg(msg: SyncMessage):
 	global syncedObjects
@@ -697,10 +704,11 @@ def initSyncedObjects():
 	if _isInited:
 		return
 	_isInited = True
-	addOnMessageListener(onWsMsg)
+	bpy.app.timers.register(processMsgQueue, first_interval=0.1)
 	addOnWsEndListener(onWsEnd)
 	bpy.app.handlers.depsgraph_update_post.append(onDepsgraphUpdate)
 
 def unregisterSyncedObjects():
+	bpy.app.timers.unregister(processMsgQueue)
 	bpy.app.handlers.depsgraph_update_post.remove(onDepsgraphUpdate)
 	disconnectFromWebsocket()

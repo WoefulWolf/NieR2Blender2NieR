@@ -9,8 +9,9 @@ _isConnectedToWs = False
 _ws: WebSocketApp = None
 _wsThread: WsThread = None
 _wsPort = 1547
-_onMsgListeners: List[callable] = []
 _onEndListeners: List[callable] = []
+
+msgQueue: List[SyncMessage] = []
 
 class SyncMessage:
 	method: str
@@ -37,14 +38,8 @@ class SyncMessage:
 def isConnectedToWs() -> bool:
 	return _isConnectedToWs
 
-def addOnMessageListener(listener: callable):
-	_onMsgListeners.append(listener)
-
 def addOnWsEndListener(listener: callable):
 	_onEndListeners.append(listener)
-
-def removeOnMessageListener(listener: callable):
-	_onMsgListeners.remove(listener)
 
 def removeOnWsEndListener(listener: callable):
 	_onEndListeners.remove(listener)
@@ -55,8 +50,9 @@ def _onMessage(ws: WebSocketApp, message: str):
 	if not _isConnectedToWs and msgData.method == "connected":
 		_isConnectedToWs = True
 		return
-	for listener in _onMsgListeners:
-		listener(msgData)
+	# for listener in _onMsgListeners:
+	# 	listener(msgData)
+	msgQueue.append(msgData)
 
 def _onEnd(_=None, __=None, ___=None):
 	global _isConnectedToWs, _ws, _wsThread
@@ -112,5 +108,6 @@ def disconnectFromWebsocket():
 	if not _isConnectedToWs:
 		return
 	
-	_ws.close()
+	if _ws is not None:
+		_ws.close()
 	_isConnectedToWs = False
