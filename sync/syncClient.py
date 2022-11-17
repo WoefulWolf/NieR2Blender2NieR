@@ -97,7 +97,7 @@ def _confirmIsConnected():
 def sendMsgToServer(msg: SyncMessage):
 	if not _isConnectedToWs:
 		return
-	if _ws.sock is None:
+	if _ws is None or _ws.sock is None:
 		_onEnd()
 		return
 	_ws.send(json.dumps(msg.toJson()))

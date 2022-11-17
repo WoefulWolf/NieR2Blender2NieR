@@ -19,7 +19,7 @@ def _makeSyncCollection(
 	) -> bpy.types.Collection:
 	if collection is None:
 		collection = getRootSyncCollection()
-	if collection["uuid"] == parentUuid:	# TODO parent uuid fuckery
+	if collection["uuid"] == parentUuid:
 		if not uuid in collection.children:
 			coll = bpy.data.collections.new(nameHint or uuid)
 			coll["uuid"] = uuid
@@ -85,28 +85,42 @@ def getActiveRegionView() -> bpy.types.RegionView3D:
 					space: bpy.types.SpaceView3D
 					return space.region_3d
 
-def getObjectBoundingSphere(obj: bpy.types.Object) -> tuple[Vector, float]:
-	# get sphere that contains the bounding box
-	objBB = obj.bound_box
-	spherePosX = (objBB[0][0] + objBB[6][0]) / 2
-	spherePosY = (objBB[0][1] + objBB[6][1]) / 2
-	spherePosZ = (objBB[0][2] + objBB[6][2]) / 2
-	spherePos = Vector((spherePosX, spherePosY, spherePosZ))
-	sphereRadius = 0
-	for bbPoint in objBB:
-		bbPointVec = Vector(bbPoint)
-		dist = (bbPointVec - spherePos).length
-		if dist > sphereRadius:
-			sphereRadius = dist
-	return spherePos, sphereRadius
+# def getObjectBoundingSphere(obj: bpy.types.Object) -> tuple[Vector, float]:
+# 	# get sphere that contains the bounding box
+# 	objBB = obj.bound_box
+# 	spherePosX = (objBB[0][0] + objBB[6][0]) / 2
+# 	spherePosY = (objBB[0][1] + objBB[6][1]) / 2
+# 	spherePosZ = (objBB[0][2] + objBB[6][2]) / 2
+# 	spherePos = Vector((spherePosX, spherePosY, spherePosZ))
+# 	sphereRadius = 0
+# 	for bbPoint in objBB:
+# 		bbPointVec = Vector(bbPoint)
+# 		dist = (bbPointVec - spherePos).length
+# 		if dist > sphereRadius:
+# 			sphereRadius = dist
+# 	return spherePos, sphereRadius
 
 def getObjectsBoundingSphere(objs: list[bpy.types.Object]) -> tuple[Vector, float]:
 	# get sphere that contains the bounding box
 	objsBB = []
 	for obj in objs:
-		objBB = obj.bound_box
-		if objBB[0][0] == objBB[6][0] and objBB[0][1] == objBB[6][1] and objBB[0][2] == objBB[6][2]:	# TODO test this
-			continue
+		if obj.data is not None:
+			objBB = obj.bound_box
+		else:
+			size = obj.empty_display_size
+			objBB = [
+				[-size, -size, -size],
+				[size, -size, -size],
+				[size, size, -size],
+				[-size, size, -size],
+				[-size, -size, size],
+				[size, -size, size],
+				[size, size, size],
+				[-size, size, size],
+			]
+			if obj.empty_display_type == "CIRCLE":
+				for i in range(8):
+					objBB[i][1] = 0
 		worldBB = [obj.matrix_world @ Vector(bbPoint) for bbPoint in objBB]
 		objsBB.append(worldBB)
 	spherePosX = (min([bb[0][0] for bb in objsBB]) + max([bb[6][0] for bb in objsBB])) / 2
@@ -138,3 +152,29 @@ def frameObjectInViewport(objs: list[bpy.types.Object]):
 	camPos = spherePos - camForwardVec * dist
 	regionView.view_location = camPos
 	regionView.view_distance = dist
+
+def deleteRecursively(obj: bpy.types.Object|bpy.types.Collection):
+	if isinstance(obj, bpy.types.Object):
+		if obj.data is not None:
+			data = obj.data
+			obj.data = None
+			bpy.data.meshes.remove(data, do_unlink=True)
+		else:
+			bpy.data.objects.remove(obj, do_unlink=True)
+	elif isinstance(obj, bpy.types.Collection):
+		for child in list(obj.children):
+			deleteRecursively(child)
+		for child in list(obj.objects):
+			deleteRecursively(child)
+		bpy.data.collections.remove(obj, do_unlink=True)
+
+def findParentCollection(childUuid: str, parent: bpy.types.Collection|None = None) -> bpy.types.Collection:
+	if parent is None:
+		parent = getRootSyncCollection()
+	if any(child.get("uuid") == childUuid for child in parent.children):
+		return parent
+	for child in parent.children:
+		found = findParentCollection(childUuid, child)
+		if found is not None:
+			return found
+	return None

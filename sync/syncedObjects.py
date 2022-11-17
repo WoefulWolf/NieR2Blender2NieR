@@ -1,24 +1,25 @@
 from __future__ import annotations
 from copy import deepcopy
+from math import radians
 import re
 import time
 from xml.etree import ElementTree
 from uuid import uuid4
 
+import bmesh
 import bpy
 from mathutils import Euler, Vector
 from ..utils.util import throttle
 from ..lay.importer.lay_importer import updateVisualizationObject
 from .syncClient import SyncMessage, addOnMessageListener, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, msgQueue
 from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
-from .utils import findObject, frameObjectInViewport, getRootSyncCollection, getSyncCollection, getTransparentMat, makeSyncCollection, updateXmlChildWithStr
+from .utils import deleteRecursively, findObject, findParentCollection, frameObjectInViewport, getRootSyncCollection, getSyncCollection, getTransparentMat, makeSyncCollection, updateXmlChildWithStr
 from ..utils.xmlIntegrationUtils import floatToStr, makeSphereMesh, strToFloat, vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
 from ..dat_dtt.exporter.datHashGenerator import crc32
 from xml.etree.ElementTree import Element, SubElement
 
 syncedObjects: dict[str, SyncedObject] = {}
 
-_newObjects: list[bpy.types.Object] = []
 def onWsMsg(msg: SyncMessage):
 	global syncedObjects
 	setDisableDepsgraphUpdates(True)
@@ -34,21 +35,15 @@ def onWsMsg(msg: SyncMessage):
 		newObj = SyncedObject.fromType(msg)
 		syncedObjects[msg.uuid] = newObj
 		newAllObjects = list(getRootSyncCollection().all_objects)
-		_newObjects.extend(obj for obj in newAllObjects if obj not in initAllObjects)
+		bpy.app.timers.register(
+			lambda: frameObjectInViewport([obj for obj in newAllObjects if obj not in initAllObjects]),
+			first_interval=0.005
+		)
 	elif msg.method == "endSync":
 		if msg.uuid in syncedObjects:
 			syncedObjects[msg.uuid].endSync(False)
 
 	setDisableDepsgraphUpdates(False)
-
-def frameNewObjects(newObjects: list[bpy.types.Object]):
-	global _newObjects
-	_newObjects.extend(newObjects)
-	_frameNewObjectsThrottled()
-@throttle(50)
-def _frameNewObjectsThrottled():
-	frameObjectInViewport(_newObjects)
-	_newObjects.clear()
 
 def onWsEnd():
 	for syncObj in list(syncedObjects.values()):
@@ -109,11 +104,13 @@ class SyncedObject:
 	uuid: str
 	nameHint: str|None = None
 	parentUuid: str|None = None
+	allowReparent: bool = False
 
-	def __init__(self, uuid: str, nameHint: str|None, parentUuid: str|None):
+	def __init__(self, uuid: str, nameHint: str|None, parentUuid: str|None, allowReparent: bool):
 		self.uuid = uuid
 		self.nameHint = nameHint
 		self.parentUuid = parentUuid
+		self.allowReparent = allowReparent
 	
 	@classmethod
 	def fromType(cls, msg: SyncMessage):
@@ -121,20 +118,22 @@ class SyncedObject:
 		type = SyncObjectsType.fromInt(msg.args["type"])
 		nameHint = msg.args.get("nameHint", None)
 		parentUuid = msg.args.get("parentUuid", None)
+		allowReparent = msg.args.get("allowReparent", False)
 		if type == SyncObjectsType.list:
-			return SyncedListObject(uuid, msg, nameHint, parentUuid)
+			allowListChange = msg.args.get("allowListChange", False)
+			return SyncedListObject(uuid, msg, nameHint, parentUuid, allowReparent, allowListChange)
 		else:
 			xml = ElementTree.fromstring(msg.args["propXml"])
 			if type == SyncObjectsType.entity:
-				return SyncedEntityObject(uuid, xml, nameHint, parentUuid)
+				return SyncedEntityObject(uuid, xml, nameHint, parentUuid, allowReparent)
 			elif type == SyncObjectsType.area:
-				return SyncedAreaObject(uuid, xml, nameHint, parentUuid)
+				return SyncedAreaObject(uuid, xml, nameHint, parentUuid, allowReparent)
 			elif type == SyncObjectsType.bezier:
-				return SyncedBezierObject(uuid, xml, nameHint, parentUuid)
+				return SyncedBezierObject(uuid, xml, nameHint, parentUuid, allowReparent)
 			elif type == SyncObjectsType.enemyGeneratorNode:
-				return SyncedEMGeneratorNodeObject(uuid, xml, nameHint, parentUuid)
+				return SyncedEMGeneratorNodeObject(uuid, xml, nameHint, parentUuid, allowReparent)
 			elif type == SyncObjectsType.enemyGeneratorDist:
-				return SyncedEMGeneratorDistObject(uuid, xml, nameHint, parentUuid)
+				return SyncedEMGeneratorDistObject(uuid, xml, nameHint, parentUuid, allowReparent)
 		raise NotImplementedError()
 
 	def update(self, msg: SyncMessage):
@@ -152,8 +151,8 @@ class SyncedObject:
 class SyncedXmlObject(SyncedObject):
 	xml: Element
 	
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None):
-		super().__init__(uuid, nameHint, parentUuid)
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None, allowReparent: bool):
+		super().__init__(uuid, nameHint, parentUuid, allowReparent)
 		self.xml = xml
 
 	def xmlCmp(self, el1: Element, el2: Element) -> bool:
@@ -180,7 +179,7 @@ class SyncedXmlObject(SyncedObject):
 			sendMsgToServer(SyncMessage("endSync", self.uuid, {}))
 		obj = findObject(self.uuid)
 		if obj is not None:
-			bpy.data.objects.remove(obj)
+			deleteRecursively(obj)
 		if self.uuid in syncedObjects:
 			del syncedObjects[self.uuid]
 
@@ -207,11 +206,13 @@ class SyncedXmlObject(SyncedObject):
 class SyncedListObject(SyncedObject):
 	objects: list[SyncedObject]
 	listType: str
+	allowListChange: bool
 	
-	def __init__(self, uuid: str, msg: SyncMessage, nameHint: str|None, parentUuid: str|None):
-		super().__init__(uuid, nameHint, parentUuid)
+	def __init__(self, uuid: str, msg: SyncMessage, nameHint: str|None, parentUuid: str|None, allowReparent: bool, allowListChange: bool):
+		super().__init__(uuid, nameHint, parentUuid, allowReparent)
 		self.listType = msg.args["listType"]
 		self.objects = []
+		self.allowListChange = allowListChange
 		makeSyncCollection(uuid, self.parentUuid, nameHint)
 
 		for child in msg.args["children"]:
@@ -247,7 +248,7 @@ class SyncedListObject(SyncedObject):
 			sendMsgToServer(SyncMessage("endSync", self.uuid, {}))
 		collection = getSyncCollection(self.uuid)
 		if collection is not None:
-			bpy.data.collections.remove(collection)
+			deleteRecursively(collection)
 		if self.uuid in syncedObjects:
 			del syncedObjects[self.uuid]
 		for obj in self.objects:
@@ -288,10 +289,25 @@ class SyncedListObject(SyncedObject):
 			if findObject(removedUuid) is not None:
 				reparentedObj = findObject(removedUuid)
 				repObjCollUuid = reparentedObj.users_collection[0].get("uuid")
-				if repObjCollUuid is not None:
-					self.handleObjectReparent(removedUuid)
+				if repObjCollUuid is None or not syncedObjects[removedUuid].allowReparent:
+					print(f"moving {removedUuid} back to {self.uuid}")
+					reparentedObj.users_collection[0].objects.unlink(reparentedObj)
+					coll.objects.link(reparentedObj)
 					continue
-
+				self.handleObjectReparent(removedUuid)
+				continue
+			if getSyncCollection(removedUuid) is not None:
+				if not syncedObjects[removedUuid].allowReparent:
+					print(f"moving {removedUuid} back to {self.uuid}")
+					wrongParentColl = findParentCollection(removedUuid)
+					wrongParentColl.children.unlink(getSyncCollection(removedUuid))
+					coll.children.link(getSyncCollection(removedUuid))
+					continue
+				self.handleObjectReparent(removedUuid)
+				continue
+			
+			if not self.allowListChange:
+				raise Exception(f"Object {removedUuid} was removed from {self.uuid} but list changes are not allowed")
 			removeSyncObj = next(obj for obj in self.objects if obj.uuid == removedUuid)
 			self.objects.remove(removeSyncObj)
 			removeSyncObj.endSync(False)
@@ -304,6 +320,8 @@ class SyncedListObject(SyncedObject):
 		
 		# duplicate objects
 		duplicateUuids = [uuid for uuid in set(blenderObjUuids) if blenderObjUuids.count(uuid) > 1]
+		if len(duplicateUuids) > 0 and not self.allowListChange:
+			raise Exception(f"Duplicate objects found in {self.uuid} but list changes are not allowed")
 		duplicateBlenderObjects: dict[str, list[bpy.types.Object]] = {
 			uuid: [obj for obj in blenderObjects if obj["uuid"] == uuid][1:]
 			for uuid in duplicateUuids
@@ -330,10 +348,24 @@ class SyncedListObject(SyncedObject):
 		# added objects
 		addedUuids = [uuid for uuid in blenderObjUuids if uuid not in syncObjUuids]
 		for addedUuid in addedUuids:
-			addedObj = findObject(addedUuid)
+			addedObj = findObject(addedUuid) or getSyncCollection(addedUuid)
 			addedObjUuid = addedObj["uuid"]
 			if addedObjUuid not in syncedObjects:
 				print("added object not found in synced objects")
+				continue
+			if not syncedObjects[addedObjUuid].allowReparent:
+				print(f"moving {addedObjUuid} back to {self.uuid}")
+				originalCollUuid = syncedObjects[addedObjUuid].parentUuid
+				originalColl = getSyncCollection(originalCollUuid)
+				if originalColl is None:
+					print("original collection not found")
+					continue
+				if isinstance(addedObj, bpy.types.Object):
+					coll.objects.unlink(addedObj)
+					originalColl.objects.link(addedObj)
+				else:
+					coll.children.unlink(addedObj)
+					originalColl.children.link(addedObj)
 				continue
 			self.handleObjectReparent(addedObjUuid)
 
@@ -342,7 +374,13 @@ class SyncedListObject(SyncedObject):
 		syncObj = syncedObjects[objUuid]
 		srcList = syncedObjects[syncObj.parentUuid]
 		blenderObj = findObject(objUuid)
-		objCollUuid = blenderObj.users_collection[0].get("uuid")
+		if blenderObj is not None:
+			objCollUuid = blenderObj.users_collection[0].get("uuid")
+		else:
+			parentColl = findParentCollection(objUuid)
+			if parentColl is None:
+				raise Exception(f"Parent collection of {objUuid} not found")
+			objCollUuid = parentColl.get("uuid")
 		if objCollUuid is None:
 			raise Exception(f"Object {objUuid} not in collection")
 		destList = syncedObjects[objCollUuid]
@@ -357,9 +395,9 @@ class SyncedListObject(SyncedObject):
 class SyncedEntityObject(SyncedXmlObject):
 	# syncable props: location{ position, rotation?, }, scale?, objId
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None):
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None, allowReparent: bool):
 		objId = xml.find("objId").text
-		super().__init__(uuid, xml, objId, parentUuid)
+		super().__init__(uuid, xml, objId, parentUuid, allowReparent)
 		self.newObjFromType(SyncObjectsType.entity, objId + " Entity", modelName=self.xml.find("objId").text)
 		self.updateWithXml(self.xml)
 
@@ -449,10 +487,10 @@ class SyncedAreaObject(SyncedXmlObject):
 	# syncable props: position, radius
 	_typeSphereAreaHash = crc32(_typeSphereArea)
 
-	_objColor = (0, 0, 1, 0.333)
+	_objColor = (0.25, 0.25, 1, 0.333)
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None):
-		super().__init__(uuid, xml, nameHint, parentUuid)
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parentUuid: str|None, allowReparent: bool):
+		super().__init__(uuid, xml, nameHint, parentUuid, allowReparent)
 		self.newAreaObjectFromType(int(xml.find("code").text, 16))
 		self.updateWithXml(self.xml)
 	
@@ -616,8 +654,8 @@ class SyncedAreaObject(SyncedXmlObject):
 class SyncedBezierObject(SyncedXmlObject):
 	# syncable props: attribute, parent?, controls, nodes
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None):
-		super().__init__(uuid, xml, nameHint, parent)
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None, allowReparent: bool):
+		super().__init__(uuid, xml, nameHint, parent, allowReparent)
 		self.makeBezierObject()
 		self.updateWithXml(self.xml)
 
@@ -710,9 +748,11 @@ class SyncedBezierObject(SyncedXmlObject):
 class SyncedEMGeneratorNodeObject(SyncedXmlObject):
 	# syncable props: point, radius
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None):
-		super().__init__(uuid, xml, nameHint, parent)
-		self.makeSphereObject()
+	_objColor = (1, 0, 1, 0.333)
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None, allowReparent: bool):
+		super().__init__(uuid, xml, nameHint, parent, allowReparent)
+		self.makeSphere()
 		self.updateWithXml(self.xml)
 	
 	def updateWithXml(self, xmlRoot: Element):
@@ -729,17 +769,37 @@ class SyncedEMGeneratorNodeObject(SyncedXmlObject):
 		rootCopy.find("radius").text = str(sphere.scale[0])
 		return rootCopy
 
-	def makeSphereObject(self):
-		sphere: bpy.types.Mesh = bpy.data.meshes.new(self.nameHint or "sphere", "SPHERE")
+	def makeSphere(self):
+		sphere: bpy.types.Mesh = bpy.data.meshes.new(self.nameHint or "node")
 		sphereObj = bpy.data.objects.new(self.nameHint or "sphere", sphere)
 		sphereObj["uuid"] = self.uuid
 		getSyncCollection(self.parentUuid).objects.link(sphereObj)
+		sphereObj.color = self._objColor
+		sphereObj.data.materials.append(getTransparentMat())
+
+		geometryNodesMod: bpy.types.NodesModifier = sphereObj.modifiers.new("GeometryNodes", "NODES")
+		nodeTree = geometryNodesMod.node_group
+
+		inputNode = nodeTree.nodes["Group Input"]
+		outputNode = nodeTree.nodes["Group Output"]
+		sphereNode = nodeTree.nodes.new("GeometryNodeMeshUVSphere")
+		nodeTree.links.new(sphereNode.outputs["Mesh"], outputNode.inputs["Geometry"])
+
+		inputNode.outputs.new("VALUE", "Radius")
+		nodeTree.links.new(inputNode.outputs["Radius"], sphereNode.inputs["Radius"])
+		
+		nodeTree.inputs[1].hide_value = False
+		radiusIdentifier = nodeTree.inputs[1].identifier
+		radius = 1
+		geometryNodesMod[radiusIdentifier] = radius
+		nodeTree.inputs[1].default_value = radius 
+		nodeTree.inputs[1].hide_value = True
 
 class SyncedEMGeneratorDistObject(SyncedXmlObject):
 	# syncable props: dist { position, areaDist?, resetDist?, searchDist?, guardSDist?, guardLDist?, escapeDist? }
 
-	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None):
-		super().__init__(uuid, xml, nameHint, parent)
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None, allowReparent: bool):
+		super().__init__(uuid, xml, nameHint, parent, allowReparent)
 		self.makeEmptyRoot()
 		self.updateWithXml(self.xml)
 	
@@ -765,10 +825,11 @@ class SyncedEMGeneratorDistObject(SyncedXmlObject):
 		posRoot: bpy.types.Object = findObject(self.uuid)
 		rootCopy.find("position").text = vecToXmlVec3(posRoot.location)
 
-		children = { self.getDistName(child.name): child for child in posRoot.children } 
+		children = { self.getDistName(child.name): child for child in posRoot.children }
+		curXmlDistNames = [ distE.tag for distE in rootCopy if distE.tag != "position" ]
 		for distName, distObj in children.items():
 			dist = distObj.scale[0]
-			if distName not in rootCopy:
+			if distName not in curXmlDistNames:
 				rootCopy.append(Element(distName))
 			rootCopy.find(distName).text = floatToStr(dist)
 		return rootCopy
@@ -779,18 +840,23 @@ class SyncedEMGeneratorDistObject(SyncedXmlObject):
 	def makeEmptyRoot(self):
 		empty: bpy.types.Object = bpy.data.objects.new(self.nameHint or "dist", None)
 		empty["uuid"] = self.uuid
-		getSyncCollection(self.parentUuid).objects.link(empty)
+		makeSyncCollection(self.uuid, self.parentUuid, "dist").objects.link(empty)
 		empty.empty_display_type = "PLAIN_AXES"
+		empty.lock_rotation = (True, True, True)
+		empty.lock_scale = (True, True, True)
 
 	def makeEmptyDist(self, distName: str, parent: bpy.types.Object) -> bpy.types.Object:
 		empty: bpy.types.Object = bpy.data.objects.new(distName, None)
 		empty["uuid"] = self.uuid
-		getSyncCollection(self.parentUuid).objects.link(empty)
+		getSyncCollection(self.uuid).objects.link(empty)
 		empty.empty_display_type = "CIRCLE"
 		empty.empty_display_size = 0.5
 		empty.parent = parent
+		empty.rotation_euler[0] = radians(90)
 		empty.lock_location = (True, True, True)
 		empty.lock_rotation = (True, True, True)
+
+		return empty
 	
 
 _isInited = False
