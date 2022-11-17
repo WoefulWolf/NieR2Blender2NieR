@@ -390,3 +390,6 @@ class throttle(object):
                 self.timeout = Timer(remaining / 1000, self.later)
                 self.timeout.start()
         return wrapper
+
+def clamp(value: float, min: float, max: float) -> float:
+    return min if value < min else max if value > max else value

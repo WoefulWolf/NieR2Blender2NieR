@@ -9,6 +9,8 @@ class SyncObjectsType(Enum):
 	area = 1
 	entity = 2
 	bezier = 3
+	enemyGeneratorNode = 4
+	enemyGeneratorDist = 5
 
 	@staticmethod
 	def fromInt(i: int) -> SyncObjectsType:

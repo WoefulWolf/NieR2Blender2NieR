@@ -5,10 +5,13 @@ from time import time
 from typing import List
 from websocket import create_connection, WebSocket, WebSocketApp
 
+import bpy
+
 _isConnectedToWs = False
 _ws: WebSocketApp = None
 _wsThread: WsThread = None
 _wsPort = 1547
+_onMsgListeners: List[callable] = []
 _onEndListeners: List[callable] = []
 
 msgQueue: List[SyncMessage] = []
@@ -38,20 +41,36 @@ class SyncMessage:
 def isConnectedToWs() -> bool:
 	return _isConnectedToWs
 
+def addOnMessageListener(listener: callable):
+	_onMsgListeners.append(listener)
+
+def removeOnMessageListener(listener: callable):
+	_onMsgListeners.remove(listener)
+
 def addOnWsEndListener(listener: callable):
 	_onEndListeners.append(listener)
 
 def removeOnWsEndListener(listener: callable):
 	_onEndListeners.remove(listener)
 
+_hasMsgQueueTimer = False
+def processMsgQueue():
+	global _hasMsgQueueTimer
+	_hasMsgQueueTimer = False
+	while len(msgQueue) > 0:
+		msg = msgQueue.pop(0)
+		for listener in _onMsgListeners:
+			listener(msg)
+	
 def _onMessage(ws: WebSocketApp, message: str):
-	global _isConnectedToWs
+	global _isConnectedToWs, _hasMsgQueueTimer
 	msgData = SyncMessage.fromJson(json.loads(message))
 	if not _isConnectedToWs and msgData.method == "connected":
 		_isConnectedToWs = True
 		return
-	# for listener in _onMsgListeners:
-	# 	listener(msgData)
+	if not _hasMsgQueueTimer:
+		bpy.app.timers.register(processMsgQueue, first_interval=0.01)
+		_hasMsgQueueTimer = True
 	msgQueue.append(msgData)
 
 def _onEnd(_=None, __=None, ___=None):

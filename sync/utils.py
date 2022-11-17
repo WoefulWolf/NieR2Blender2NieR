@@ -1,5 +1,8 @@
 import bpy
+from mathutils import Vector
+from math import tan, radians
 from xml.etree.ElementTree import Element, SubElement
+from ..utils.util import clamp
 
 def getRootSyncCollection() -> bpy.types.Collection:
 	if "Sync" not in bpy.data.collections:
@@ -73,3 +76,65 @@ def getTransparentMat() -> bpy.types.Material:
 	mat.blend_method = "BLEND"
 	mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = transparentMatColor
 	return mat
+
+def getActiveRegionView() -> bpy.types.RegionView3D:
+	for area in bpy.context.screen.areas:
+		if area.type == "VIEW_3D":
+			for space in area.spaces:
+				if space.type == "VIEW_3D":
+					space: bpy.types.SpaceView3D
+					return space.region_3d
+
+def getObjectBoundingSphere(obj: bpy.types.Object) -> tuple[Vector, float]:
+	# get sphere that contains the bounding box
+	objBB = obj.bound_box
+	spherePosX = (objBB[0][0] + objBB[6][0]) / 2
+	spherePosY = (objBB[0][1] + objBB[6][1]) / 2
+	spherePosZ = (objBB[0][2] + objBB[6][2]) / 2
+	spherePos = Vector((spherePosX, spherePosY, spherePosZ))
+	sphereRadius = 0
+	for bbPoint in objBB:
+		bbPointVec = Vector(bbPoint)
+		dist = (bbPointVec - spherePos).length
+		if dist > sphereRadius:
+			sphereRadius = dist
+	return spherePos, sphereRadius
+
+def getObjectsBoundingSphere(objs: list[bpy.types.Object]) -> tuple[Vector, float]:
+	# get sphere that contains the bounding box
+	objsBB = []
+	for obj in objs:
+		objBB = obj.bound_box
+		if objBB[0][0] == objBB[6][0] and objBB[0][1] == objBB[6][1] and objBB[0][2] == objBB[6][2]:	# TODO test this
+			continue
+		worldBB = [obj.matrix_world @ Vector(bbPoint) for bbPoint in objBB]
+		objsBB.append(worldBB)
+	spherePosX = (min([bb[0][0] for bb in objsBB]) + max([bb[6][0] for bb in objsBB])) / 2
+	spherePosY = (min([bb[0][1] for bb in objsBB]) + max([bb[6][1] for bb in objsBB])) / 2
+	spherePosZ = (min([bb[0][2] for bb in objsBB]) + max([bb[6][2] for bb in objsBB])) / 2
+	spherePos = Vector((spherePosX, spherePosY, spherePosZ))
+	sphereRadius = 0
+	for bb in objsBB:
+		for bbPoint in bb:
+			bbPointVec = Vector(bbPoint)
+			dist = (bbPointVec - spherePos).length
+			if dist > sphereRadius:
+				sphereRadius = dist
+	return spherePos, sphereRadius
+
+def frameObjectInViewport(objs: list[bpy.types.Object]):
+	if len(objs) == 0:
+		return
+	regionView = getActiveRegionView()
+	spherePos, sphereRadius = getObjectsBoundingSphere(objs)
+
+	# calculate distance to fit the sphere in the viewport
+	assumedFov = radians(80)
+	dist = sphereRadius / tan(assumedFov / 2)
+	dist = clamp(dist, 3, 1000)
+
+	# set the camera position
+	camForwardVec = regionView.view_rotation @ Vector((0, 0, -1))
+	camPos = spherePos - camForwardVec * dist
+	regionView.view_location = camPos
+	regionView.view_distance = dist

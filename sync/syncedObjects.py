@@ -9,22 +9,16 @@ import bpy
 from mathutils import Euler, Vector
 from ..utils.util import throttle
 from ..lay.importer.lay_importer import updateVisualizationObject
-from .syncClient import SyncMessage, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, msgQueue
+from .syncClient import SyncMessage, addOnMessageListener, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, msgQueue
 from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
-from .utils import findObject, getSyncCollection, getTransparentMat, makeSyncCollection, updateXmlChildWithStr
+from .utils import findObject, frameObjectInViewport, getRootSyncCollection, getSyncCollection, getTransparentMat, makeSyncCollection, updateXmlChildWithStr
 from ..utils.xmlIntegrationUtils import floatToStr, makeSphereMesh, strToFloat, vecToXmlVec3, vecToXmlVec3Scale, xmlVecToVec3, xmlVecToVec3Scale
 from ..dat_dtt.exporter.datHashGenerator import crc32
 from xml.etree.ElementTree import Element, SubElement
 
 syncedObjects: dict[str, SyncedObject] = {}
 
-def processMsgQueue():
-	while len(msgQueue) > 0:
-		msg = msgQueue.pop(0)
-		onWsMsg(msg)
-	
-	return 0.1
-
+_newObjects: list[bpy.types.Object] = []
 def onWsMsg(msg: SyncMessage):
 	global syncedObjects
 	setDisableDepsgraphUpdates(True)
@@ -36,13 +30,25 @@ def onWsMsg(msg: SyncMessage):
 		else:
 			sendMsgToServer(SyncMessage("endSync", msg.uuid, {}))
 	elif msg.method == "startSync":
+		initAllObjects = list(getRootSyncCollection().all_objects)
 		newObj = SyncedObject.fromType(msg)
 		syncedObjects[msg.uuid] = newObj
+		newAllObjects = list(getRootSyncCollection().all_objects)
+		_newObjects.extend(obj for obj in newAllObjects if obj not in initAllObjects)
 	elif msg.method == "endSync":
 		if msg.uuid in syncedObjects:
 			syncedObjects[msg.uuid].endSync(False)
 
 	setDisableDepsgraphUpdates(False)
+
+def frameNewObjects(newObjects: list[bpy.types.Object]):
+	global _newObjects
+	_newObjects.extend(newObjects)
+	_frameNewObjectsThrottled()
+@throttle(50)
+def _frameNewObjectsThrottled():
+	frameObjectInViewport(_newObjects)
+	_newObjects.clear()
 
 def onWsEnd():
 	for syncObj in list(syncedObjects.values()):
@@ -125,6 +131,10 @@ class SyncedObject:
 				return SyncedAreaObject(uuid, xml, nameHint, parentUuid)
 			elif type == SyncObjectsType.bezier:
 				return SyncedBezierObject(uuid, xml, nameHint, parentUuid)
+			elif type == SyncObjectsType.enemyGeneratorNode:
+				return SyncedEMGeneratorNodeObject(uuid, xml, nameHint, parentUuid)
+			elif type == SyncObjectsType.enemyGeneratorDist:
+				return SyncedEMGeneratorDistObject(uuid, xml, nameHint, parentUuid)
 		raise NotImplementedError()
 
 	def update(self, msg: SyncMessage):
@@ -343,7 +353,6 @@ class SyncedListObject(SyncedObject):
 			"srcListUuid": srcList.uuid,
 			"destListUuid": destList.uuid,
 		}))
-
 
 class SyncedEntityObject(SyncedXmlObject):
 	# syncable props: location{ position, rotation?, }, scale?, objId
@@ -698,17 +707,102 @@ class SyncedBezierObject(SyncedXmlObject):
 		curve.bevel_depth = 0.1
 		curve.bevel_resolution = 8
 
+class SyncedEMGeneratorNodeObject(SyncedXmlObject):
+	# syncable props: point, radius
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None):
+		super().__init__(uuid, xml, nameHint, parent)
+		self.makeSphereObject()
+		self.updateWithXml(self.xml)
+	
+	def updateWithXml(self, xmlRoot: Element):
+		point = xmlRoot.find("point").text
+		radius = xmlRoot.find("radius").text
+		sphere: bpy.types.Object = findObject(self.uuid)
+		sphere.location = xmlVecToVec3(point)
+		sphere.scale = (float(radius), float(radius), float(radius))
+	
+	def selfToXml(self) -> Element:
+		rootCopy = deepcopy(self.xml)
+		sphere: bpy.types.Object = findObject(self.uuid)
+		rootCopy.find("point").text = vecToXmlVec3(sphere.location)
+		rootCopy.find("radius").text = str(sphere.scale[0])
+		return rootCopy
+
+	def makeSphereObject(self):
+		sphere: bpy.types.Mesh = bpy.data.meshes.new(self.nameHint or "sphere", "SPHERE")
+		sphereObj = bpy.data.objects.new(self.nameHint or "sphere", sphere)
+		sphereObj["uuid"] = self.uuid
+		getSyncCollection(self.parentUuid).objects.link(sphereObj)
+
+class SyncedEMGeneratorDistObject(SyncedXmlObject):
+	# syncable props: dist { position, areaDist?, resetDist?, searchDist?, guardSDist?, guardLDist?, escapeDist? }
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None):
+		super().__init__(uuid, xml, nameHint, parent)
+		self.makeEmptyRoot()
+		self.updateWithXml(self.xml)
+	
+	def updateWithXml(self, xmlRoot: Element):
+		position = xmlRoot.find("position").text
+		posRoot: bpy.types.Object = findObject(self.uuid)
+		posRoot.location = xmlVecToVec3(position)
+
+		children = { self.getDistName(child.name): child for child in posRoot.children } 
+		for distE in xmlRoot:
+			if distE.tag == "position":
+				continue
+
+			if distE.tag in children:
+				distObj = children[distE.tag]
+			else:
+				distObj = self.makeEmptyDist(distE.tag, posRoot)
+			dist = strToFloat(distE.text)
+			distObj.scale = (dist, dist, dist)
+		
+	def selfToXml(self) -> Element:
+		rootCopy = deepcopy(self.xml)
+		posRoot: bpy.types.Object = findObject(self.uuid)
+		rootCopy.find("position").text = vecToXmlVec3(posRoot.location)
+
+		children = { self.getDistName(child.name): child for child in posRoot.children } 
+		for distName, distObj in children.items():
+			dist = distObj.scale[0]
+			if distName not in rootCopy:
+				rootCopy.append(Element(distName))
+			rootCopy.find(distName).text = floatToStr(dist)
+		return rootCopy
+	
+	def getDistName(self, name: str) -> str:
+		return name.split(".")[0]
+	
+	def makeEmptyRoot(self):
+		empty: bpy.types.Object = bpy.data.objects.new(self.nameHint or "dist", None)
+		empty["uuid"] = self.uuid
+		getSyncCollection(self.parentUuid).objects.link(empty)
+		empty.empty_display_type = "PLAIN_AXES"
+
+	def makeEmptyDist(self, distName: str, parent: bpy.types.Object) -> bpy.types.Object:
+		empty: bpy.types.Object = bpy.data.objects.new(distName, None)
+		empty["uuid"] = self.uuid
+		getSyncCollection(self.parentUuid).objects.link(empty)
+		empty.empty_display_type = "CIRCLE"
+		empty.empty_display_size = 0.5
+		empty.parent = parent
+		empty.lock_location = (True, True, True)
+		empty.lock_rotation = (True, True, True)
+	
+
 _isInited = False
 def initSyncedObjects():
 	global _isInited
 	if _isInited:
 		return
 	_isInited = True
-	bpy.app.timers.register(processMsgQueue, first_interval=0.1)
+	addOnMessageListener(onWsMsg)
 	addOnWsEndListener(onWsEnd)
 	bpy.app.handlers.depsgraph_update_post.append(onDepsgraphUpdate)
 
 def unregisterSyncedObjects():
-	bpy.app.timers.unregister(processMsgQueue)
 	bpy.app.handlers.depsgraph_update_post.remove(onDepsgraphUpdate)
 	disconnectFromWebsocket()
