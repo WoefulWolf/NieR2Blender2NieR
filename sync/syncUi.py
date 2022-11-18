@@ -1,9 +1,7 @@
 import bpy
 from .syncedObjects import initSyncedObjects
 from .syncClient import connectToWebsocket, disconnectFromWebsocket, isConnectedToWs
-from .shared import dependencies_installed
-from ..utils.util import drawMultilineLabel
-from ..__init__ import bl_info
+from ..utils.util import ShowMessageBox
 
 class StartSyncOperator(bpy.types.Operator):
     """Start Sync"""
@@ -12,38 +10,52 @@ class StartSyncOperator(bpy.types.Operator):
     bl_description = "Start Sync"
     bl_options = {"REGISTER"}
 
+    connectionSuccess: bool
+
     def execute(self, context):
-        if connectToWebsocket():
+        self.connectionSuccess = False
+        connectToWebsocket(self.onResult)
+        return {"FINISHED"}
+
+    def onResultDelayed(self):
+        if self.connectionSuccess:
             initSyncedObjects()
-            return {'FINISHED'}
+            ShowMessageBox("Connected!", "Success")
         else:
-            return {'CANCELLED'}
+            ShowMessageBox("Couldn't connect to websocket server", "Error")
 
-class SYNCUI_PT_sync_ui(bpy.types.Panel):
-    bl_label = "Sync"
-    bl_category = "Sync"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
+    def onResult(self, success: bool):
+        self.connectionSuccess = success
+        bpy.app.timers.register(self.onResultDelayed, first_interval=0.005, persistent=False)
 
-    @classmethod
-    def poll(self, context):
-        return not dependencies_installed
+class StopSyncOperator(bpy.types.Operator):
+    """Stop Sync"""
+    bl_idname = "n2b2n.stop_sync"
+    bl_label = "Stop Sync"
+    bl_description = "Stop Sync"
+    bl_options = {"REGISTER"}
 
-    def draw(self, context):
-        layout = self.layout
+    def execute(self, context):
+        disconnectFromWebsocket()
+        return {"FINISHED"}
 
-        if isConnectedToWs():
-            layout.label(text="Connected to websocket")
-        else:
-            layout.operator(StartSyncOperator.bl_idname, text="Start Sync")
+def dropDownStartSyncButtonEntry(self, context):
+    if isConnectedToWs():
+        self.layout.operator(StopSyncOperator.bl_idname, icon="CANCEL")
+    else:
+        self.layout.operator(StartSyncOperator.bl_idname, icon="UV_SYNC_SELECT")
 
 def registerSync():
     bpy.utils.register_class(StartSyncOperator)
-    bpy.utils.register_class(SYNCUI_PT_sync_ui)
+    bpy.utils.register_class(StopSyncOperator)
+
+    bpy.types.VIEW3D_MT_object.append(dropDownStartSyncButtonEntry)
 
 def unregisterSync():
     bpy.utils.unregister_class(StartSyncOperator)
-    bpy.utils.unregister_class(SYNCUI_PT_sync_ui)
+    bpy.utils.unregister_class(StopSyncOperator)
+
+    bpy.types.VIEW3D_MT_object.remove(dropDownStartSyncButtonEntry)
 
     if isConnectedToWs():
         disconnectFromWebsocket()

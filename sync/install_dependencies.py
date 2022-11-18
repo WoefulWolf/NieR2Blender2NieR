@@ -13,6 +13,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>
 
+import traceback
 import bpy
 import os
 import sys
@@ -107,39 +108,12 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     # The installation succeeded, attempt to import the module again
     import_module(module_name, global_name)
 
-
-class NODEP_PT_no_dep(bpy.types.Panel):
-    bl_label = "Sync"
-    bl_category = "Sync"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-
-    @classmethod
-    def poll(self, context):
-        return not dependencies_installed
-
-    def draw(self, context):
-        layout = self.layout
-
-        drawMultilineLabel(context, f"Please install the missing dependencies for the \"{bl_info.get('name')}\" add-on.", layout)
-        drawMultilineLabel(context, f"1. Open the preferences (Edit > Preferences > Add-ons).", layout)
-        drawMultilineLabel(context, f"2. Search for the \"{bl_info.get('name')}\" add-on.", layout)
-        drawMultilineLabel(context, f"3. Open the details section of the add-on.", layout)
-        drawMultilineLabel(context, f"4. Click on the \"Install dependencies\" button.", layout)
-        drawMultilineLabel(context, f"   This will download and install the missing Python packages, if Blender has the required", layout)
-        drawMultilineLabel(context, f"   permissions.", layout)
-        drawMultilineLabel(context, f"If you're attempting to run the add-on from the text editor, you won't see the options described", layout)
-        drawMultilineLabel(context, f"above. Please install the add-on properly through the preferences.", layout)
-        drawMultilineLabel(context, f"1. Open the add-on preferences (Edit > Preferences > Add-ons).", layout)
-        drawMultilineLabel(context, f"2. Press the \"Install\" button.", layout)
-        drawMultilineLabel(context, f"3. Search for the add-on file.", layout)
-        drawMultilineLabel(context, f"4. Confirm the selection by pressing the \"Install Add-on\" button in the file browser.", layout)
-
-
+def dropDownInstallButtonEntry(self, context):
+    self.layout.operator("sync.install_dependencies", icon="UV_SYNC_SELECT")
 
 class EXAMPLE_OT_install_dependencies(bpy.types.Operator):
-    bl_idname = "example.install_dependencies"
-    bl_label = "Install dependencies"
+    bl_idname = "sync.install_dependencies"
+    bl_label = "Sync First Time Setup"
     bl_description = ("Downloads and installs the required python packages for this add-on. "
                       "Internet connection is required. Blender may have to be started with "
                       "elevated permissions in order to install the package")
@@ -158,7 +132,8 @@ class EXAMPLE_OT_install_dependencies(bpy.types.Operator):
                                           package_name=dependency.package,
                                           global_name=dependency.name)
         except (subprocess.CalledProcessError, ImportError) as err:
-            self.report({"ERROR"}, str(err))
+            traceback.print_exc()
+            self.report({"ERROR"}, "Failed to install dependencies! Try to restart Blender with elevated permissions")
             return {"CANCELLED"}
 
         global dependencies_installed
@@ -168,7 +143,9 @@ class EXAMPLE_OT_install_dependencies(bpy.types.Operator):
         from .syncUi import registerSync
         registerSync()
         
-        bpy.utils.unregister_class(NODEP_PT_no_dep)
+        bpy.types.VIEW3D_MT_object.remove(dropDownInstallButtonEntry)
+
+        self.report({"INFO"}, "Setup complete. Ready to sync")
 
         return {"FINISHED"}
 
@@ -193,10 +170,10 @@ def register():
         registerSync()
     except ModuleNotFoundError:
         # Don't register other panels, operators etc.
-        return
+        pass
     
     if not dependencies_installed:
-        bpy.utils.register_class(NODEP_PT_no_dep)
+        bpy.types.VIEW3D_MT_object.append(dropDownInstallButtonEntry)
 
 
 def unregister():
@@ -208,4 +185,4 @@ def unregister():
         unregisterSync()
     
     if not dependencies_installed:
-        bpy.utils.unregister_class(NODEP_PT_no_dep)
+        bpy.types.VIEW3D_MT_object.remove(dropDownInstallButtonEntry)

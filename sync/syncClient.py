@@ -89,6 +89,7 @@ def _onError(ws: WebSocketApp, error: str):
 
 def _confirmIsConnected():
 	global _isConnectedToWs
+	_wsThread.connectionResultCallback(_isConnectedToWs and _ws is not None)
 	if _isConnectedToWs or _ws is None:
 		return
 	print("Failed to connect to websocket server")
@@ -103,24 +104,25 @@ def sendMsgToServer(msg: SyncMessage):
 	_ws.send(json.dumps(msg.toJson()))
 
 class WsThread(threading.Thread):
-	def __init__(self):
+	connectionResultCallback: callable = None
+
+	def __init__(self, connectionResultCallback: callable):
 		super().__init__()
+		self.connectionResultCallback = connectionResultCallback
 		self.start()
 	
 	def run(self):
 		_ws.run_forever()
 
-def connectToWebsocket() -> bool:
+def connectToWebsocket(resultCallback: callable):
 	global _isConnectedToWs, _ws, _wsThread
 	if _isConnectedToWs:
-		return True
+		return
 	
 	_ws = WebSocketApp(f"ws://localhost:{_wsPort}", on_message=_onMessage, on_close=_onEnd, on_error=_onError)
-	_wsThread = WsThread()
+	_wsThread = WsThread(resultCallback)
 	confirmConnectionTimer = threading.Timer(0.2, _confirmIsConnected)
 	confirmConnectionTimer.start()
-	
-	return True
 
 def disconnectFromWebsocket():
 	global _isConnectedToWs
