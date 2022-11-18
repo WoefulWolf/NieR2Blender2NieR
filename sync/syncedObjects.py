@@ -9,7 +9,7 @@ from uuid import uuid4
 import bmesh
 import bpy
 from mathutils import Euler, Vector
-from ..utils.util import throttle
+from ..utils.util import throttle, newGeometryNodesModifier
 from ..lay.importer.lay_importer import updateVisualizationObject
 from .syncClient import SyncMessage, addOnMessageListener, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, msgQueue
 from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
@@ -24,26 +24,27 @@ def onWsMsg(msg: SyncMessage):
 	global syncedObjects
 	setDisableDepsgraphUpdates(True)
 
-	if msg.method == "update":
-		if msg.uuid in syncedObjects:
-			syncObj = syncedObjects[msg.uuid]
-			syncObj.update(msg)
-		else:
-			sendMsgToServer(SyncMessage("endSync", msg.uuid, {}))
-	elif msg.method == "startSync":
-		initAllObjects = list(getRootSyncCollection().all_objects)
-		newObj = SyncedObject.fromType(msg)
-		syncedObjects[msg.uuid] = newObj
-		newAllObjects = list(getRootSyncCollection().all_objects)
-		bpy.app.timers.register(
-			lambda: frameObjectInViewport([obj for obj in newAllObjects if obj not in initAllObjects]),
-			first_interval=0.005
-		)
-	elif msg.method == "endSync":
-		if msg.uuid in syncedObjects:
-			syncedObjects[msg.uuid].endSync(False)
-
-	setDisableDepsgraphUpdates(False)
+	try:
+		if msg.method == "update":
+			if msg.uuid in syncedObjects:
+				syncObj = syncedObjects[msg.uuid]
+				syncObj.update(msg)
+			else:
+				sendMsgToServer(SyncMessage("endSync", msg.uuid, {}))
+		elif msg.method == "startSync":
+			initAllObjects = list(getRootSyncCollection().all_objects)
+			newObj = SyncedObject.fromType(msg)
+			syncedObjects[msg.uuid] = newObj
+			newAllObjects = list(getRootSyncCollection().all_objects)
+			bpy.app.timers.register(
+				lambda: frameObjectInViewport([obj for obj in newAllObjects if obj not in initAllObjects]),
+				first_interval=0.005
+			)
+		elif msg.method == "endSync":
+			if msg.uuid in syncedObjects:
+				syncedObjects[msg.uuid].endSync(False)
+	finally:
+		setDisableDepsgraphUpdates(False)
 
 def onWsEnd():
 	for syncObj in list(syncedObjects.values()):
@@ -134,6 +135,8 @@ class SyncedObject:
 				return SyncedEMGeneratorNodeObject(uuid, xml, nameHint, parentUuid, allowReparent)
 			elif type == SyncObjectsType.enemyGeneratorDist:
 				return SyncedEMGeneratorDistObject(uuid, xml, nameHint, parentUuid, allowReparent)
+			elif type == SyncObjectsType.camTargetLocation:
+				return SyncedCameraTargetLocationObject(uuid, xml, nameHint, parentUuid, allowReparent)
 		raise NotImplementedError()
 
 	def update(self, msg: SyncMessage):
@@ -610,7 +613,7 @@ class SyncedAreaObject(SyncedXmlObject):
 			# use geometry nodes
 				# cylinder: first create a circle curve and then fill it
 				# sphere: just create a uv sphere
-			geometryNodesMod: bpy.types.NodesModifier = obj.modifiers.new("GeometryNodes", "NODES")
+			geometryNodesMod: bpy.types.NodesModifier = newGeometryNodesModifier(obj)
 			nodeTree = geometryNodesMod.node_group
 
 			inputNode = nodeTree.nodes["Group Input"]
@@ -777,7 +780,7 @@ class SyncedEMGeneratorNodeObject(SyncedXmlObject):
 		sphereObj.color = self._objColor
 		sphereObj.data.materials.append(getTransparentMat())
 
-		geometryNodesMod: bpy.types.NodesModifier = sphereObj.modifiers.new("GeometryNodes", "NODES")
+		geometryNodesMod: bpy.types.NodesModifier = newGeometryNodesModifier(sphereObj)
 		nodeTree = geometryNodesMod.node_group
 
 		inputNode = nodeTree.nodes["Group Input"]
@@ -858,6 +861,45 @@ class SyncedEMGeneratorDistObject(SyncedXmlObject):
 
 		return empty
 	
+class SyncedCameraTargetLocationObject(SyncedXmlObject):
+	# syncable props: position?, rotation?
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None, allowReparent: bool):
+		super().__init__(uuid, xml, nameHint, parent, allowReparent)
+		self.makeEmptyObject()
+		self.updateWithXml(self.xml)
+	
+	def updateWithXml(self, xmlRoot: Element):
+		posRoot: bpy.types.Object = findObject(self.uuid)
+		positionE = xmlRoot.find("position")
+		rotationE = xmlRoot.find("rotation")
+		if positionE is not None:
+			position = xmlVecToVec3(positionE.text)
+		else:
+			position = (0, 0, 0)
+		if rotationE is not None:
+			rotation = xmlVecToVec3(rotationE.text)
+		else:
+			rotation = (0, 0, 0)
+		posRoot.location = position
+		posRoot.rotation_euler = rotation
+
+	def selfToXml(self) -> Element:
+		rootCopy = deepcopy(self.xml)
+		posRoot: bpy.types.Object = findObject(self.uuid)
+		position = vecToXmlVec3(posRoot.location) if posRoot.location != Vector((0, 0, 0)) else None
+		rotation = vecToXmlVec3(posRoot.rotation_euler) if posRoot.rotation_euler != Euler((0, 0, 0)) else None
+		updateXmlChildWithStr(rootCopy, "position", position)
+		updateXmlChildWithStr(rootCopy, "rotation", rotation)
+
+		return rootCopy
+	
+	def makeEmptyObject(self):
+		empty: bpy.types.Object = bpy.data.objects.new(self.nameHint or "cameraTarget", None)
+		empty["uuid"] = self.uuid
+		getSyncCollection(self.parentUuid).objects.link(empty)
+		empty.empty_display_type = "PLAIN_AXES"
+		
 
 _isInited = False
 def initSyncedObjects():

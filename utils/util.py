@@ -393,3 +393,22 @@ class throttle(object):
 
 def clamp(value: float, min: float, max: float) -> float:
     return min if value < min else max if value > max else value
+
+def newGeometryNodesModifier(obj: bpy.types.Object) -> bpy.types.NodesModifier:
+    modifier: bpy.types.NodesModifier = obj.modifiers.new("Geometry Nodes", "NODES")
+    nodeTree = modifier.node_group
+    if nodeTree is None:
+        nodeTree = bpy.data.node_groups.new("Geometry Nodes", "GeometryNodeTree")
+        modifier.node_group = nodeTree
+
+        inputNode = nodeTree.nodes.new("NodeGroupInput")
+        inputNode.location = (-200, 0)
+        inputNode.outputs.new("NodeSocketGeometry", "Geometry")
+
+        outputNode = nodeTree.nodes.new("NodeGroupOutput")
+        outputNode.location = (200, 0)
+        outputNode.inputs.new("NodeSocketGeometry", "Geometry")
+
+        nodeTree.links.new(inputNode.outputs["Geometry"], outputNode.inputs["Geometry"])
+    return modifier
+
