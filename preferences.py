@@ -102,9 +102,6 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
         addOp = box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
         addOp.settingsType = 1
 
-        row = layout.row()
-        row.operator(EXAMPLE_OT_install_dependencies.bl_idname, icon="CONSOLE")
-
 
 def register():
     bpy.utils.register_class(DirectoryProperty)

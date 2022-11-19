@@ -155,7 +155,7 @@ def frameObjectInViewport(objs: list[bpy.types.Object]):
 
 def deleteRecursively(obj: bpy.types.Object|bpy.types.Collection):
 	if isinstance(obj, bpy.types.Object):
-		if obj.data is not None:
+		if obj.data is not None and isinstance(obj.data, bpy.types.Mesh):
 			data = obj.data
 			obj.data = None
 			bpy.data.meshes.remove(data, do_unlink=True)

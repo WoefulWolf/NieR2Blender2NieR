@@ -37,7 +37,7 @@ def onWsMsg(msg: SyncMessage):
 			syncedObjects[msg.uuid] = newObj
 			newAllObjects = list(getRootSyncCollection().all_objects)
 			bpy.app.timers.register(
-				lambda: frameObjectInViewport([obj for obj in newAllObjects if obj not in initAllObjects]),
+				lambda: highlightNewObjects([obj for obj in newAllObjects if obj not in initAllObjects]),
 				first_interval=0.005
 			)
 		elif msg.method == "endSync":
@@ -45,6 +45,11 @@ def onWsMsg(msg: SyncMessage):
 				syncedObjects[msg.uuid].endSync(False)
 	finally:
 		setDisableDepsgraphUpdates(False)
+
+def highlightNewObjects(objs: list[bpy.types.Object]):
+	frameObjectInViewport(objs)
+	for obj in objs:
+		obj.select_set(True)
 
 def onWsEnd():
 	for syncObj in list(syncedObjects.values()):
@@ -677,7 +682,7 @@ class SyncedBezierObject(SyncedXmlObject):
 			newLeftHandles[i] = Vector(newPoints[i]) + vecToPoint
 		
 		curve: bpy.types.Curve = findObject(self.uuid).data
-		bezierPoints = curve.splines.active.bezier_points
+		bezierPoints = curve.splines[0].bezier_points
 
 		minLen = min(len(bezierPoints), len(newPoints))
 		for i in range(minLen):
@@ -692,13 +697,13 @@ class SyncedBezierObject(SyncedXmlObject):
 				bezierPoints[i].handle_right = newRightHandles[i]
 		elif len(bezierPoints) > len(newPoints):
 			for i in range(len(newPoints), len(bezierPoints)):
-				bezierPoints.remove(bezierPoints[-1])
+				del bezierPoints[i]
 	
 	def selfToXml(self) -> Element:
 		rootCopy = deepcopy(self.xml)
 		
 		curve: bpy.types.Curve = findObject(self.uuid).data
-		bezierCurvePoints = curve.splines.active.bezier_points
+		bezierCurvePoints = curve.splines[0].bezier_points
 		bezierPoints = [bp.co for bp in bezierCurvePoints]
 		bezierRightHandles = [bp.handle_right for bp in bezierCurvePoints]
 		bezierLeftHandles = [bp.handle_left for bp in bezierCurvePoints]
@@ -723,17 +728,19 @@ class SyncedBezierObject(SyncedXmlObject):
 	@staticmethod
 	def updateXmlChildren(root: Element, curLen: int, childTagName: str, newChildStrings: list[str]):
 		root.find("size").text = str(curLen)
-		minLen = min(curLen, len(root.findall("value")))
+		newLen = len(root.findall("value"))
+		minLen = min(curLen, newLen)
 		for i in range(minLen):
 			point = root.findall("value")[i].find(childTagName)
 			point.text = newChildStrings[i]
 		if curLen < len(root.findall("value")):
-			for i in range(minLen, curLen):
+			for i in range(minLen, newLen):
 				root.remove(root[-1])
 		elif curLen > len(root.findall("value")):
 			for i in range(len(root.findall("value")), curLen):
 				newNode = deepcopy(root[-1])
 				newNode.find(childTagName).text = newChildStrings[i]
+				root.append(newNode)
 
 	def makeBezierObject(self):
 		curve: bpy.types.Curve = bpy.data.curves.new(self.nameHint or "bezier", "CURVE")
