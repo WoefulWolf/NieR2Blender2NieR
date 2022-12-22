@@ -6,7 +6,7 @@ from ..utils.util import ShowMessageBox
 class StartSyncOperator(bpy.types.Operator):
     """Start Sync"""
     bl_idname = "n2b2n.start_sync"
-    bl_label = "Start Sync"
+    bl_label = "Sync with F-SERVO"
     bl_description = "Start Sync"
     bl_options = {"REGISTER"}
 

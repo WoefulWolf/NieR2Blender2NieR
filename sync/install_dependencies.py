@@ -114,7 +114,8 @@ def dropDownInstallButtonEntry(self, context):
 class EXAMPLE_OT_install_dependencies(bpy.types.Operator):
     bl_idname = "sync.install_dependencies"
     bl_label = "Sync First Time Setup"
-    bl_description = ("Downloads and installs the required python packages for this add-on. "
+    bl_description = ("Needed for syncing with F-SERVO."
+                      "Downloads and installs the required python packages for this add-on. "
                       "Internet connection is required. Blender may have to be started with "
                       "elevated permissions in order to install the package")
     bl_options = {"REGISTER", "INTERNAL"}
