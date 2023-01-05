@@ -100,12 +100,9 @@ def getAllBonesInOrder(collectionName):
             return list(obj.data.bones)
 
 def getBoneIndexByName(collectionName, name):
-    try:
-        for i, bone in enumerate(getAllBonesInOrder(collectionName)):
-            if bone.name == name:
-                return i
-    except:
-        pass
+    for i, bone in enumerate(getAllBonesInOrder(collectionName)):
+        if bone.name == name:
+            return i
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):
