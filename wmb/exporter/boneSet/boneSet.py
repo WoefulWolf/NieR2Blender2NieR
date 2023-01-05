@@ -1,6 +1,6 @@
 import bpy
 from ....utils.util import getBoneIndexByName
-import time
+
 class c_boneSet(object):
     def __init__(self, boneMap, boneSets_Offset):
 
