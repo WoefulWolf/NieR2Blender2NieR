@@ -1,6 +1,6 @@
 import bpy
 from ....utils.util import getBoneIndexByName
-
+import time
 class c_boneSet(object):
     def __init__(self, boneMap, boneSets_Offset):
 
@@ -71,13 +71,10 @@ class c_b_boneSets(object):
                 vertex_group_bones = []
                 if obj['boneSetIndex'] != -1:
                     for group in obj.vertex_groups:
-                        print(group.name)
-                        try:
-                            boneID = getBoneIndexByName("WMB", group.name)
+                        boneID = getBoneIndexByName("WMB", group.name)
+                        if boneID:
                             boneMapIndex = boneMap.index(boneID)
                             vertex_group_bones.append(boneMapIndex)
-                        except:
-                            pass
                         
                     if vertex_group_bones not in b_boneSets:
                         b_boneSets.append(vertex_group_bones)
