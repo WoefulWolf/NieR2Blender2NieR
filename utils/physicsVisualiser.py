@@ -131,11 +131,11 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
                 curveData.use_path = False
                 curveData.dimensions = '3D'
                 curveData.resolution_u = 1
-                curveData.bevel_depth = radius/2
+                curveData.bevel_depth = radius
                 if capsule == 0:
                     curveData.bevel_resolution = 0
-                    pos1 -= direction.normalized() * radius/2
-                    pos2 += direction.normalized() * radius/2
+                    pos1 -= direction.normalized() * radius
+                    pos2 += direction.normalized() * radius
                     curveData.use_fill_caps = True
                 
                 # Create spline
@@ -158,7 +158,7 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
                     # Add empty objects at the end of the curve:
                     capsuleCap1Obj = bpy.data.objects.new('CLH_{}_{}_cap1'.format(p1, p2), None)
                     capsuleCap1Obj.empty_display_type = 'SPHERE'
-                    capsuleCap1Obj.empty_display_size = radius/2
+                    capsuleCap1Obj.empty_display_size = radius
                     capsuleCap1Obj.location = pos1.xyz
                     capsuleCap1Obj.parent = curveObj
                     capsuleCap1Obj.rotation_euler = rot
@@ -166,7 +166,7 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
 
                     capsuleCap2Obj = bpy.data.objects.new('CLH_{}_{}_cap2'.format(p1, p2), None)
                     capsuleCap2Obj.empty_display_type = 'SPHERE'
-                    capsuleCap2Obj.empty_display_size = radius/2
+                    capsuleCap2Obj.empty_display_size = radius
                     capsuleCap2Obj.location = pos2.xyz
                     capsuleCap2Obj.parent = curveObj
                     capsuleCap2Obj.rotation_euler = rot
@@ -185,7 +185,7 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
                     # Create empty sphere object:
                     emptyObj = bpy.data.objects.new('CLH_{}_{}_[{}]'.format(p1, p2, weight), None)
                     emptyObj.empty_display_type = 'SPHERE'
-                    emptyObj.empty_display_size = radius/2
+                    emptyObj.empty_display_size = radius
                     emptyObj.location = (pos1[0], -pos1[2], pos1[1])
                     emptyObj.show_name = True
                     clhCollection.objects.link(emptyObj)
@@ -193,7 +193,7 @@ class B2NUpdateCLHVisualization(bpy.types.Operator):
                     # Create empty cylinder object:
                     emptyObj = bpy.data.objects.new('CLH_{}_{}_[{}]'.format(p1, p2, weight), None)
                     emptyObj.empty_display_type = 'CUBE'
-                    emptyObj.empty_display_size = radius/2
+                    emptyObj.empty_display_size = radius
                     emptyObj.location = (pos1[0], -pos1[2], pos1[1])
                     emptyObj.show_name = True
                     clhCollection.objects.link(emptyObj)
