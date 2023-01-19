@@ -39,28 +39,58 @@ class c_bones(object):
                     else:
                         parentIndex = -1
 
+                    # APOSE_position
                     position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
-                    tPosition = get_bone_tPosition(bone)
-                    localPosition = get_bone_localPosition(bone)
+                    #tPosition = get_bone_tPosition(bone)
+                    #localPosition = get_bone_localPosition(bone)
 
-                    child_tPosition = get_bone_tPosition(bone.children[0]) if len(bone.children) > 0 else Vector3(0, 0, 0)
+                    #child_tPosition = get_bone_tPosition(bone.children[0]) if len(bone.children) > 0 else Vector3(0, 0, 0)
                 
-                    if 'localRotation' in bone:
-                        localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
-                    else:
-                        localRotation = Vector3(0, 0, 0)
+                    # I don't know why they even store localRot then, but here we are
+                    localRotation = [0, 0, 0]
+                    rotation = [0, 0, 0]
+                    
+                    tPosition = [0, 0, 0]
+                    localPosition = [0, 0, 0]
+                    for obj in bpy.data.collections["WMB"].all_objects:
+                        if obj.type == 'ARMATURE':
+                            for pBone in obj.pose.bones:
+                                if pBone.name == bone.name:
+                                    #localRotation
+                                    mat = pBone.matrix_basis.inverted().to_euler()
+                                    localRotation[0] = mat.x
+                                    localRotation[1] = mat.y
+                                    localRotation[2] = mat.z
 
-                    if 'worldRotation' in bone:
-                        rotation = Vector3(bone['worldRotation'][0], bone['worldRotation'][1], bone['worldRotation'][2])
-                    else:
-                        rotation = Vector3(0, 0, 0)
+                                    #rotation
+                                    full_rot_mat = pBone.matrix_basis.inverted().copy()
+                                    for parent_pb in pBone.parent_recursive:
+                                        full_rot_mat = parent_pb.matrix_basis.inverted() @ full_rot_mat
+                                    euler = full_rot_mat.to_euler()
+                                    rotation[0] = euler.x
+                                    rotation[1] = euler.y
+                                    rotation[2] = euler.z
+                                    
+                                    #TPOSE_worldPosition
+                                    full_trans = pBone.head
+                                    tPosition[0] = full_trans.x
+                                    tPosition[1] = full_trans.y
+                                    tPosition[2] = full_trans.z
+
+                                    #TPOSE_localPosition
+                                    trans = pBone.head - pBone.parent.head if pBone.parent else [0, 0, 0]
+                                    localPosition[0] = trans[0]
+                                    localPosition[1] = trans[1]
+                                    localPosition[2] = trans[2]
+                                    break
+                            break
 
                     localScale = Vector3(1, 1, 1)                           
                     scale = localScale
 
                     blenderName = bone.name
-
-                    bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                    
+                    bone = [ID, parentIndex, localPosition, localRotation, localScale.xyz, position.xyz, rotation, scale.xyz, tPosition, blenderName]
                     _bones.append(bone)
                 
             elif numBones == 1:
@@ -79,7 +109,7 @@ class c_bones(object):
                     tPosition = localPosition
 
                     blenderName = bone.name
-                    bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                    bone = [ID, parentIndex, localPosition.xyz, localRotation, localScale.xyz, position.xyz, rotation, scale.xyz, tPosition.xyz, blenderName]
                     _bones.append(bone)
                     break
 
