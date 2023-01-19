@@ -2,7 +2,6 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
-from .sync.install_dependencies import EXAMPLE_OT_install_dependencies
 
 from .utils.util import drawMultilineLabel, getPreferences
 from .consts import ADDON_NAME

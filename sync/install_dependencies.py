@@ -14,6 +14,7 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import traceback
+from typing import Tuple
 import bpy
 import os
 import sys
@@ -21,7 +22,7 @@ import subprocess
 import importlib
 from collections import namedtuple
 
-from .shared import dependencies_installed
+from .shared import dependencies_installed, setDropDownOperatorAndIcon, removeDropDownOperatorAndIcon
 from ..utils.util import drawMultilineLabel
 from ..__init__ import bl_info
 
@@ -108,9 +109,6 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     # The installation succeeded, attempt to import the module again
     import_module(module_name, global_name)
 
-def dropDownInstallButtonEntry(self, context):
-    self.layout.operator("sync.install_dependencies", icon="UV_SYNC_SELECT")
-
 class EXAMPLE_OT_install_dependencies(bpy.types.Operator):
     bl_idname = "sync.install_dependencies"
     bl_label = "Sync First Time Setup"
@@ -144,7 +142,7 @@ class EXAMPLE_OT_install_dependencies(bpy.types.Operator):
         from .syncUi import registerSync
         registerSync()
         
-        bpy.types.VIEW3D_MT_object.remove(dropDownInstallButtonEntry)
+        removeDropDownOperatorAndIcon(getDropDownButton)
 
         self.report({"INFO"}, "Setup complete. Ready to sync")
 
@@ -155,6 +153,11 @@ preference_classes = (
     EXAMPLE_OT_install_dependencies,
 )
 
+def getDropDownButton() -> Tuple[str, str]:
+    return (
+        EXAMPLE_OT_install_dependencies.bl_idname,
+        "UV_SYNC_SELECT"
+    )
 
 def register():
     global dependencies_installed
@@ -174,7 +177,7 @@ def register():
         pass
     
     if not dependencies_installed:
-        bpy.types.VIEW3D_MT_object.append(dropDownInstallButtonEntry)
+        setDropDownOperatorAndIcon(getDropDownButton)
 
 
 def unregister():
@@ -186,4 +189,4 @@ def unregister():
         unregisterSync()
     
     if not dependencies_installed:
-        bpy.types.VIEW3D_MT_object.remove(dropDownInstallButtonEntry)
+        removeDropDownOperatorAndIcon(getDropDownButton)

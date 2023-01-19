@@ -1,5 +1,6 @@
 from __future__ import annotations
 from enum import Enum
+from typing import Callable, List, Tuple
 
 
 dependencies_installed = False
@@ -33,3 +34,16 @@ def getDisableDepsgraphUpdates():
 def setDisableDepsgraphUpdates(val):
 	global _disableDepsgraphUpdates
 	_disableDepsgraphUpdates = val
+
+def noDropDownDefault():
+	return None
+dropDownOperatorAndIcon: Callable[[], Tuple[str, str]|None] = noDropDownDefault
+def setDropDownOperatorAndIcon(op: Callable[[], Tuple[str, str]|None]):
+	global dropDownOperatorAndIcon
+	dropDownOperatorAndIcon = op
+def removeDropDownOperatorAndIcon(op: Callable[[], Tuple[str, str]|None]):
+	global dropDownOperatorAndIcon
+	if dropDownOperatorAndIcon == op:
+		dropDownOperatorAndIcon = noDropDownDefault
+def getDropDownOperatorAndIcon() -> Tuple[str, str]|None:
+	return dropDownOperatorAndIcon()

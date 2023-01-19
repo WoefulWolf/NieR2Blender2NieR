@@ -29,6 +29,7 @@ from .dat_dtt.importer.datImportOperator import ImportNierDtt, ImportNierDat
 from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
 from .sync import install_dependencies
+from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
@@ -46,6 +47,9 @@ class NierObjectMenu(bpy.types.Menu):
         self.layout.operator(DeleteLooseGeometryAll.bl_idname)
         self.layout.operator(RipMeshByUVIslands.bl_idname)
         self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
+        syncOpAndIcon = getDropDownOperatorAndIcon()
+        if syncOpAndIcon is not None:
+            self.layout.operator(syncOpAndIcon[0], icon=syncOpAndIcon[1])
 
 class CreateLayVisualization(bpy.types.Operator):
     """Create Layout Object Visualization"""

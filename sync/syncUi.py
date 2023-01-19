@@ -1,5 +1,7 @@
+from typing import Tuple
 import bpy
 from .syncedObjects import initSyncedObjects
+from .shared import setDropDownOperatorAndIcon, removeDropDownOperatorAndIcon
 from .syncClient import connectToWebsocket, disconnectFromWebsocket, isConnectedToWs
 from ..utils.util import ShowMessageBox
 
@@ -39,23 +41,23 @@ class StopSyncOperator(bpy.types.Operator):
         disconnectFromWebsocket()
         return {"FINISHED"}
 
-def dropDownStartSyncButtonEntry(self, context):
+def getDropDownButton() -> Tuple[str, str]:
     if isConnectedToWs():
-        self.layout.operator(StopSyncOperator.bl_idname, icon="CANCEL")
+        return (StopSyncOperator.bl_idname, "CANCEL")
     else:
-        self.layout.operator(StartSyncOperator.bl_idname, icon="UV_SYNC_SELECT")
+        return (StartSyncOperator.bl_idname, "UV_SYNC_SELECT")
 
 def registerSync():
     bpy.utils.register_class(StartSyncOperator)
     bpy.utils.register_class(StopSyncOperator)
 
-    bpy.types.VIEW3D_MT_object.append(dropDownStartSyncButtonEntry)
+    setDropDownOperatorAndIcon(getDropDownButton)
 
 def unregisterSync():
     bpy.utils.unregister_class(StartSyncOperator)
     bpy.utils.unregister_class(StopSyncOperator)
 
-    bpy.types.VIEW3D_MT_object.remove(dropDownStartSyncButtonEntry)
+    removeDropDownOperatorAndIcon(getDropDownButton)
 
     if isConnectedToWs():
         disconnectFromWebsocket()
