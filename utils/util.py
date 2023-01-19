@@ -213,8 +213,10 @@ def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
             return
     
     if os.path.exists(datExtractedDir):
+        bpy.context.scene.DatContents.clear()
         importContentsFileFromFolder(datExtractedDir, bpy.context.scene.DatContents)
     if os.path.exists(dttExtraDir):
+        bpy.context.scene.DttContents.clear()
         importContentsFileFromFolder(dttExtraDir, bpy.context.scene.DttContents)
 
 def getPreferences():
