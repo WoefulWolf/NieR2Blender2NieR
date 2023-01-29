@@ -12,7 +12,7 @@ def create_wmb_header(wmb_file, data):
     if data.vertexGroups.vertexGroups[0].vertexFlags in [4, 5] and data.numBones > 0:
         write_Int16(wmb_file, 8)                                    # flags
         write_Int16(wmb_file, 0)                                    # referenceBone
-    elif data.vertexGroups.vertexGroups[0].vertexFlags in [5, 14]:
+    elif data.vertexGroups.vertexGroups[0].vertexFlags in [4, 5, 14]:
         write_Int16(wmb_file, 8)                                    
         write_Int16(wmb_file, -1) 
     else:
