@@ -3,8 +3,9 @@ from functools import wraps
 import json
 import os
 import textwrap
+from threading import Timer
 from time import time
-from typing import Dict, List
+from typing import Callable, Dict, List
 import bmesh
 import bpy
 import numpy as np
@@ -363,3 +364,69 @@ def saveDatInfo(filepath: str, files: List[str], filename: str):
             "ext": ext[1:]
         }
         json.dump(jsonFiles, f, indent=4)
+
+class throttle(object):
+    leading: bool
+    trailing: bool
+
+    timeout: Timer
+    milliseconds: float
+    previous: float
+    function: Callable|None
+    args: List
+    kwargs: Dict
+
+    def __init__(self, milliseconds: float, leading=False, trailing=True):
+        self.leading = leading
+        self.trailing = trailing
+        self.milliseconds = milliseconds
+        self.timeout = None
+        self.previous = 0
+        self.function = None
+    
+    def later(self):
+        self.previous = time() if self.leading else 0
+        self.timeout = None
+        self.function(*self.args, **self.kwargs)
+    
+    def __call__(self, fn):
+        self.function = fn
+        def wrapper(*args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            now = time() * 1000
+            if self.previous != 0 and not self.leading:
+                self.previous = now
+            remaining = self.milliseconds - (now - self.previous)
+            if remaining <= 0 or remaining > self.milliseconds:
+                if self.timeout:
+                    self.timeout.cancel()
+                    self.timeout = None
+                self.previous = now
+                fn(*args, **kwargs)
+            elif not self.timeout and self.trailing:
+                self.timeout = Timer(remaining / 1000, self.later)
+                self.timeout.start()
+        return wrapper
+
+def clamp(value: float, min: float, max: float) -> float:
+    return min if value < min else max if value > max else value
+
+def newGeometryNodesModifier(obj: bpy.types.Object) -> bpy.types.NodesModifier:
+    modifier: bpy.types.NodesModifier = obj.modifiers.new("Geometry Nodes", "NODES")
+    nodeTree = modifier.node_group
+    if nodeTree is None:
+        nodeTree = bpy.data.node_groups.new("Geometry Nodes", "GeometryNodeTree")
+        modifier.node_group = nodeTree
+
+        inputNode = nodeTree.nodes.new("NodeGroupInput")
+        inputNode.location = (-200, 0)
+        inputNode.outputs.new("NodeSocketGeometry", "Geometry")
+
+        outputNode = nodeTree.nodes.new("NodeGroupOutput")
+        outputNode.location = (200, 0)
+        outputNode.inputs.new("NodeSocketGeometry", "Geometry")
+
+        nodeTree.links.new(inputNode.outputs["Geometry"], outputNode.inputs["Geometry"])
+    return modifier
+

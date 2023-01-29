@@ -180,6 +180,11 @@ def importXml(root: ET.Element, prefix: str) -> None:
 			actionsImported = True
 		else:
 			...
+		
+		if action.find("area") is not None:
+			# area command
+			importAreas(action.find("area"), color)
+			actionsImported = True
 	
 	if not actionsImported:
 		bpy.data.collections.remove(yaxColl)

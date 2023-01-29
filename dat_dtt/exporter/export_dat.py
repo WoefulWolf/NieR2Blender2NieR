@@ -1,17 +1,20 @@
 import math
+from typing import List
 
-from ...utils.ioUtils import write_string, write_Int32, write_buffer, read_int32
+from .datHashGenerator import HashData
+
+from ...utils.ioUtils import write_string, write_Int32, write_buffer
 from ...utils.util import *
 
 
 def to_string(bs, encoding = 'utf8'):
 	return bs.split(b'\x00')[0].decode(encoding)
 
-def main(export_filepath, file_list):
+def main(export_filepath: str, file_list: List[str]):
+    file_list.sort(key=lambda x: os.path.basename(x).lower())
     files = file_list
     fileNumber = len(files)
-    from .datHashGenerator import generateHashData
-    hashData = generateHashData(files)
+    hashData = HashData(files)
 
     fileExtensionsSize = 0
     fileExtensions = []
@@ -26,6 +29,8 @@ def main(export_filepath, file_list):
         fileName = os.path.basename(fp)
         if len(fileName)+1 > nameLength:
             nameLength = len(fileName)+1
+    namesSize = nameLength * fileNumber
+    namesPadding = 4 - (namesSize % 4)
 
     fileNames = []                             
     for fp in files:
@@ -40,14 +45,14 @@ def main(export_filepath, file_list):
     fileOffsetsOffset = 32
     fileExtensionsOffset = fileOffsetsOffset + (fileNumber * 4)
     fileNamesOffset = fileExtensionsOffset + fileExtensionsSize
-    fileSizesOffset = fileNamesOffset + (fileNumber * nameLength) + 4
+    fileSizesOffset = fileNamesOffset + (fileNumber * nameLength) + 4 + namesPadding
     hashMapOffset = fileSizesOffset + (fileNumber * 4)
 
     #fileOffsets
     fileOffsets = []
     currentOffset = hashMapOffset + hashMapSize
     for fp in files:
-        currentOffset = (math.ceil(currentOffset / 16)) * 16
+        currentOffset = math.ceil(currentOffset / 16) * 16
         fileOffsets.append(currentOffset)
         currentOffset += os.path.getsize(fp)
 
@@ -69,27 +74,33 @@ def main(export_filepath, file_list):
     write_buffer(dat_file, 4)
 
         # fileOffsets
+    dat_file.seek(fileOffsetsOffset)
     for value in fileOffsets:
         write_Int32(dat_file, value)
 
         # fileExtensions
+    dat_file.seek(fileExtensionsOffset)
     for value in fileExtensions:
         write_string(dat_file, value)
 
         # nameLength
+    dat_file.seek(fileNamesOffset)
     write_Int32(dat_file, nameLength)
 
         # fileNames
+    dat_file.seek(fileNamesOffset + 4)
     for value in fileNames:
         write_string(dat_file, value)
         if len(value) < nameLength:
             write_buffer(dat_file, nameLength - len(value) - 1)
 
         # fileSizes
+    dat_file.seek(fileSizesOffset)
     for value in fileSizes:
         write_Int32(dat_file, value)
 
         # hashMap
+    dat_file.seek(hashMapOffset)
     hashData.write(dat_file)
 
         # Files

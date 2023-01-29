@@ -200,6 +200,5 @@ def linkAssetModel(modelName, isParentRotated: bool) -> bpy.types.Collection | N
         linkedColl.name = linkedCollName
         if isParentRotated and len(linkedColl.objects) > 0:
             linkedColl.objects[0].rotation_euler[0] = 0
-        linkedColl
 
     return bpy.data.collections[linkedCollName]

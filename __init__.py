@@ -28,6 +28,8 @@ from .col.importer.colImportOperator import ImportNierCol
 from .dat_dtt.importer.datImportOperator import ImportNierDtt, ImportNierDat
 from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
+from .sync import install_dependencies
+from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
@@ -44,13 +46,17 @@ class NierObjectMenu(bpy.types.Menu):
         self.layout.operator(DeleteLooseGeometrySelected.bl_idname)
         self.layout.operator(DeleteLooseGeometryAll.bl_idname)
         self.layout.operator(RipMeshByUVIslands.bl_idname)
+        self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
+        syncOpAndIcon = getDropDownOperatorAndIcon()
+        if syncOpAndIcon is not None:
+            self.layout.operator(syncOpAndIcon[0], icon=syncOpAndIcon[1])
+        
 
 class NierArmatureMenu(bpy.types.Menu):
     bl_idname = 'ARMATURE_MT_n2b2n'
     bl_label = 'NieR Tools'
     def draw(self, context):
         self.layout.operator(ClearSelectedBoneIDs.bl_idname, icon='BONE_DATA')
-
 
 class CreateLayVisualization(bpy.types.Operator):
     """Create Layout Object Visualization"""
@@ -148,6 +154,7 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.types.VIEW3D_MT_object.append(menu_func_utils)
     bpy.types.VIEW3D_MT_edit_armature.append(menu_func_editbone_utils)
+    install_dependencies.register()
 
     bpy.types.Object.collisionType = bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType)
     bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
@@ -173,6 +180,7 @@ def unregister():
     col_ui_manager.unregister()
     visibilitySwitcher.unregister()
     preferences.unregister()
+    install_dependencies.unregister()
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
