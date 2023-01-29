@@ -107,7 +107,8 @@ class c_generate_data(object):
         currentOffset += 16 - (currentOffset % 16)
 
         self.meshMaterials_Offset = currentOffset
-        self.meshMaterials_Size = len(self.batches.batches) * 8
+        self.meshMaterials = c_meshMaterials()
+        self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize
         currentOffset += self.meshMaterials_Size
         print('meshMaterials_Size: ', self.meshMaterials_Size)
 
@@ -174,6 +175,4 @@ class c_generate_data(object):
             self.unknownWorldData_Offset = 0
             self.unknownWorldDataCount = 0
 
-
-        self.meshMaterials = c_meshMaterials(self.meshes, self.lods)
-        self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize
+        self.meshMaterials.updateLods(self.lods)
