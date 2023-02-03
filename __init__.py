@@ -44,12 +44,12 @@ class NierObjectMenu(bpy.types.Menu):
     bl_idname = 'OBJECT_MT_n2b2n'
     bl_label = 'NieR Tools'
     def draw(self, context):
-        self.layout.operator(RecalculateObjectIndices.bl_idname)
-        self.layout.operator(RemoveUnusedVertexGroups.bl_idname)
-        self.layout.operator(MergeVertexGroupCopies.bl_idname)
-        self.layout.operator(DeleteLooseGeometrySelected.bl_idname)
-        self.layout.operator(DeleteLooseGeometryAll.bl_idname)
-        self.layout.operator(RipMeshByUVIslands.bl_idname)
+        self.layout.operator(RecalculateObjectIndices.bl_idname, icon="LINENUMBERS_ON")
+        self.layout.operator(RemoveUnusedVertexGroups.bl_idname, icon="GROUP_VERTEX")
+        self.layout.operator(MergeVertexGroupCopies.bl_idname, icon="GROUP_VERTEX")
+        self.layout.operator(DeleteLooseGeometrySelected.bl_idname, icon="EDITMODE_HLT")
+        self.layout.operator(DeleteLooseGeometryAll.bl_idname, icon="EDITMODE_HLT")
+        self.layout.operator(RipMeshByUVIslands.bl_idname, icon="UV_ISLANDSEL")
         self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
         syncOpAndIcon = getDropDownOperatorAndIcon()
         if syncOpAndIcon is not None:
@@ -57,8 +57,8 @@ class NierObjectMenu(bpy.types.Menu):
         armature = getArmatureObject()
         if armature is not None and armature.animation_data is not None and armature.animation_data.action is not None \
             and armature.name in { "pl0000", "pl000d", "pl0100", "pl010d" }:
-            self.layout.operator(HidePl000fIrrelevantBones.bl_idname)
-            self.layout.operator(RemovePl000fIrrelevantAnimations.bl_idname)
+            self.layout.operator(HidePl000fIrrelevantBones.bl_idname, icon="ARMATURE_DATA")
+            self.layout.operator(RemovePl000fIrrelevantAnimations.bl_idname, icon="FCURVE")
 
 class NierArmatureMenu(bpy.types.Menu):
     bl_idname = 'ARMATURE_MT_n2b2n'

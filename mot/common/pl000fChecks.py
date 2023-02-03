@@ -1,5 +1,7 @@
+from __future__ import annotations
 import bpy
 import re
+from typing import List, Dict
 from .motUtils import getArmatureObject
 
 # there are some bones that should not be animated when animating pl000f
@@ -31,7 +33,7 @@ def getInvalidBoneIds(armature: bpy.types.Object):
 	boneIds.sort()
 	return boneIds
 
-def makeBoneIndexToIdLookup(armature: bpy.types.Object) -> dict[int, int]:
+def makeBoneIndexToIdLookup(armature: bpy.types.Object) -> Dict[int, int]:
 	boneIndexToId = {}
 	bone: bpy.types.PoseBone
 	for bone in armature.pose.bones:
@@ -43,7 +45,7 @@ def makeBoneIndexToIdLookup(armature: bpy.types.Object) -> dict[int, int]:
 		boneIndexToId[boneIndex] = boneId
 	return boneIndexToId
 
-def removeInvalidAnimations(armature: bpy.types.Object, boneIds: list[int]):
+def removeInvalidAnimations(armature: bpy.types.Object, boneIds: List[int], operator: bpy.types.Operator|None = None):
 	boneIndexToId = makeBoneIndexToIdLookup(armature)
 	removedAnimations = 0
 	action: bpy.types.Action
@@ -62,8 +64,10 @@ def removeInvalidAnimations(armature: bpy.types.Object, boneIds: list[int]):
 			action.fcurves.remove(fCurve)
 			removedAnimations += 1
 	print(f"Removed {removedAnimations} f curves")
+	if operator is not None:
+		operator.report({"INFO"}, f"Removed {removedAnimations} f curves")
 
-def hideInvalidBones(armature: bpy.types.Object, boneIds: list[int]):
+def hideInvalidBones(armature: bpy.types.Object, boneIds: List[int], operator: bpy.types.Operator|None = None):
 	hiddenBones = 0
 	bone: bpy.types.PoseBone
 	for bone in armature.pose.bones:
@@ -73,6 +77,8 @@ def hideInvalidBones(armature: bpy.types.Object, boneIds: list[int]):
 		bone.bone.hide = True
 		hiddenBones += 1
 	print(f"Hidden {hiddenBones} bones")
+	if operator is not None:
+		operator.report({"INFO"}, f"Hidden {hiddenBones} bones")
 
 class HidePl000fIrrelevantBones(bpy.types.Operator):
 	bl_idname = "object.hide_pl000f_irrelevant_bones"
@@ -89,7 +95,7 @@ class HidePl000fIrrelevantBones(bpy.types.Operator):
 		boneIds = getInvalidBoneIds(armature)
 		if len(boneIds) == 0:
 			print("Warning: No invalid bone ids found!")
-		hideInvalidBones(armature, boneIds)
+		hideInvalidBones(armature, boneIds, operator=self)
 		return {"FINISHED"}
 
 class RemovePl000fIrrelevantAnimations(bpy.types.Operator):
@@ -107,5 +113,5 @@ class RemovePl000fIrrelevantAnimations(bpy.types.Operator):
 		boneIds = getInvalidBoneIds(armature)
 		if len(boneIds) == 0:
 			print("Warning: No invalid bone ids found!")
-		removeInvalidAnimations(armature, boneIds)
+		removeInvalidAnimations(armature, boneIds, operator=self)
 		return {"FINISHED"}
