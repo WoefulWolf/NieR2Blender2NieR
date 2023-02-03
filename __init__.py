@@ -28,6 +28,10 @@ from .col.importer.colImportOperator import ImportNierCol
 from .dat_dtt.importer.datImportOperator import ImportNierDtt, ImportNierDat
 from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
+from .mot.exporter.motExportOperator import ExportNierMot
+from .mot.importer.motImportOperator import ImportNierMot
+from .mot.common.motUtils import getArmatureObject
+from .mot.common.pl000fChecks import HidePl000fIrrelevantBones, RemovePl000fIrrelevantAnimations
 from .sync import install_dependencies
 from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
@@ -50,7 +54,11 @@ class NierObjectMenu(bpy.types.Menu):
         syncOpAndIcon = getDropDownOperatorAndIcon()
         if syncOpAndIcon is not None:
             self.layout.operator(syncOpAndIcon[0], icon=syncOpAndIcon[1])
-        
+        armature = getArmatureObject()
+        if armature is not None and armature.animation_data is not None and armature.animation_data.action is not None \
+            and armature.name in { "pl0000", "pl000d", "pl0100", "pl010d" }:
+            self.layout.operator(HidePl000fIrrelevantBones.bl_idname)
+            self.layout.operator(RemovePl000fIrrelevantAnimations.bl_idname)
 
 class NierArmatureMenu(bpy.types.Menu):
     bl_idname = 'ARMATURE_MT_n2b2n'
@@ -83,6 +91,7 @@ def menu_func_import(self, context):
     self.layout.operator(ImportNierLay.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierGaArea.bl_idname, text="Visual Environment File (GAArea.bxm)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierMot.bl_idname, text="Motion File for Nier:Automata (.mot)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierYaxXml.bl_idname, text="YAX XML for Nier:Automata (.xml)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ExtractNierWtaWtp.bl_idname, text="Extract Textures (.wta/.wtp)", icon_value=yorha_icon.icon_id)
 
@@ -95,6 +104,7 @@ def menu_func_export(self, context):
     self.layout.operator(ExportNierLay.bl_idname, text="Layout File for NieR:Automata (.lay)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierGaArea.bl_idname, text="Visual Environment File (GAArea.bxm)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierMot.bl_idname, text="Motion File for NieR:Automata (.mot)", icon_value=emil_icon.icon_id)
 
 def menu_func_utils(self, context):
     pcoll = preview_collections["main"]
@@ -114,12 +124,14 @@ classes = (
     ImportNierLay,
     ImportNierSar,
     ImportNierGaArea,
+    ImportNierMot,
     ImportNierYaxXml,
     ExportNierWmb,
     ExportNierCol,
     ExportNierSar,
     ExportNierLay,
     ExportNierGaArea,
+    ExportNierMot,
     ExtractNierWtaWtp,
     CreateLayVisualization,
     NierObjectMenu,
@@ -131,6 +143,8 @@ classes = (
     DeleteLooseGeometryAll,
     RipMeshByUVIslands,
     ClearSelectedBoneIDs,
+    HidePl000fIrrelevantBones,
+    RemovePl000fIrrelevantAnimations
 )
 
 preview_collections = {}
