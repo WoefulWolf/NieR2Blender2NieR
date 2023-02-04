@@ -6,7 +6,7 @@ from ..common.motUtils import *
 from .rotationWrapperObj import objRotationWrapper
 from .tPoseFixer import fixTPose
 
-def importMot(file: str) -> None:
+def importMot(file: str, printProgress: bool = True) -> None:
 	# import mot file
 	mot = MotFile()
 	with open(file, "rb") as f:
@@ -51,7 +51,7 @@ def importMot(file: str) -> None:
 	
 	# apply to blender
 	for i, animation in enumerate(animations):
-		if i % 10 == 0:
+		if printProgress and i % 10 == 0:
 			print(f"Importing {i+1}/{len(animations)}")
 		animation.applyToBlender()
 	
