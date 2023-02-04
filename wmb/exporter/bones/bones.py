@@ -1,6 +1,7 @@
 import bpy
 import numpy as np
 from ....utils.util import Vector3, getAllBonesInOrder
+import mathutils as mu
 
 def get_bone_tPosition(bone):
     if 'TPOSE_worldPosition' in bone:
@@ -78,7 +79,7 @@ class c_bones(object):
                                     tPosition[2] = full_trans.z
 
                                     #TPOSE_localPosition
-                                    trans = pBone.head - pBone.parent.head if pBone.parent else [0, 0, 0]
+                                    trans = pBone.head - (pBone.parent.head if pBone.parent else mu.Vector([0, 0, 0]))
                                     localPosition[0] = trans[0]
                                     localPosition[1] = trans[1]
                                     localPosition[2] = trans[2]
