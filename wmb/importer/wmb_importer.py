@@ -3,7 +3,7 @@ import bpy
 import bmesh
 import math
 from typing import List, Tuple
-from mathutils import Quaternion, Vector, Matrix
+from mathutils import Vector, Matrix
 
 from ...utils.util import ShowMessageBox, getPreferences, printTimings
 from .wmb import *
@@ -79,7 +79,6 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	bpy.ops.object.mode_set(mode='POSE')
 
 	for pose_bone in ob.pose.bones:
-		num_parents = len(pose_bone.parent_recursive)
 		rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
 
 		pose_bone.matrix_basis = rot_mat @ pose_bone.matrix_basis
@@ -88,40 +87,10 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	bpy.ops.pose.armature_apply()
 
 	for pose_bone in ob.pose.bones:
-		num_parents = len(pose_bone.parent_recursive)
 		rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
 
 		pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
 		bpy.context.view_layer.update()
-		del pose_bone.bone["localRotation"]
-
-		"""
-		if (pose_bone.bone["localRotation"][0] != 0 or pose_bone.bone["localRotation"][1] != 0 or pose_bone.bone["localRotation"][2] != 0):# and pose_bone.length > 0.01:
-			print(pose_bone.bone.name, num_parents)
-			
-			localRot = pose_bone.matrix_basis.inverted().to_euler()
-			print("+ localRot:", localRot.x, localRot.y, localRot.z)
-			print("- localRot:", pose_bone.bone["localRotation"][0], pose_bone.bone["localRotation"][1], pose_bone.bone["localRotation"][2])
-
-			full_rot_mat = pose_bone.matrix_basis.inverted().copy()
-			for parent_pb in pose_bone.parent_recursive:
-				full_rot_mat = parent_pb.matrix_basis.inverted() @ full_rot_mat
-			euler = full_rot_mat.to_euler()
-
-			print("\n+ worldRotation:", euler.x, euler.y, euler.z)
-			print("- worldRotation:", pose_bone.bone["worldRotation"][0], pose_bone.bone["worldRotation"][1], pose_bone.bone["worldRotation"][2])
-
-			full_trans = pose_bone.bone.head_local
-			print("\n+ APose_world", full_trans.x, full_trans.y, full_trans.z)
-			print("- APose_world", pose_bone.bone["position"][0], pose_bone.bone["position"][1], pose_bone.bone["position"][2])
-
-			print("\n+ TPose_world", pose_bone.head.x, pose_bone.head.y, pose_bone.head.z)
-			print("- TPose_world", pose_bone.bone["TPOSE_worldPosition"][0], pose_bone.bone["TPOSE_worldPosition"][1], pose_bone.bone["TPOSE_worldPosition"][2])
-
-			trans = pose_bone.head - pose_bone.parent.head if pose_bone.parent else Vector((0, 0, 0))
-			print("\n+ TPose_local", trans.x, trans.y, trans.z)
-			print("- TPose_local", pose_bone.bone["localPosition"][0], pose_bone.bone["localPosition"][1], pose_bone.bone["localPosition"][2])
-			"""
 
 	bpy.ops.object.mode_set(mode='OBJECT')
 	ob.rotation_euler = (math.radians(90),0,0)

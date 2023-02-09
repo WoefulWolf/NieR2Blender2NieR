@@ -42,12 +42,7 @@ class c_bones(object):
 
                     # APOSE_position
                     position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
-                    #tPosition = get_bone_tPosition(bone)
-                    #localPosition = get_bone_localPosition(bone)
-
-                    #child_tPosition = get_bone_tPosition(bone.children[0]) if len(bone.children) > 0 else Vector3(0, 0, 0)
                 
-                    # I don't know why they even store localRot then, but here we are
                     localRotation = [0, 0, 0]
                     rotation = [0, 0, 0]
                     
