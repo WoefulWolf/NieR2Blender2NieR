@@ -15,7 +15,7 @@ from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionT
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
-    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, ClearSelectedBoneIDs
+    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, ClearSelectedBoneIDs, RestoreImportPose
 from .utils.visibilitySwitcher import enableVisibilitySelector, disableVisibilitySelector
 from .utils import visibilitySwitcher
 from .wta_wtp.exporter import wta_wtp_ui_manager
@@ -51,6 +51,7 @@ class NierObjectMenu(bpy.types.Menu):
         self.layout.operator(DeleteLooseGeometryAll.bl_idname, icon="EDITMODE_HLT")
         self.layout.operator(RipMeshByUVIslands.bl_idname, icon="UV_ISLANDSEL")
         self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
+        self.layout.operator(RestoreImportPose.bl_idname, icon='OUTLINER_OB_ARMATURE')
         syncOpAndIcon = getDropDownOperatorAndIcon()
         if syncOpAndIcon is not None:
             self.layout.operator(syncOpAndIcon[0], icon=syncOpAndIcon[1])

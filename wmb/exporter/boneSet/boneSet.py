@@ -54,7 +54,7 @@ class c_b_boneSets(object):
                     boneID = getBoneIndexByName("WMB", group.name)
                     if boneID not in boneMap:
                         #print("Adding ID to boneMap: " + str(boneID))
-                        if boneID:
+                        if boneID != None:
                             boneMap.append(boneID)
 
         # Set boneMap to armature
@@ -72,7 +72,7 @@ class c_b_boneSets(object):
                 if obj['boneSetIndex'] != -1:
                     for group in obj.vertex_groups:
                         boneID = getBoneIndexByName("WMB", group.name)
-                        if boneID:
+                        if boneID != None:
                             boneMapIndex = boneMap.index(boneID)
                             vertex_group_bones.append(boneMapIndex)
                         

@@ -1,6 +1,7 @@
 import bpy
 import numpy as np
 from ....utils.util import Vector3, getAllBonesInOrder
+import mathutils as mu
 
 def get_bone_tPosition(bone):
     if 'TPOSE_worldPosition' in bone:
@@ -41,12 +42,7 @@ class c_bones(object):
 
                     # APOSE_position
                     position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
-                    #tPosition = get_bone_tPosition(bone)
-                    #localPosition = get_bone_localPosition(bone)
-
-                    #child_tPosition = get_bone_tPosition(bone.children[0]) if len(bone.children) > 0 else Vector3(0, 0, 0)
                 
-                    # I don't know why they even store localRot then, but here we are
                     localRotation = [0, 0, 0]
                     rotation = [0, 0, 0]
                     
@@ -78,7 +74,7 @@ class c_bones(object):
                                     tPosition[2] = full_trans.z
 
                                     #TPOSE_localPosition
-                                    trans = pBone.head - pBone.parent.head if pBone.parent else [0, 0, 0]
+                                    trans = pBone.head - (pBone.parent.head if pBone.parent else mu.Vector([0, 0, 0]))
                                     localPosition[0] = trans[0]
                                     localPosition[1] = trans[1]
                                     localPosition[2] = trans[2]

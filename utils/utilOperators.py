@@ -1,6 +1,7 @@
 import re
 import bmesh
 import bpy
+from mathutils import Matrix
 
 from .util import ShowMessageBox
 
@@ -242,4 +243,25 @@ class ClearSelectedBoneIDs(bpy.types.Operator):
                 cleared_ids_count += 1
 
         ShowMessageBox('Cleared the ID of ' + str(cleared_ids_count) + ' bones.', 'Blender2NieR: Tool Info')
+        return {'FINISHED'}
+
+class RestoreImportPose(bpy.types.Operator):
+    """Restore Import Pose (If you have changed the pose since importing)"""
+    bl_idname = "b2n.restoreimportpose"
+    bl_label = "Restore Import Pose"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        active_object = bpy.context.active_object
+        if active_object.type != "ARMATURE":
+            ShowMessageBox('Please select an armature object.', 'Blender2NieR: Tool Info')
+            return {'FINISHED'}
+            
+        for pose_bone in active_object.pose.bones:
+            # Clear the bone matrix
+            pose_bone.matrix_basis = Matrix()
+
+            rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+            pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
+        bpy.context.view_layer.update()
         return {'FINISHED'}
