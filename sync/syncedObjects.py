@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import deepcopy
-from math import radians
+from math import degrees, radians
 import re
 import time
 from xml.etree import ElementTree
@@ -142,6 +142,8 @@ class SyncedObject:
 				return SyncedEMGeneratorDistObject(uuid, xml, nameHint, parentUuid, allowReparent)
 			elif type == SyncObjectsType.camTargetLocation:
 				return SyncedCameraTargetLocationObject(uuid, xml, nameHint, parentUuid, allowReparent)
+			elif type == SyncObjectsType.camera:
+				return SyncedCameraObject(uuid, xml, nameHint, parentUuid, allowReparent)
 		raise NotImplementedError()
 
 	def update(self, msg: SyncMessage):
@@ -906,7 +908,85 @@ class SyncedCameraTargetLocationObject(SyncedXmlObject):
 		empty["uuid"] = self.uuid
 		getSyncCollection(self.parentUuid).objects.link(empty)
 		empty.empty_display_type = "PLAIN_AXES"
+
+class SyncedCameraObject(SyncedXmlObject):
+	# syncable props: pos.position?, tar.position?, Rotation_X/Y/Z, Fovy
+	assumedAspectRatio = 16/9
+
+	def __init__(self, uuid: str, xml: Element, nameHint: str|None, parent: SyncedXmlObject|None, allowReparent: bool):
+		super().__init__(uuid, xml, nameHint, parent, allowReparent)
+		self.makeCameraObject()
+		self.updateWithXml(self.xml)
+	
+	def updateWithXml(self, xmlRoot: Element):
+		camRoot: bpy.types.Object = findObject(self.uuid)
+		camTarget: bpy.types.Object = camRoot.children[0]
 		
+		posE = xmlRoot.find("pos").find("position")
+		tarE = xmlRoot.find("tar").find("position")
+		rotXE = xmlRoot.find("Rotation_X")
+		rotYE = xmlRoot.find("Rotation_Y")
+		rotZE = xmlRoot.find("Rotation_Z")
+		fovyE = xmlRoot.find("Fovy")
+
+		if posE is not None:
+			position = xmlVecToVec3(posE.text)
+		else:
+			position = (0, 0, 0)
+		if tarE is not None:
+			target = xmlVecToVec3(tarE.text)
+		else:
+			target = (0, 0, 0)
+		rotX = strToFloat(rotXE.text)
+		rotY = radians(-strToFloat(rotZE.text))
+		rotZ = strToFloat(rotYE.text)
+		fovy = strToFloat(fovyE.text)
+
+		camRoot.location = position
+		camRoot.rotation_euler = Euler((rotX, rotY, rotZ))
+		camRoot.data.angle = radians(fovy) * self.assumedAspectRatio
+		# global location to local location
+		bpy.context.view_layer.update()
+		camTarget.location = camRoot.matrix_world.inverted() @ Vector(target)
+
+	def selfToXml(self) -> Element:
+		rootCopy = deepcopy(self.xml)
+		camRoot: bpy.types.Object = findObject(self.uuid)
+		camTarget: bpy.types.Object = camRoot.children[0]
+		posE = rootCopy.find("pos")
+		tarE = rootCopy.find("tar")
+		rotXE = rootCopy.find("Rotation_X")
+		rotYE = rootCopy.find("Rotation_Y")
+		rotZE = rootCopy.find("Rotation_Z")
+		fovyE = rootCopy.find("Fovy")
+
+		position = vecToXmlVec3(camRoot.location)
+		target = vecToXmlVec3(camRoot.matrix_world @ camTarget.location)
+		rotX = camRoot.rotation_euler[0]
+		rotY = camRoot.rotation_euler[1]
+		rotZ = camRoot.rotation_euler[2]
+		fovy = degrees(camRoot.data.angle / self.assumedAspectRatio)
+
+		updateXmlChildWithStr(posE, "position", position)
+		updateXmlChildWithStr(tarE, "position", target)
+		rotXE.text = floatToStr(rotX)
+		rotYE.text = floatToStr(rotZ)
+		rotZE.text = floatToStr(degrees(-rotY))
+		fovyE.text = floatToStr(fovy)
+
+		return rootCopy
+
+	def makeCameraObject(self):
+		cam: bpy.types.Object = bpy.data.objects.new(self.nameHint or "camera", bpy.data.cameras.new(self.nameHint or "camera"))
+		cam["uuid"] = self.uuid
+		coll = makeSyncCollection(self.uuid, self.parentUuid, self.nameHint or "camera")
+		coll.objects.link(cam)
+		camTarget: bpy.types.Object = bpy.data.objects.new("cameraTarget", None)
+		camTarget["uuid"] = self.uuid
+		coll.objects.link(camTarget)
+		camTarget.empty_display_type = "PLAIN_AXES"
+		camTarget.parent = cam
+		camTarget.location = (0, 0, 0)
 
 _isInited = False
 def initSyncedObjects():

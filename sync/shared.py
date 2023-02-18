@@ -13,6 +13,7 @@ class SyncObjectsType(Enum):
 	enemyGeneratorNode = 4
 	enemyGeneratorDist = 5
 	camTargetLocation = 6
+	camera = 7
 
 	@staticmethod
 	def fromInt(i: int) -> SyncObjectsType:

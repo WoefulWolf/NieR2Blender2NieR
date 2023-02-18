@@ -161,6 +161,8 @@ def deleteRecursively(obj: bpy.types.Object|bpy.types.Collection):
 			bpy.data.meshes.remove(data, do_unlink=True)
 		else:
 			bpy.data.objects.remove(obj, do_unlink=True)
+		for child in list(obj.children):
+			deleteRecursively(child)
 	elif isinstance(obj, bpy.types.Collection):
 		for child in list(obj.children):
 			deleteRecursively(child)
