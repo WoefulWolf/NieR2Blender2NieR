@@ -144,6 +144,7 @@ classes = (
     DeleteLooseGeometryAll,
     RipMeshByUVIslands,
     ClearSelectedBoneIDs,
+    RestoreImportPose,
     HidePl000fIrrelevantBones,
     RemovePl000fIrrelevantAnimations
 )
