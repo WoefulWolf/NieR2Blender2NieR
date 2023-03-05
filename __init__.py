@@ -29,10 +29,10 @@ from .dat_dtt.importer.datImportOperator import ImportNierDtt, ImportNierDat
 from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
+from .wmb.exporter.wmbExportOperator import ExportMGRRWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
-
 
 class NierObjectMenu(bpy.types.Menu):
     bl_idname = 'OBJECT_MT_n2b2n'
@@ -78,7 +78,8 @@ def menu_func_export(self, context):
     pcoll = preview_collections["main"]
     emil_icon = pcoll["emil"]
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(ExportNierWmb.bl_idname, text="WMB File for NieR:Automata (.wmb)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierWmb.bl_idname, text="WMB3 File for NieR:Automata (.wmb)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportMGRRWmb.bl_idname, text="WMB4 File for MGR: Revengeance (.wmb)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierCol.bl_idname, text="Collision File for NieR:Automata (.col)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierLay.bl_idname, text="Layout File for NieR:Automata (.lay)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=emil_icon.icon_id)
@@ -99,6 +100,7 @@ classes = (
     ImportNierGaArea,
     ImportNierYaxXml,
     ExportNierWmb,
+    ExportMGRRWmb,
     ExportNierCol,
     ExportNierSar,
     ExportNierLay,
