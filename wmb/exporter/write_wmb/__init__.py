@@ -37,7 +37,7 @@ def create_wmb_batch_supplement(wmb_file, data): # wmb4
             write_uInt32(wmb_file, batch[1]) # meshIndex
             write_uInt16(wmb_file, batch[2]) # materialIndex
             write_uInt16(wmb_file, batch[3]) # boneSetsIndex
-            write_uInt32(wmb_file, 0)        # unknown10, hopefully just padding
+            write_uInt32(wmb_file, 0x100)    # unknown10, hopefully just padding
             # TODO fuck it wasn't padding, sometimes 0x100 sometimes not
 
 def create_wmb_boneIndexTranslateTable(wmb_file, data):
@@ -65,10 +65,9 @@ def create_wmb_boneSet(wmb_file, data, wmb4=False):
         write_uInt32(wmb_file, boneSet[0])
         write_uInt32(wmb_file, boneSet[1])
     
-    if wmb4:
-        wmb_file.seek(data.boneSet.boneSet[0][0])
-    
     for boneSet in data.boneSet.boneSet:
+        if wmb4:
+            wmb_file.seek(boneSet[0])
         for entry in boneSet[2]:
             if wmb4:
                 write_byte(wmb_file, entry)
@@ -78,14 +77,14 @@ def create_wmb_boneSet(wmb_file, data, wmb4=False):
 def create_wmb_bones(wmb_file, data, wmb4=False):
     wmb_file.seek(data.bones_Offset)
 
-    for bone in data.bones.bones:               # [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz]
+    for index, bone in enumerate(data.bones.bones):               # [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz]
         write_Int16(wmb_file, bone[0])          # ID
         if wmb4:
-            write_Int16(wmb_file, 0)       # unknown02
+            write_Int16(wmb_file, index)       # wrong order probably fine todo
         write_Int16(wmb_file, bone[1])   # parentIndex
         if wmb4:
             write_Int16(wmb_file, 0)       # rotationOrder or something
-        write_xyz(wmb_file, bone[2])    # localPosition.xyx
+        write_xyz(wmb_file, bone[2])    # localPosition.xyz
         if not wmb4:
             write_xyz(wmb_file, bone[3])   # localRotation.xyz
             write_xyz(wmb_file, bone[4])   # localScale.xyz
@@ -236,8 +235,8 @@ def create_wmb_header(wmb_file, data, wmb4=False):
         write_Int16(wmb_file, -1) # TODO flags
         
         boundingBoxXYZ, boundingBoxUVW = getGlobalBoundingBox()
-        write_xyz(wmb_file, boundingBoxXYZ)                        # boundingBox: x y z 
-        write_xyz(wmb_file, boundingBoxUVW)                        #              u v w
+        write_xyz(wmb_file, boundingBoxXYZ) # boundingBox: x y z 
+        write_xyz(wmb_file, boundingBoxUVW) #              u v w
         
         offsetVertexGroups = data.vertexGroups_Offset
         write_uInt32(wmb_file, offsetVertexGroups)                  # offsetVertexGroups
@@ -297,12 +296,11 @@ def create_wmb_header(wmb_file, data, wmb4=False):
         write_uInt32(wmb_file, numMaterials)                        # numMaterials
         print(' + numMaterials:                 ', numMaterials)
         
-        # TODO texture class
-        offsetTextures = 0#data.textures_Offset
+        offsetTextures = data.textures_Offset
         write_uInt32(wmb_file, offsetTextures)                     # offsetMaterials
         print(' + offsetTextures:               ', hex(offsetTextures))
 
-        numTextures = 0#len(data.textures.textures)
+        numTextures = len(data.textures.textures)
         write_uInt32(wmb_file, numTextures)                        # numMaterials
         print(' + numTextures:                  ', numTextures)
         
@@ -314,7 +312,7 @@ def create_wmb_header(wmb_file, data, wmb4=False):
         write_uInt32(wmb_file, numMeshes)                           # numMeshes
         print(' + numMeshes:                    ', numMeshes)
         
-        write_uInt32(wmb_file, 0xda422) # unknown, pointer?
+        write_uInt32(wmb_file, 0)#0xda422) # unknown, pointer?
 
 def create_wmb_lods(wmb_file, data):
     wmb_file.seek(data.lods_Offset)
@@ -342,20 +340,20 @@ def create_wmb_materials(wmb_file, data, wmb4=False):
     wmb_file.seek(data.materials_Offset)
 
     for material in data.materials.materials:
-        for val in material.unknown0:                           # unknown0
-            write_uInt16(wmb_file, val)
-        if not wmb4:
-            write_uInt32(wmb_file, material.offsetName)           # offsetName
-        write_uInt32(wmb_file, material.offsetShaderName)       # offsetShaderName
         if wmb4:
+            write_uInt32(wmb_file, material.offsetShaderName) # offsetShaderName
             write_uInt32(wmb_file, material.offsetTextures)
             write_uInt32(wmb_file, 0) # unknown08. pointer?
             write_uInt32(wmb_file, material.offsetParameterGroups)
-            write_uInt16(wmb_file, material.numTextures)
-            write_uInt16(wmb_file, 0) # should be 5
+            write_uInt16(wmb_file, material.numTextures - 2) # two secret extras?
+            write_uInt16(wmb_file, 5) # should be 5
             write_uInt16(wmb_file, 0) # mystery value
-            write_uInt16(wmb_file, material.numParameterGroups)
+            write_uInt16(wmb_file, material.numParameterGroups*4)
         if not wmb4:
+            for val in material.unknown0:                     # unknown0
+                write_uInt16(wmb_file, val)
+            write_uInt32(wmb_file, material.offsetShaderName) # offsetShaderName
+            write_uInt32(wmb_file, material.offsetName)           # offsetName
             write_uInt32(wmb_file, material.offsetTechniqueName)  # offsetTechniqueName
             write_uInt32(wmb_file, material.unknown1)             # unknown1
             write_uInt32(wmb_file, material.offsetTextures)       # offsetTextures
@@ -365,26 +363,43 @@ def create_wmb_materials(wmb_file, data, wmb4=False):
             write_uInt32(wmb_file, material.offsetVariables)        # offsetVariables
             write_uInt32(wmb_file, material.numVariables)           # numVariables
     for material in data.materials.materials:
-        write_string(wmb_file, material.name)                   # name
+        if not wmb4:
+            write_string(wmb_file, material.name)                   # name
+        if wmb4:
+            wmb_file.seek(material.offsetShaderName)
         write_string(wmb_file, material.shaderName)             # shaderName
-        write_string(wmb_file, material.techniqueName)          # techniqueName
+        if not wmb4:
+            write_string(wmb_file, material.techniqueName)          # techniqueName
+        if wmb4:
+            wmb_file.seek(material.offsetTextures)
         for texture in material.textures:                       # [offsetName, texture, name]
-            write_uInt32(wmb_file, texture[0])
-            write_uInt32(wmb_file, int(texture[1], 16))
-        for texture in material.textures:
-            write_string(wmb_file, texture[2])
-        for parameterGroup in material.parameterGroups:         # [index, offsetParameters, numParameters, parameters]
-            write_Int32(wmb_file, parameterGroup[0])
-            write_uInt32(wmb_file, parameterGroup[1])
-            write_uInt32(wmb_file, parameterGroup[2])
+            if not wmb4:
+                write_uInt32(wmb_file, texture[0])
+                write_uInt32(wmb_file, int(texture[1], 16))
+            if wmb4:
+                for key, value in enumerate(data.textures.textures):
+                    if value[1] == texture[1]:
+                        write_uInt32(wmb_file, key)
+                        break
+        if not wmb4:
+            for texture in material.textures:
+                write_string(wmb_file, texture[2])
+        if wmb4:
+            wmb_file.seek(material.offsetParameterGroups)
+        if not wmb4:
+            for parameterGroup in material.parameterGroups: # [index, offsetParameters, numParameters, parameters]
+                write_Int32(wmb_file, parameterGroup[0])
+                write_uInt32(wmb_file, parameterGroup[1])
+                write_uInt32(wmb_file, parameterGroup[2])
         for parameterGroup in material.parameterGroups:
             for value in parameterGroup[3]:
                 write_float(wmb_file, value)
-        for variable in material.variables:                     # [offsetName, value, name]
-            write_uInt32(wmb_file, variable[0])
-            write_float(wmb_file, variable[1])
-        for variable in material.variables:
-            write_string(wmb_file, variable[2])
+        if not wmb4:
+            for variable in material.variables: # [offsetName, value, name]
+                write_uInt32(wmb_file, variable[0])
+                write_float(wmb_file, variable[1])
+            for variable in material.variables:
+                write_string(wmb_file, variable[2])
 
 def create_wmb_meshMaterials(wmb_file, data):
     wmb_file.seek(data.meshMaterials_Offset)
@@ -393,25 +408,42 @@ def create_wmb_meshMaterials(wmb_file, data):
         write_uInt32(wmb_file, meshMaterial[0])                          # meshID
         write_uInt32(wmb_file, meshMaterial[1])                          # materialID
 
-def create_wmb_meshes(wmb_file, data):
+def create_wmb_meshes(wmb_file, data, wmb4=False):
     wmb_file.seek(data.meshes_Offset)
 
     for mesh in data.meshes.meshes:
         write_uInt32(wmb_file, mesh.nameOffset)             # nameOffset
         for val in mesh.boundingBox:                        # boundingBox [x, y, z, u, v, m]
             write_float(wmb_file, val)
+        
+        if wmb4:
+            write_uInt32(wmb_file, mesh.batchesPointer)
+            write_uInt32(wmb_file, len(mesh.batches))
+            for i in range(6): # 3 more batch groups? really?
+                write_uInt32(wmb_file, 0)
         write_uInt32(wmb_file, mesh.offsetMaterials)        # offsetMaterials
         write_uInt32(wmb_file, mesh.numMaterials)           # numMaterials
-        write_uInt32(wmb_file, mesh.offsetBones)            # offsetBones
-        write_uInt32(wmb_file, mesh.numBones)               # numBones
+        if not wmb4:
+            write_uInt32(wmb_file, mesh.offsetBones)        # offsetBones
+            write_uInt32(wmb_file, mesh.numBones)           # numBones
 
     for mesh in data.meshes.meshes:
         write_string(wmb_file, mesh.name)                   # name
+        if wmb4:
+            for batch in mesh.batches:
+                write_uInt16(wmb_file, batch)
+            wmb_file.seek(mesh.offsetMaterials)
         for material in mesh.materials:
             write_uInt16(wmb_file, material)                # materials
         if mesh.numBones != 0:
             for bone in mesh.bones:
                 write_uInt16(wmb_file, bone)                    # bones
+
+def create_wmb_textures(wmb_file, data): #wmb4
+    wmb_file.seek(data.textures_Offset)
+    for tex in data.textures.textures:
+        write_uInt32(wmb_file, tex[0]) # flags
+        write_uInt32(wmb_file, int(tex[1], 16)) # wta index/hash thing
 
 def create_wmb_unknownWorldData(wmb_file, data):
     wmb_file.seek(data.unknownWorldData_Offset)
@@ -444,8 +476,8 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
     writePos = SmartIO.makeFormat(SmartIO.float, SmartIO.float, SmartIO.float)
     writeTangent = fourbytes
     writeNormal = SmartIO.makeFormat(SmartIO.float16, SmartIO.float16, SmartIO.float16, SmartIO.float16)
-    if wmb4:
-        writeNormal = SmartIO.makeFormat(SmartIO.int8, SmartIO.int8, SmartIO.int8, SmartIO.int8)
+    #if wmb4:
+    #    writeNormal = SmartIO.makeFormat(SmartIO.uint32)
     writeBoneIndexes = fourbytes
     writeBoneWeights = fourbytes
     writeUV = SmartIO.makeFormat(SmartIO.float16, SmartIO.float16)
@@ -460,7 +492,11 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
             writeUV.write(wmb_file, vertex[3][0]) # UVMap 1
             
             if vertexGroup.vertexFlags == 0:                        # Normal
-                writeNormal.write(wmb_file, vertex[2])
+                if not wmb4:
+                    writeNormal.write(wmb_file, vertex[2])
+                else:
+                    #print(hex(vertex[2]))
+                    write_uInt32(wmb_file, vertex[2])
             if wmb4:
                 writeTangent.write(wmb_file, vertex[1])
             if vertexGroup.vertexFlags in {1, 4, 5, 12, 14}:

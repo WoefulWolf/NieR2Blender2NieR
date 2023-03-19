@@ -49,11 +49,12 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
         amt['boneMap'] = boneMap
 
     amt['boneSetArray'] = boneSetArray
+    #print([bone[1] for bone in bone_data_array])
     
     for bone_data in bone_data_array:
         bone = amt.edit_bones.new(bone_data[1])
-        bone.head = Vector(bone_data[4]) 
-        bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))                
+        bone.head = Vector(bone_data[4]) - Vector((0 , 0.01, 0))  
+        bone.tail = Vector(bone_data[4]) #+ Vector((0 , 0.01, 0))                
         bone['ID'] = bone_data[6]
 
         bone['localPosition'] = bone_data[7]
@@ -66,16 +67,17 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
         if bone_data[2] != -1:
             bone = bones[bone_data[1]]
             bone.parent = bones[bone_data[3]]
-            if bone['ID'] <= len(bones): # probably make this be boneCount
-                if bones[bone_data[3]].head != bone.head:
-                    bones[bone_data[3]].tail = bone.head
+            #if bone['ID'] <= len(bones): # probably make this be boneCount
+            if bones[bone_data[3]].tail != bone.tail:
+                bone.head = bone.parent.tail
     
-    for bone_data in bone_data_array:
-        if bone_data[6] > len(bones):
-            bones[bone_data[1]].name = "fakeBone%d" % bone_data[6]
+    #for bone_data in bone_data_array:
+    #    if bone_data[6] > len(bones):
+    #        bones[bone_data[1]].name = "fakeBone%d" % bone_data[6]
     
     bpy.ops.object.mode_set(mode='OBJECT')
     ob.rotation_euler = (math.radians(90),0,0)
+    
     # split armature
     return ob
 
@@ -112,7 +114,7 @@ def copy_bone_tree(source_root, target_amt):
     for child in source_root.children:
         copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):            # [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex, batchID?, materialArray?, boneSet?], collection_name
+def construct_mesh(mesh_data, collection_name):            # [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex, batchID?, materialArray?, boneSet?, vertexStart?], collection_name
     name = mesh_data[0]
     matched_objs = 0
     for obj in bpy.data.objects:
@@ -129,7 +131,7 @@ def construct_mesh(mesh_data, collection_name):            # [meshName, vertices
     vertices = mesh_data[1]
     faces = mesh_data[2]
     has_bone = mesh_data[3]
-    weight_infos = [[[],[]]]                            # A real fan can recognize me even I am a 2 dimensional array
+    weight_infos = [[[],[]]] # A real fan can recognize me even I am a 2 dimensional array
     print("[+] importing %s" % name)
     objmesh = bpy.data.meshes.new(name)
     if not name in bpy.data.objects.keys(): 
@@ -181,6 +183,7 @@ def construct_mesh(mesh_data, collection_name):            # [meshName, vertices
     if len(mesh_data) > 14:
         obj['ID'] = mesh_data[14]
         obj['Materials'] = mesh_data[15]
+        obj['VertexIndexStart'] = mesh_data[17]
 
     obj.data.flip_normals()
     return obj
@@ -248,11 +251,18 @@ def construct_materials(texture_dir, material):
     shaders = json.load(shaderFile)
 
     for gindx, parameterGroup in enumerate(parameterGroups):
-        for pindx, parameter in enumerate(parameterGroup):
-            if (gindx == 0) and (shader_name in shaders):
-                material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
-            else:
-                material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
+        if type(parameterGroup) is not list:
+            for pindx, parameter in enumerate([parameterGroup.x, parameterGroup.y, parameterGroup.z, parameterGroup.w]):
+                if (gindx == 0) and (shader_name in shaders):
+                    material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
+                else:
+                    material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
+        else:
+            for pindx, parameter in enumerate(parameterGroup):
+                if (gindx == 0) and (shader_name in shaders):
+                    material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
+                else:
+                    material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
 
     albedo_maps = {}
     normal_maps = {}
@@ -302,11 +312,11 @@ def construct_materials(texture_dir, material):
         alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
     elif len(albedo_mixRGB_nodes) > 0:
         albedo_link = links.new(albedo_nodes[0].outputs['Color'], albedo_mixRGB_nodes[0].inputs['Color2'])
-        for i in range(len(albedo_mixRGB_nodes)):
-            albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color1'])
-            alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], albedo_mixRGB_nodes[i].inputs['Fac'])
+        for i, node in enumerate(albedo_mixRGB_nodes):
+            albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], node.inputs['Color1'])
+            alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], node.inputs['Fac'])
             if i > 0:
-                mixRGB_link = links.new(albedo_mixRGB_nodes[i-1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color2'])
+                mixRGB_link = links.new(albedo_mixRGB_nodes[i-1].outputs['Color'], node.inputs['Color2'])
         mixRGB_link = links.new(albedo_mixRGB_nodes[-1].outputs['Color'], principled.inputs['Base Color'])
 
     # Mask Nodes
@@ -356,7 +366,7 @@ def construct_materials(texture_dir, material):
         if os.path.exists(texture_file):
             normal_image = nodes.new(type='ShaderNodeTexImage')
             normal_nodes.append(normal_image)
-            normal_image.location = 0, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
+            normal_image.location = 0, (len(albedo_maps)+1 + len(mask_maps)+1 + i) * -60
             normal_image.image = bpy.data.images.load(texture_file)
             normal_image.image.colorspace_settings.name = 'Non-Color'
             normal_image.hide = True
@@ -368,11 +378,13 @@ def construct_materials(texture_dir, material):
             if i > 0:
                 n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
                 normal_mixRGB_nodes.append(n_mixRGB_shader)
-                n_mixRGB_shader.location = 300, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-(i-1)*60
+                n_mixRGB_shader.location = 300, (len(albedo_maps)+1 + len(mask_maps)+1 + i-1) * -60
                 n_mixRGB_shader.hide = True
+        else:
+            pass#print("Looking for", textureID, "in normalMaps, couldn't find it")
     if len(normal_nodes) > 0:
         normalmap_shader = nodes.new(type='ShaderNodeNormalMap')
-        normalmap_shader.location = 600, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-(i-1)*60
+        normalmap_shader.location = 600, (len(albedo_maps)+1 + len(mask_maps)+1 + i-1) * -60
         normalmap_link = links.new(normalmap_shader.outputs['Normal'], principled.inputs['Normal'])
         normalmap_shader.hide = True
     # Normal Links
@@ -380,10 +392,10 @@ def construct_materials(texture_dir, material):
         normal_link = links.new(normal_nodes[0].outputs['Color'], normalmap_shader.inputs['Color'])
     elif len(normal_mixRGB_nodes) > 0:
         normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
-        for i in range(len(normal_mixRGB_nodes)):
-            normal_link = links.new(normal_nodes[i+1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color1'])
+        for i, node in enumerate(normal_mixRGB_nodes):
+            normal_link = links.new(normal_nodes[i+1].outputs['Color'], node.inputs['Color1'])
             if i > 0:
-                n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color2'])
+                n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], node.inputs['Color2'])
         mixRGB_link = links.new(normal_mixRGB_nodes[-1].outputs['Color'], normalmap_shader.inputs['Color'])
 
     # Curvature Nodes
@@ -437,19 +449,24 @@ def add_material_to_mesh(mesh, materials , uvs):
     for face in bm.faces:
         face.material_index = 0
         for l in face.loops:
-            luv = l[uv_layer]
+            #luv = l[uv_layer]
             ind = l.vert.index
-            luv.uv = Vector(uvs[0][ind])
+            #print(l.vert)
+            l[uv_layer].uv = Vector(uvs[0][ind])
     
-    for i in range (1, 5):
+    for i in range(1, 5): # 0 handled above
         if len(uvs[i]) > 0:
+            #print("Creating UV layer for", material.name)
             new_uv_layer = bm.loops.layers.uv.new("UVMap" + str(i + 1))
             for face in bm.faces:
                 face.material_index = 0
                 for l in face.loops:
-                    luv = l[new_uv_layer]
+                    #luv = l[new_uv_layer]
                     ind = l.vert.index
-                    luv.uv = Vector(uvs[i][ind])
+                    #print(ind)
+                    l[new_uv_layer].uv = Vector(uvs[i][ind])
+        else:
+            pass#print("Weird, no UV[%d] for %s" % (i, material.name))
 
     bpy.ops.object.mode_set(mode='OBJECT')
     mesh.select_set(True)
@@ -603,7 +620,7 @@ def format_wmb_mesh(wmb, collection_name):
                 wmb.hasBone, # has_bone
                 meshInfo[3], # boneWeightInfoArray
                 batchData.boneSetsIndex, # boneSetIndex
-                0,           # meshGroupIndex
+                batchData.meshIndex,     # meshGroupIndex
                 meshInfo[4], # vertex_colors
                 "NoLOD",     # LOD_name
                 -1,          # LOD_level
@@ -612,8 +629,9 @@ def format_wmb_mesh(wmb, collection_name):
                 mesh.boundingBox,       # boundingBox
                 batch.vertexGroupIndex, # vertexGroupIndex
                 batchIndex,
-                mesh.materials,
-                wmb.boneSetArray[batchData.boneSetsIndex] # boneSet
+                [batchData.materialIndex],
+                wmb.boneSetArray[batchData.boneSetsIndex], # boneSet
+                meshInfo[5]  # vertexStart
             ], collection_name)
             meshes.append(obj)
     
@@ -652,13 +670,14 @@ def get_wmb_material(wmb, texture_dir):
                                 texture_fp.write(texture_stream)
                                 texture_fp.close()
                             else:
-                                pass#print('[+] Found %s.dds'% identifier)
+                                print('[+] Found %s.dds'% identifier)
                         else:
                             print("Texture identifier %s does not exist in WTA, despite being fetched from a WTA identifier list." % identifier)
                     except:
                         continue
                 
                 materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
+                #print(materials)
         else:
             texture_dir = texture_dir.replace('.dat','.dtt')
             for textureIndex in range(wmb.wta.textureCount):
@@ -772,8 +791,8 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
     print('Linking materials to objects...')
     if hasattr(wmb, "meshGroupInfoArray"):
         for meshGroupInfo in wmb.meshGroupInfoArray:
+            mesh_start = meshGroupInfo.meshStart
             for Index in range(len(meshGroupInfo.groupedMeshArray)):
-                mesh_start = meshGroupInfo.meshStart
                 meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
                 materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
                 groupIndex = int(meshes[Index + mesh_start].name.split('-')[2])
@@ -787,15 +806,20 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
     else:
         for mesh in meshes:
             meshIndex = int(mesh['ID'])
+            groupIndex = int(mesh.name.split('-')[0])
+            uvMaps = [[], [], [], [], []]
+            vertexStart = mesh['VertexIndexStart']
+            for VertexIndex in usedVerticeIndexArrays[meshIndex]:
+                for k in range(5):
+                    if uvs[k][groupIndex] != None:
+                        #print("Found a UV!", k, groupIndex, VertexIndex, uvs[k][groupIndex][VertexIndex])
+                        uvMaps[k].append( uvs[k][groupIndex][vertexStart + VertexIndex])
             for materialIndex in mesh['Materials']:
-                groupIndex = int(mesh.name.split('-')[0])
-                uvMaps = [[], [], [], [], []]
-                for VertexIndex in usedVerticeIndexArrays[meshIndex]:
-                    for k in range(5):
-                        if uvs[k][groupIndex] != None:
-                            uvMaps[k].append( uvs[k][groupIndex][VertexIndex])
-                if len(materials) > 0:
-                    add_material_to_mesh(mesh, [materials[materialIndex]], uvMaps)
+                #if len(materials) > 0:
+                    #print("Some materials made for", mesh.name)
+                # sanity checks are for wimps
+                print(mesh.name, materialIndex)
+                add_material_to_mesh(mesh, [materials[materialIndex]], uvMaps)
     
     if wmb.hasBone:
         amt = bpy.data.objects.get(armature_name)

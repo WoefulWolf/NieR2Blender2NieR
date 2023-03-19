@@ -118,7 +118,7 @@ def main(filepath, wmb4=False):
         create_wmb_textures(wmb_file, generated_data)
 
         print('Writing meshes.')
-        create_wmb_meshes(wmb_file, generated_data)
+        create_wmb_meshes(wmb_file, generated_data, True)
 
     print('Finished writing. Closing file..')
     close_wmb(wmb_file, generated_data)

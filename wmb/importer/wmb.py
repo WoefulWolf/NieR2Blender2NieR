@@ -659,14 +659,14 @@ class wmb4_batch(object):
         self.indexStart = read_int32(wmb_fp)
         self.numVertexes = read_uint32(wmb_fp)
         self.numIndexes = read_uint32(wmb_fp)
-        
+        """
         print()
         print("vertexGroupIndex:", self.vertexGroupIndex)
         print("vertexStart:     ", self.vertexStart)
         print("vertexCount:     ", self.numVertexes)
         print("indexStart:      ", self.indexStart)
         print("indexCount:      ", self.numIndexes)
-        
+        """
 
 class wmb4_batchDescription(object):
     """docstring for wmb4_batchDescription"""
@@ -689,13 +689,13 @@ class wmb4_batchData(object):
         self.materialIndex = read_uint16(wmb_fp)
         self.boneSetsIndex = read_int16(wmb_fp)
         self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
-        """
+        
         print("Batch index:    %d" % self.batchIndex)
         print("Mesh index:     %d" % self.meshIndex)
         print("Material index: %d" % self.materialIndex)
         print("Bone set index: %d\n" % self.boneSetsIndex)
         print()
-        """
+        
 
 class wmb4_bone(object):
     """docstring for wmb4_bone"""
@@ -773,10 +773,10 @@ class wmb4_material(object):
     """docstring for wmb4_material"""
     class paramFunc(object):
         def read(self, wmb_fp):
-            self.x = read_uint32(wmb_fp)
-            self.y = read_uint32(wmb_fp)
-            self.z = read_uint32(wmb_fp)
-            self.w = read_uint32(wmb_fp)
+            self.x = read_float(wmb_fp)
+            self.y = read_float(wmb_fp)
+            self.z = read_float(wmb_fp)
+            self.w = read_float(wmb_fp)
     
     def read(self, wmb_fp):
         super(wmb4_material, self).__init__()
@@ -792,30 +792,33 @@ class wmb4_material(object):
         self.unknown14 = read_uint16(wmb_fp) # and the mystery count.
         self.parametersCount = read_uint16(wmb_fp)
         
-        [self.tex0, self.albedoMap, self.tex2, self.tex3, self.tex4, self.tex5, self.tex6, self.normalMap] = load_data_array(wmb_fp, self.texturesPointer, 8, uint32)
+        [tex0, albedoMap, tex2, tex3, tex4, tex5, tex6, normalMap, tex8, tex9] = load_data_array(wmb_fp, self.texturesPointer, 10, uint32)
         
         if self.parametersCount/4 % 1 != 0:
             print("Hey, idiot, you have incomplete parameters in your materials. It's gonna read some garbage data, since each one should have exactly four attributes: xyzw. Actually, I'm not sure if it'll read garbage or stop early. Idiot.")
         
         self.parameters = load_data_array(wmb_fp, self.parametersPointer, int(self.parametersCount/4), self.paramFunc)
         
-        self.effectName = "NoEffect"
+        self.effectName = load_data(wmb_fp, self.shaderNamePointer, filestring)
         self.techniqueName = "NoTechnique"
         self.uniformArray = {}
         self.textureArray = {
-            "tex0": self.tex0,
-            "albedoMap": self.albedoMap,
-            "tex2": self.tex2,
-            "tex3": self.tex3,
-            "tex4": self.tex4,
-            "tex5": self.tex5,
-            "tex6": self.tex6,
-            "normalMap": self.normalMap
+            "tex0": tex0,
+            "albedoMap": albedoMap,
+            "tex2": tex2,
+            "tex3": tex3, # these don't exist?
+            "tex4": tex4,
+            "tex5": tex5,
+            "tex6": tex6,
+            "normalMap": normalMap,
+            "tex8": tex8,
+            "tex9": tex9
         }
-        #print("Textures!", self.tex0, self.albedoMap, self.tex2, self.tex3, self.tex4, self.tex5, self.tex6, self.normalMap)
-        #self.parameterGroups = self.parameters
-        self.parameterGroups = [] # look: there are no materials, materials no longer exist
+        print("Textures!", tex0, albedoMap, tex2, tex3, tex4, tex5, tex6, normalMap, tex8, tex9)
+        self.parameterGroups = self.parameters # we back
+        #self.parameterGroups = [] # look: there are no materials, materials no longer exist
         self.materialName = "UnusedMaterial" # mesh name overrides
+        self.wmb4 = True
 
 class wmb4_mesh(object):
     """docstring for wmb4_mesh"""
@@ -1278,9 +1281,10 @@ class WMB(object):
                 self.secondLevel = boneTranslateTable.secondLevel
                 self.thirdLevel = boneTranslateTable.thirdLevel
             
-            self.boneSetArrayTrue = load_data_array(wmb_fp, self.wmb_header.boneSetPointer, self.wmb_header.boneSetCount, wmb4_boneSet)
+            boneSetArrayTrue = load_data_array(wmb_fp, self.wmb_header.boneSetPointer, self.wmb_header.boneSetCount, wmb4_boneSet)
             # is this cheating
-            self.boneSetArray = [item.boneSet for item in self.boneSetArrayTrue]
+            self.boneSetArray = [item.boneSet for item in boneSetArrayTrue]
+            #print(self.boneSetArray)
             
             self.materialArray = load_data_array(wmb_fp, self.wmb_header.materialPointer, self.wmb_header.materialCount, wmb4_material)
             
@@ -1324,9 +1328,8 @@ class WMB(object):
         """
         # mappingDict is the reverse lookup for usedVertexIndexArray
         mappingDict = {}
-        # enumerate() isn't working
-        for newIndex in range(len(usedVertexIndexArray)):
-            mappingDict[usedVertexIndexArray[newIndex]] = newIndex
+        for newIndex, vertid in enumerate(usedVertexIndexArray):
+            mappingDict[vertid] = newIndex
         #print(mappingDict)
         # After this loop, facesRaw now points to indexes in usedVertices (below)
         for i, vertex in enumerate(facesRaw):
@@ -1336,7 +1339,7 @@ class WMB(object):
         boneWeightInfos = [[],[]]
         #print("Iterating over 0, faceRawCount, 3, length %d" % 0, faceRawCount, 3)
         for i in range(0, faceRawCount, 3):
-            faces[int(i/3)] = (facesRaw[i]  , facesRaw[i + 1]  , facesRaw[i + 2] )
+            faces[int(i/3)] = ( facesRaw[i], facesRaw[i + 1], facesRaw[i + 2] )
         meshVertices = vertexGroup.vertexArray[vertexStart : vertexStart + vertexCount]
 
         if self.hasBone:
@@ -1366,7 +1369,7 @@ class WMB(object):
                         print(meshVertices[i].boneWeights) 
                 else:
                     self.hasBone = False
-        return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors
+        return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors, vertexStart
 
 def load_data(wmb_fp, pointer, chunkClass, other=None):
     pos = wmb_fp.tell()
