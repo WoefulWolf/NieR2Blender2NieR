@@ -775,12 +775,15 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
     #bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
     
     texture_dir = wmb_file.replace(wmbname, 'textures')
-    if wmb.hasBone:
+    if hasattr(wmb, 'hasBone') and wmb.hasBone:
         boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
         armature_no_wmb = wmbname.replace('.wmb','')
         armature_name_split = armature_no_wmb.split('/')
         armature_name = armature_name_split[-1]
         construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
+    else:
+        return
+
     meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
     wmb_materials = get_wmb_material(wmb, texture_dir)
     materials = []
