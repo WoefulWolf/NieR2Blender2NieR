@@ -1,60 +1,27 @@
 import bpy
-import os
+from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
-from ...wmb.importer import wmb_importer  # Assuming wmb_importer.py is in root/wmb/importer
 
-from .SCRFile import SCRFile
-from .SCR2File import SCR2File
+from ...utils.visibilitySwitcher import enableVisibilitySelector
+from ...utils.util import setExportFieldsFromImportFile
 
 
 class ImportSCR(bpy.types.Operator, ImportHelper):
-    bl_idname = "import_scene.scr"
-    bl_label = "Import SCR"
-    bl_options = {'PRESET', 'UNDO'}
-
+    '''Load a MGR SCR File.'''
+    bl_idname = "import_scene.scr_data"
+    bl_label = "Import SCR Data"
+    bl_options = {'PRESET'}
     filename_ext = ".scr"
-    filter_glob: bpy.props.StringProperty(default="*.scr", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*.scr", options={'HIDDEN'})
+
+    reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
 
     def execute(self, context):
-        # Clear existing scene
-        bpy.ops.object.select_all(action='SELECT')
-        bpy.ops.object.delete(use_global=True)
+        from . import scr_importer
+        if self.reset_blend:
+            scr_importer.reset_blend()
 
-        # Load SCR file
-        with open(self.filepath, 'rb') as f:
-            if SCRFile.is_bayo2(f):
-                scr = SCRFile(f)
-            else:
-                scr = SCRFile(f)
+        setExportFieldsFromImportFile(self.filepath, False)
+        enableVisibilitySelector()
 
-        # Load models
-        for model_data in scr.each_model():
-            # Load .wmb model using your existing .wmb importer function
-            # You can pass the model_data file-like object directly to the function
-            # or save it to a temporary file and pass the file path
-            import_wmb_models(model_data)
-
-        return {'FINISHED'}
-
-
-def import_wmb_models(scr_file):
-    for model in scr_file.models:
-        wmb_importer.main(False, model)
-
-
-def menu_func_import(self, context):
-    self.layout.operator(ImportSCR.bl_idname, text="SCR (.scr)")
-
-
-def register():
-    bpy.utils.register_class(ImportSCR)
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-
-
-def unregister():
-    bpy.utils.unregister_class(ImportSCR)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-
-
-if __name__ == "__main__":
-    register()
+        return scr_importer.ImportSCR(False, self.filepath)
