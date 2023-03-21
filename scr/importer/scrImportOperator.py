@@ -24,4 +24,4 @@ class ImportSCR(bpy.types.Operator, ImportHelper):
         setExportFieldsFromImportFile(self.filepath, False)
         enableVisibilitySelector()
 
-        return scr_importer.ImportSCR(False, self.filepath)
+        return scr_importer.ImportSCR.main(self.filepath, False)

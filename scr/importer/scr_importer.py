@@ -2,49 +2,62 @@ import bpy
 import os
 import struct
 from pathlib import Path
-
+import shutil
 # Replace the import statement below with the correct path to your WMB importer
 from ...wmb.importer import wmb_importer  # Assuming wmb_importer.py is in root/wmb/importer
 
-def ImportSCR(file_path, context):
-    with open(file_path, 'rb') as scr_file:
-        # Read header
-        header = struct.unpack('<4s2hI', scr_file.read(12))
-        num_models = header[2]
-        offset_offsets_models = header[3]
+class ImportSCR:
+    def main(file_path, context):
+        print('Beginning export')
+        with open(file_path, 'rb') as f:
+            id = f.read(4)
+            print('ID read')
+            if id != b'SCR\x00':
+                raise ValueError("Wrong file type")
+    
+            f.seek(0)
+            header = struct.unpack('<4s2hI', f.read(12))
+            num_models = header[2]
+            offset_offsets_models = header[3]
+        
+            f.seek(offset_offsets_models)
+            offsets_models = struct.unpack(f'<{num_models}I', f.read(num_models * 4))
+            print('Offsets found')
+        
+            model_headers = []
+            for i in range(num_models):
+                f.seek(offsets_models[i])
+                model_header = struct.unpack('<I64s9f18h', f.read(140))
+                model_headers.append(model_header)
+                print('Model header read')
+        
+            model_data = []
+            for i in range(num_models):
+                f.seek(model_headers[i][0])
+                if i == num_models - 1:
+                    size = os.path.getsize(file_path) - model_headers[i][0]
+                else:
+                    size = offsets_models[i+1] - model_headers[i][0]
+        
+                model = f.read(size)
+                model_data.append(model)
+                print('SCR import completed')
+                ImportSCR.import_models(model_headers, model_data, './extracted_scr/')
+            return {'FINISHED'}
 
-        # Read model offsets
-        scr_file.seek(offset_offsets_models)
-        offsets_models = struct.unpack(f'<{num_models}I', scr_file.read(4 * num_models))
-
-        # Read model headers
-        model_headers = []
-        for offset in offsets_models:
-            scr_file.seek(offset)
-            model_header = struct.unpack('<I64s9f18h', scr_file.read(108))
-            model_headers.append(model_header)
-
-        # Read model data and call WMB importer for each model
-        for i, model_header in enumerate(model_headers):
-            scr_file.seek(model_header[0])
-            if i == num_models - 1:
-                size = os.path.getsize(file_path) - model_header[0]
-            else:
-                size = offsets_models[i + 1] - model_header[0]
-
-            model_data = scr_file.read(size)
-            model_name = model_header[1].decode('utf-8').rstrip('\x00')
-
-            # Save model data to a temporary file
-            temp_wmb_file = Path(file_path).parent / f'{model_name}.wmb'
-            with open(temp_wmb_file, 'wb') as wmb_file:
-                wmb_file.write(model_data)
-
-            # Call the WMB importer
-            wmb_importer.main(str(temp_wmb_file), context)
-
-            # Delete the temporary WMB file
-            os.remove(temp_wmb_file)
+    @staticmethod
+    def import_models(model_headers, model_data, temp_folder):
+        print('Beginning import')
+        if not os.path.exists(temp_folder):
+            os.makedirs(temp_folder)
+    
+        for i, (header, model) in enumerate(zip(model_headers, model_data)):
+            file_name = header[1].decode('utf-8').rstrip('\x00')
+            file_path = f'{temp_folder}/{file_name}.wmb'
+            with open(file_path, 'wb') as f:
+                f.write(model)
+            print('Beginning WMB import')
+            wmb_importer.main(file_path)
 
 def reset_blend():
     #bpy.ops.object.mode_set(mode='OBJECT')
