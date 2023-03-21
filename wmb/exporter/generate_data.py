@@ -1,4 +1,5 @@
-# this looks redundant but idk todo check
+# save data from Blender to Python object (still dependent on too many custom properties)
+# these imports look redundant but idk todo check
 from ...utils.util import allObjectsInCollectionInOrder
 from ...utils.util import Vector3
 from ...utils.util import *
@@ -569,9 +570,11 @@ class c_material(object):
         def get_textures_StructSize(self, textures):
             textures_StructSize = 0
             for texture in textures:
+                #print(texture[1])
                 textures_StructSize += 8 if not wmb4 else 4
                 if not wmb4:
                     textures_StructSize += len(texture[2]) + 1
+            #print(textures_StructSize)
             return textures_StructSize
 
         def get_numParameterGroups(self, material):
@@ -679,7 +682,8 @@ class c_material(object):
         self.numTextures = len(self.textures)
 
         self.offsetParameterGroups = self.offsetTextures + get_textures_StructSize(self, self.textures)
-        if wmb4:
+        #print(hex(self.offsetParameterGroups))
+        if wmb4 and (self.offsetParameterGroups % 16 > 0):
             self.offsetParameterGroups += 16 - (self.offsetParameterGroups % 16)
 
         self.numParameterGroups = get_numParameterGroups(self, self.b_material)  
@@ -877,6 +881,10 @@ class c_meshes(object):
             print("Meshes to generate:", meshNamesSorted)
 
             meshes_added = []
+            # first name pointer is aligned
+            if wmb4 and ((offsetMeshes + numMeshes*68) % 16 > 0):
+                offsetMeshes += 16 - ((offsetMeshes + numMeshes*68) % 16)
+            
             for meshName in meshNamesSorted:
                 for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
                     obj_name = obj.name.split('-')[1]
@@ -935,7 +943,21 @@ class c_textures(object): # wmb4
         self.textures = []
         for mat in materials:
             #for tex in mat.textures:
-            for index in [0, 1, 3, 5, 6, 7, 4, 9]:
+            """
+             1 (maybe 0 too) is first
+             then 3
+             then 5 OR 6
+             then 7
+             then 4 OR 9
+             1 is BEFORE 7
+             no 2 or 8
+             1 is BEFORE 3... ok
+             is it just skipping 2, 4, 8?
+             wtf platinum
+            """
+            for index in [0, 1, 3, 5, 6, 7, 9, 10, 11, 12, 13]:
+                if index > len(mat.textures)-1:
+                    break
                 if mat.textures[index][1] not in (x[1] for x in self.textures):
                     self.textures.append([0x63, mat.textures[index][1]])
         
@@ -1135,7 +1157,7 @@ class c_vertexGroup(object):
 
                     # Normal
                     normal = []
-                    if self.vertexFlags == 0:
+                    if self.vertexFlags == 0 or wmb4:
                         normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
                         if wmb4:
                             #print(normal)
@@ -1236,7 +1258,7 @@ class c_vertexGroup(object):
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
                     color = []
-                    if self.vertexFlags in {4, 5, 12, 14}:
+                    if self.vertexFlags in {4, 5, 12, 14} or (wmb4 and self.vertexFlags == 7):
                         if len (bvertex_obj_obj.data.vertex_colors) == 0:
                             print("Object had no vertex colour layer when one was expected - creating one.")
                             new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
@@ -1267,6 +1289,9 @@ class c_vertexGroup(object):
                     elif self.vertexFlags == 7:
                         uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
                         uv_maps.append(uv2)
+                        if wmb4:
+                            loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
+                            color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
 
                     elif self.vertexFlags == 10:
                         uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
@@ -1334,9 +1359,11 @@ class c_vertexGroup(object):
         self.unknownSize = [0, 0]    # THIS IS UNKOWN TOO OKAY? LEAVE ME BE
         # *unknown
 
-        self.numVertexes = numVertices                                            
+        self.numVertexes = numVertices
 
         self.indexBufferOffset = self.vertexOffset + numVertices * (self.vertexSize + self.vertexExDataSize)
+        if wmb4 and (self.indexBufferOffset % 16 > 0):
+            self.indexBufferOffset += 16 - (self.indexBufferOffset % 16)
         
         self.numIndexes = get_numIndexes(self)
 
@@ -1344,7 +1371,7 @@ class c_vertexGroup(object):
         
         self.indexes = get_indexes(self)
 
-        self.vertexGroupSize = (self.numVertexes * (self.vertexSize + self.vertexExDataSize)) + (self.numIndexes * (2 if wmb4 else 4))
+        self.vertexGroupSize = (self.indexBufferOffset - self.vertexOffset) + (self.numIndexes * (2 if wmb4 else 4))
 
 class c_vertexGroups(object):
     def __init__(self, offsetVertexGroups, wmb4=False):
@@ -1655,7 +1682,7 @@ class c_generate_data(object):
             currentOffset += self.textures_Size
             print('textures_Size: ', self.textures_Size)
             
-            #currentOffset += 16 - (currentOffset % 16)
+            currentOffset += 16 - (currentOffset % 16)
             
             self.meshes_Offset = currentOffset
             self.meshes = c_meshes(self.meshes_Offset, True)

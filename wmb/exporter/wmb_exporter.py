@@ -1,3 +1,4 @@
+# basically a wrapper for generate_data.py and write_wmb/__init__.py
 from ...utils.ioUtils import create_wmb, close_wmb
 from .generate_data import *
 from .write_wmb import *

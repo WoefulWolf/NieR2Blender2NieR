@@ -1,3 +1,4 @@
+# write data from Python object to .wmb
 from ....utils.ioUtils import write_Int32, write_uInt32, write_Int16, write_xyz, write_float, write_char, write_string, write_uInt16, SmartIO, write_byte, write_float16
 from ....utils.util import *
 from time import time
@@ -345,8 +346,8 @@ def create_wmb_materials(wmb_file, data, wmb4=False):
             write_uInt32(wmb_file, material.offsetTextures)
             write_uInt32(wmb_file, 0) # unknown08. pointer?
             write_uInt32(wmb_file, material.offsetParameterGroups)
-            write_uInt16(wmb_file, material.numTextures - 2) # two secret extras?
-            write_uInt16(wmb_file, 5) # should be 5
+            write_uInt16(wmb_file, 8) # what even
+            write_uInt16(wmb_file, int(material.numTextures/2)) # 5 or 4
             write_uInt16(wmb_file, 0) # mystery value
             write_uInt16(wmb_file, material.numParameterGroups*4)
         if not wmb4:
@@ -428,6 +429,7 @@ def create_wmb_meshes(wmb_file, data, wmb4=False):
             write_uInt32(wmb_file, mesh.numBones)           # numBones
 
     for mesh in data.meshes.meshes:
+        wmb_file.seek(mesh.nameOffset)
         write_string(wmb_file, mesh.name)                   # name
         if wmb4:
             for batch in mesh.batches:
@@ -485,13 +487,15 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
     
     for vertexGroup in data.vertexGroups.vertexGroups:
         wmb_file.seek(vertexGroup.vertexOffset)
+        print("Vertices:", len(vertexGroup.vertexes))
+        print("Wacky flag:", vertexGroup.vertexFlags)
         for vertex in vertexGroup.vertexes:                         # [position.xyz, tangents, normal, uv_maps, boneIndexes, boneWeights, color]
             writePos.write(wmb_file, vertex[0])
             if not wmb4:
                 writeTangent.write(wmb_file, vertex[1])
             writeUV.write(wmb_file, vertex[3][0]) # UVMap 1
             
-            if vertexGroup.vertexFlags == 0:                        # Normal
+            if vertexGroup.vertexFlags == 0 or wmb4: # Normal
                 if not wmb4:
                     writeNormal.write(wmb_file, vertex[2])
                 else:
@@ -522,12 +526,14 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
                 #     write_float16(wmb_file, val)
                 writeUV.write(wmb_file, vertexExData[1][0])
             elif vertexGroup.vertexFlags == 7:                      # [7]
-                # for val in vertexExData[1][0]:                      # UVMap 1
-                #     write_float16(wmb_file, val)
-                writeUV.write(wmb_file, vertexExData[1][0])
-                # for val in vertexExData[0]:                         # normal
-                #     write_float16(wmb_file, val)
-                writeNormal.write(wmb_file, vertexExData[0])
+                if not wmb4:
+                    # UVMap 1
+                    writeUV.write(wmb_file, vertexExData[1][0])
+                    # normal
+                    writeNormal.write(wmb_file, vertexExData[0])
+                else:
+                    writeColor.write(wmb_file, vertexExData[2])
+                    writeUV.write(wmb_file, vertexExData[1][0])
             elif vertexGroup.vertexFlags == 10:                     # [10]
                 # for val in vertexExData[1][0]:                      # UVMap 1
                 #     write_float16(wmb_file, val)
@@ -574,7 +580,9 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
                 # for val in vertexExData[1][1]:                      # UVMap 4
                 #     write_float16(wmb_file, val)
                 writeUV.write(wmb_file, vertexExData[1][1])
-
+        
+        if wmb4:
+            wmb_file.seek(vertexGroup.indexBufferOffset)
         for index in vertexGroup.indexes:                           # indexes
             if wmb4:
                 write_uInt16(wmb_file, index)
