@@ -39,21 +39,23 @@ class ImportSCR:
                     size = os.path.getsize(file_path) - model_headers[i][0]
                 else:
                     size = offsets_models[i+1] - model_headers[i][0]
-                model = f.read(size)
-                model_data.append(model)
-                print('SCR read completed')
-                print('Beginning extract')
-                if not os.path.exists(head + '\extracted_scr'):
-                    os.makedirs(head + '\extracted_scr')
-            
-                for i, (header, model) in enumerate(zip(model_headers, model_data)):
-                    file_name = header[1].decode('utf-8').rstrip('\x00')
-                    file_path = f"{head}\extracted_scr\{file_name}.wmb"
-                    with open(file_path, 'wb') as f2:
-                        f2.write(model)
-                    if not (context):    
+                if size > 0:
+                    model = f.read(size)
+                    model_data.append(model)
+                    print('SCR read completed')
+                    print('Beginning extract')
+                    if not os.path.exists(head + '/extracted_scr'):
+                        os.makedirs(head + '/extracted_scr')
+                
+                    for i, (header, model) in enumerate(zip(model_headers, model_data)):
+                        file_name = header[1].decode('utf-8').rstrip('\x00')
+                        file_path = f"{head}/extracted_scr/{file_name}.wmb"
+                        with open(file_path, 'wb') as f2:
+                            f2.write(model)
+                    print('SCR extract completed')
+                    if not (context):
                         print('Beginning WMB import')                    
-                        ImportSCR.import_models(file_path)
+                        ImportSCR.import_models(file_path)  
                         
                 print('SCR extract completed')
                 
