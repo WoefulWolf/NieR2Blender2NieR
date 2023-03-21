@@ -1,3 +1,4 @@
+# load from Python object into Blender (way too many custom properties)
 from time import time
 import bpy
 import bmesh
@@ -649,12 +650,17 @@ def get_wmb_material(wmb, texture_dir):
                 textures = material.textureArray
                 if hasattr(wmb, 'textureArray'):
                     for index, texture in textures.items():
+                        if texture == -1:
+                            continue
                         try:
                             textures[index] = wmb.textureArray[texture].id # change index to WTA identifier
                         except:
                             print("An error has occured! It seems that the global texture array doesn't have enough elements (%d). I think. This is a generic exception." % texture)
-                            print("I'll just use the last texture in the array.")
-                            textures[index] = wmb.textureArray[-1].id
+                            print("I'm deleting this.")
+                            textures[index] = -1
+                    for index, texture in textures.copy().items():
+                        if texture == -1:
+                            del textures[index]
                     print("Textures on %s:"%material_name, textures)
                 parameterGroups = material.parameterGroups
                 for textureIndex in range(wmb.wta.textureCount):        # for key in textures.keys():
@@ -670,7 +676,7 @@ def get_wmb_material(wmb, texture_dir):
                                 texture_fp.write(texture_stream)
                                 texture_fp.close()
                             else:
-                                print('[+] Found %s.dds'% identifier)
+                                pass#print('[+] Found %s.dds'% identifier)
                         else:
                             print("Texture identifier %s does not exist in WTA, despite being fetched from a WTA identifier list." % identifier)
                     except:

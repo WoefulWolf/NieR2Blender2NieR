@@ -1,3 +1,4 @@
+# load from .wmb into Python object
 import os
 import json
 import bpy
@@ -690,11 +691,7 @@ class wmb4_batchData(object):
         self.boneSetsIndex = read_int16(wmb_fp)
         self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
         
-        print("Batch index:    %d" % self.batchIndex)
-        print("Mesh index:     %d" % self.meshIndex)
-        print("Material index: %d" % self.materialIndex)
-        print("Bone set index: %d\n" % self.boneSetsIndex)
-        print()
+        print("Batch: %s;   Mesh: %s;   Material: %s;   Bone set: %s" % (str(self.batchIndex).rjust(3, " "), str(self.meshIndex).rjust(3, " "), str(self.materialIndex).rjust(3, " "), str(self.boneSetsIndex).rjust(3, " ")))
         
 
 class wmb4_bone(object):
@@ -787,12 +784,12 @@ class wmb4_material(object):
         self.unknown08 = read_uint32(wmb_fp)
         self.parametersPointer = read_uint32(wmb_fp)
         
-        self.texturesCount = read_uint16(wmb_fp)
-        self.unknown12 = read_uint16(wmb_fp) # texture count, always 1, I would guess.
+        self.texturesCount = read_uint16(wmb_fp) # wait so what's this
+        self.trueTexturesCount = read_uint16(wmb_fp) # texture count, 4 or 5
         self.unknown14 = read_uint16(wmb_fp) # and the mystery count.
         self.parametersCount = read_uint16(wmb_fp)
         
-        [tex0, albedoMap, tex2, tex3, tex4, tex5, tex6, normalMap, tex8, tex9] = load_data_array(wmb_fp, self.texturesPointer, 10, uint32)
+        texturesArray = load_data_array(wmb_fp, self.texturesPointer, self.trueTexturesCount*2, uint32)
         
         if self.parametersCount/4 % 1 != 0:
             print("Hey, idiot, you have incomplete parameters in your materials. It's gonna read some garbage data, since each one should have exactly four attributes: xyzw. Actually, I'm not sure if it'll read garbage or stop early. Idiot.")
@@ -802,19 +799,16 @@ class wmb4_material(object):
         self.effectName = load_data(wmb_fp, self.shaderNamePointer, filestring)
         self.techniqueName = "NoTechnique"
         self.uniformArray = {}
-        self.textureArray = {
-            "tex0": tex0,
-            "albedoMap": albedoMap,
-            "tex2": tex2,
-            "tex3": tex3, # these don't exist?
-            "tex4": tex4,
-            "tex5": tex5,
-            "tex6": tex6,
-            "normalMap": normalMap,
-            "tex8": tex8,
-            "tex9": tex9
-        }
-        print("Textures!", tex0, albedoMap, tex2, tex3, tex4, tex5, tex6, normalMap, tex8, tex9)
+        self.textureArray = {}
+        for i, texture in enumerate(texturesArray):
+            if i == 1:
+                self.textureArray["albedoMap"] = texture
+            elif i == 7:
+                self.textureArray["normalMap"] = texture
+            else:
+                self.textureArray["tex" + str(i)] = texture
+        
+        print("Textures!", texturesArray)
         self.parameterGroups = self.parameters # we back
         #self.parameterGroups = [] # look: there are no materials, materials no longer exist
         self.materialName = "UnusedMaterial" # mesh name overrides
