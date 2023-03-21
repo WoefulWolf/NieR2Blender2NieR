@@ -16,12 +16,14 @@ class ImportSCR(bpy.types.Operator, ImportHelper):
 
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
 
+    only_extract: bpy.props.BoolProperty(name="Only Extract .SCR", default=False)
+
     def execute(self, context):
         from . import scr_importer
         if self.reset_blend:
-            scr_importer.reset_blend()
+            scr_importer.reset_blend()    
 
         setExportFieldsFromImportFile(self.filepath, False)
         enableVisibilitySelector()
-
-        return scr_importer.ImportSCR.main(self.filepath, False)
+        
+        return scr_importer.ImportSCR.main(self.filepath, self.only_extract)

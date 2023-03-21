@@ -9,6 +9,7 @@ from ...wmb.importer import wmb_importer  # Assuming wmb_importer.py is in root/
 class ImportSCR:
     def main(file_path, context):
         print('Beginning export')
+        head = os.path.split(file_path)[0]
         with open(file_path, 'rb') as f:
             id = f.read(4)
             print('ID read')
@@ -41,22 +42,26 @@ class ImportSCR:
         
                 model = f.read(size)
                 model_data.append(model)
-                print('SCR import completed')
-                ImportSCR.import_models(model_headers, model_data, './extracted_scr/')
+                print('SCR read completed')
+                print('Beginning extract')
+                if not os.path.exists(head + '\extracted_scr'):
+                    os.makedirs(head + '\extracted_scr')
+            
+                for i, (header, model) in enumerate(zip(model_headers, model_data)):
+                    file_name = header[1].decode('utf-8').rstrip('\x00')
+                    file_path = head + '\extracted_scr\{file_name}.wmb'
+                    with open(head + '\extracted_scr', 'wb') as f:
+                        f.write(model)
+                print('SCR extract completed')
+                if (context):
+                    return {'FINISHED'}     
+                print('Beginning WMB import')                    
+                ImportSCR.import_models(file_path)
+                
             return {'FINISHED'}
 
     @staticmethod
-    def import_models(model_headers, model_data, temp_folder):
-        print('Beginning import')
-        if not os.path.exists(temp_folder):
-            os.makedirs(temp_folder)
-    
-        for i, (header, model) in enumerate(zip(model_headers, model_data)):
-            file_name = header[1].decode('utf-8').rstrip('\x00')
-            file_path = f'{temp_folder}/{file_name}.wmb'
-            with open(file_path, 'wb') as f:
-                f.write(model)
-            print('Beginning WMB import')
+    def import_models(file_path):
             wmb_importer.main(file_path)
 
 def reset_blend():
