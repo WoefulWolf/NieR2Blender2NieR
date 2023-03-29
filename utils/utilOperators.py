@@ -261,7 +261,8 @@ class RestoreImportPose(bpy.types.Operator):
             # Clear the bone matrix
             pose_bone.matrix_basis = Matrix()
 
-            rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
-            pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
+            if 'localRotation' in pose_bone.bone:
+                rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+                pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
         bpy.context.view_layer.update()
         return {'FINISHED'}
