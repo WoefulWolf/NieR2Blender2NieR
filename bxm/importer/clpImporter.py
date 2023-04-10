@@ -56,8 +56,6 @@ def update_clp_bone_items():
         if 'ID' in bone:
             bone_items.append((str(bone['ID']), bone.name + " (" + str(bone['ID']) + ")", ""))
 
-    bone_items.sort(key=lambda a: int(a[0]))
-
 class ClothWK(bpy.types.PropertyGroup):
     no : bpy.props.EnumProperty(items=clp_bone_items, default=0)
     no_up : bpy.props.EnumProperty(items=clp_bone_items, default=0)

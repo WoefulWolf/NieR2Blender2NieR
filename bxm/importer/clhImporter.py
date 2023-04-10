@@ -24,8 +24,6 @@ def update_clh_bone_items():
         if 'ID' in bone:
             bone_items.append((str(bone['ID']), bone.name + " (" + str(bone['ID']) + ")", ""))
 
-    bone_items.sort(key=lambda a: int(a[0]))
-
 def get_bone_from_id(bone_id):
     armatureObj = None
     for obj in bpy.data.collections['WMB'].all_objects:
