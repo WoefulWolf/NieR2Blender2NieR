@@ -766,7 +766,7 @@ def getMeshBoundingBox(meshObj):
     return midPoint, scale
 
 class c_mesh(object):
-    def __init__(self, offsetMeshes, numMeshes, obj, wmb4=False):
+    def __init__(self, offsetMeshes, numMeshes, obj, wmb4=False, meshIDOffset=0):
 
         def get_BoundingBox(self, obj):
             midPoint, scale = getMeshBoundingBox(obj)
@@ -818,14 +818,66 @@ class c_mesh(object):
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
                 if mesh.name.split('-')[1] == obj.name.split('-')[1]:
                     self.batches.append(mesh['ID'])
-
-        self.offsetMaterials = self.nameOffset + len(self.name) + 1
+            
+            self.batches = sorted(self.batches)
+            
+            if meshIDOffset == 0:
+                prevBatch = self.batches[0] - 1
+                for batch in self.batches:
+                    if prevBatch + 1 < batch:
+                        meshIDOffset = batch - 1
+                        break
+                    prevBatch = batch
+            
+            self.batches0 = self.batches
+            self.batches1 = []
+            self.batches2 = []
+            self.batches3 = []
+            if meshIDOffset > 0:
+                for i, batch in enumerate(self.batches):
+                    if batch > meshIDOffset:
+                        self.batches0 = self.batches[0:i]
+                        self.batches3 = self.batches[i:]
+                        break
+                
+                self.batches3 = [batch - meshIDOffset - 1 for batch in self.batches3]
+            #print(self.name, self.batches0, self.batches1, self.batches2, self.batches3)
+        
+        self.meshIDOffset = meshIDOffset
+        
         if wmb4:
-            self.batchesPointer = self.offsetMaterials
-            self.offsetMaterials += len(self.batches) * 2
-            self.offsetMaterials += 16 - (self.offsetMaterials % 16)
+            self.batch0Pointer = self.nameOffset + len(self.name) + 1
+            
+            self.batch1Pointer = self.batch0Pointer
+            self.batch1Pointer += len(self.batches0) * 2
+            if (self.batch1Pointer % 16) > 0:
+                self.batch1Pointer += 16 - (self.batch1Pointer % 16)
+            
+            self.batch2Pointer = self.batch1Pointer
+            self.batch2Pointer += len(self.batches1) * 2
+            if (self.batch2Pointer % 16) > 0:
+                self.batch2Pointer += 16 - (self.batch2Pointer % 16)
+            
+            self.batch3Pointer = self.batch2Pointer
+            self.batch3Pointer += len(self.batches2) * 2
+            if (self.batch3Pointer % 16) > 0:
+                self.batch3Pointer += 16 - (self.batch3Pointer % 16)
+            
+            self.offsetMaterials = self.batch3Pointer
+            self.offsetMaterials += len(self.batches3) * 2
+            if (self.offsetMaterials % 16) > 0:
+                self.offsetMaterials += 16 - (self.offsetMaterials % 16)
+            
+            if len(self.batches1) == 0:
+                self.batch1Pointer = 0
+            if len(self.batches2) == 0:
+                self.batch2Pointer = 0
+            if len(self.batches3) == 0:
+                self.batch3Pointer = 0
+        else:
+            self.offsetMaterials = self.nameOffset + len(self.name) + 1
 
-        self.materials =  get_materials(self, obj)
+        self.materials = get_materials(self, obj)
 
         self.numMaterials = len(self.materials)
 
@@ -844,7 +896,7 @@ class c_mesh(object):
             mesh_StructSize += len(self.name) + 1
             if wmb4:
                 #print(mesh_StructSize % 16)
-                mesh_StructSize += self.offsetMaterials - self.batchesPointer
+                mesh_StructSize += self.offsetMaterials - self.batch0Pointer
                 mesh_StructSize += len(self.materials) * 2
             else:
                 mesh_StructSize += len(self.materials) * 2
@@ -857,7 +909,8 @@ class c_mesh(object):
 
 class c_meshes(object):
     def __init__(self, offsetMeshes, wmb4=False):
-
+        
+        self.meshIDOffset = 0
         def get_meshes(self, offsetMeshes):
             meshes = []
 
@@ -891,7 +944,8 @@ class c_meshes(object):
                     if obj_name == meshName:
                         if obj_name not in meshes_added:
                             print('[+] Generating Mesh', meshName)
-                            mesh = c_mesh(offsetMeshes, numMeshes, obj, wmb4)
+                            mesh = c_mesh(offsetMeshes, numMeshes, obj, wmb4, self.meshIDOffset)
+                            self.meshIDOffset = mesh.meshIDOffset
                             meshes.append(mesh)
                             meshes_added.append(obj_name)
                             offsetMeshes += mesh.mesh_StructSize
@@ -1095,7 +1149,7 @@ class c_vertexGroup(object):
         elif self.vertexFlags in {5, 7}:                                          
             self.vertexExDataSize = 8 if wmb4 else 12                                    
         elif self.vertexFlags in {10, 14}:
-            self.vertexExDataSize = 16
+            self.vertexExDataSize = 8 if wmb4 else 16
         elif self.vertexFlags in {11, 12}:
             self.vertexExDataSize = 20
 
@@ -1682,7 +1736,8 @@ class c_generate_data(object):
             currentOffset += self.textures_Size
             print('textures_Size: ', self.textures_Size)
             
-            currentOffset += 16 - (currentOffset % 16)
+            if currentOffset % 16 > 0:
+                currentOffset += 16 - (currentOffset % 16)
             
             self.meshes_Offset = currentOffset
             self.meshes = c_meshes(self.meshes_Offset, True)

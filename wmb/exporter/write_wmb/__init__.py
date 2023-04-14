@@ -418,10 +418,14 @@ def create_wmb_meshes(wmb_file, data, wmb4=False):
             write_float(wmb_file, val)
         
         if wmb4:
-            write_uInt32(wmb_file, mesh.batchesPointer)
-            write_uInt32(wmb_file, len(mesh.batches))
-            for i in range(6): # 3 more batch groups? really?
-                write_uInt32(wmb_file, 0)
+            write_uInt32(wmb_file, mesh.batch0Pointer)
+            write_uInt32(wmb_file, len(mesh.batches0))
+            write_uInt32(wmb_file, mesh.batch1Pointer)
+            write_uInt32(wmb_file, len(mesh.batches1))
+            write_uInt32(wmb_file, mesh.batch2Pointer)
+            write_uInt32(wmb_file, len(mesh.batches2))
+            write_uInt32(wmb_file, mesh.batch3Pointer)
+            write_uInt32(wmb_file, len(mesh.batches3))
         write_uInt32(wmb_file, mesh.offsetMaterials)        # offsetMaterials
         write_uInt32(wmb_file, mesh.numMaterials)           # numMaterials
         if not wmb4:
@@ -432,7 +436,17 @@ def create_wmb_meshes(wmb_file, data, wmb4=False):
         wmb_file.seek(mesh.nameOffset)
         write_string(wmb_file, mesh.name)                   # name
         if wmb4:
-            for batch in mesh.batches:
+            wmb_file.seek(mesh.batch0Pointer)
+            for batch in mesh.batches0:
+                write_uInt16(wmb_file, batch)
+            wmb_file.seek(mesh.batch1Pointer)
+            for batch in mesh.batches1:
+                write_uInt16(wmb_file, batch)
+            wmb_file.seek(mesh.batch2Pointer)
+            for batch in mesh.batches2:
+                write_uInt16(wmb_file, batch)
+            wmb_file.seek(mesh.batch3Pointer)
+            for batch in mesh.batches3:
                 write_uInt16(wmb_file, batch)
             wmb_file.seek(mesh.offsetMaterials)
         for material in mesh.materials:
@@ -525,7 +539,7 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
                 # for val in vertexExData[1][0]:                      # UVMap 3
                 #     write_float16(wmb_file, val)
                 writeUV.write(wmb_file, vertexExData[1][0])
-            elif vertexGroup.vertexFlags == 7:                      # [7]
+            elif vertexGroup.vertexFlags == 7 or (wmb4 and vertexGroup.vertexFlags == 10): # [7]
                 if not wmb4:
                     # UVMap 1
                     writeUV.write(wmb_file, vertexExData[1][0])
