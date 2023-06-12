@@ -105,7 +105,7 @@ class c_bones(object):
                     tPosition = localPosition
 
                     blenderName = bone.name
-                    bone = [ID, parentIndex, localPosition.xyz, localRotation, localScale.xyz, position.xyz, rotation, scale.xyz, tPosition.xyz, blenderName]
+                    bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
                     _bones.append(bone)
                     break
 
