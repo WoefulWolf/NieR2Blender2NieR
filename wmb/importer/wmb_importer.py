@@ -67,7 +67,7 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
     bones = amt.edit_bones
     for bone_data in bone_data_array:
         if bone_data[2] != -1:
-            print(bone_data[1])
+            #print(bone_data[1])
             bone = bones[bone_data[1]]
             bone.parent = bones[bone_data[3]]
             #if bone['ID'] <= len(bones): # probably make this be boneCount

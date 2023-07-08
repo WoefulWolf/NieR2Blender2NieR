@@ -571,7 +571,7 @@ class c_material(object):
         def get_textures_StructSize(self, textures):
             textures_StructSize = 0
             for texture in textures:
-                print(texture[1])
+                #print(texture[1])
                 textures_StructSize += 8 if not wmb4 else 4
                 if not wmb4:
                     textures_StructSize += len(texture[2]) + 1
