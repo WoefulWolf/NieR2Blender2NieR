@@ -31,7 +31,9 @@ class c_batch_supplements(object): # wmb4
             batchDatum[1] = batch['meshGroupIndex']
             batchDatum[2] = batch['Materials'][0]
             batchDatum[3] = batch['boneSetIndex'] # erroneously counting up, they should be 0 # fine on sam
-            self.batchData[0].append(batchDatum) # TODO USE ALL FOUR BASED ON SOMETHING # what
+            if not batch['batchGroup'] or batch['batchGroup'] < 0:
+                batch['batchGroup'] = 0
+            self.batchData[batch['batchGroup']].append(batchDatum)
         
         self.batchOffsets = [-1] * 4
         curOffset = startPointer + 32
@@ -244,10 +246,9 @@ class c_bones(object):
                         localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
                         localScale = Vector3(1, 1, 1) # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
                         
-                        if wmb4:
-                            position = Vector3(bone.tail_local[0], bone.tail_local[1], bone.tail_local[2])
-                        else:
-                            position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                        #if wmb4:
+                        #    position = Vector3(bone.tail_local[0], bone.tail_local[1], bone.tail_local[2])
+                        position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
                         rotation = Vector3(bone['worldRotation'][0], bone['worldRotation'][1], bone['worldRotation'][2])
                         scale = localScale
 
@@ -570,7 +571,7 @@ class c_material(object):
         def get_textures_StructSize(self, textures):
             textures_StructSize = 0
             for texture in textures:
-                #print(texture[1])
+                print(texture[1])
                 textures_StructSize += 8 if not wmb4 else 4
                 if not wmb4:
                     textures_StructSize += len(texture[2]) + 1
@@ -701,8 +702,9 @@ class c_material(object):
         self.shaderName = self.b_material['Shader_Name']
 
         self.techniqueName = self.b_material['Technique_Name']
-
+        
         self.materialNames_StructSize = self.offsetVariables + get_variables_StructSize(self, self.variables) - self.offsetName
+        print(self.offsetShaderName, self.offsetTextures, self.offsetParameterGroups, self.materialNames_StructSize)
 
 class c_materials(object):
     def __init__(self, materialsStart, wmb4=False):
@@ -1270,7 +1272,8 @@ class c_vertexGroup(object):
                                     boneSetIndx = boneSet.index(boneMapIndx)
                                     boneIndexes.append(boneSetIndx)
                                 else:
-                                    boneIndexes.append(boneID)
+                                    boneSetIndx = boneSet.index(boneID)
+                                    boneIndexes.append(boneSetIndx)
                         
                         if len(boneIndexes) == 0:
                             print(len(vertexes) ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
