@@ -607,6 +607,9 @@ def format_wmb_mesh(wmb, collection_name):
                             meshes.append(obj)
         
     if wmb.wmb_header.magicNumber == b'WMB4':
+        # very important, should be somewhere else
+        bpy.data.collections['WMB']['vertexFormat'] = wmb.wmb_header.vertexFormat
+        
         for batchIndex, batch in enumerate(wmb.batchArray):
             batchData = wmb.batchDataArray[batchIndex]
             vertexGroup = wmb.vertexGroupArray[batch.vertexGroupIndex]

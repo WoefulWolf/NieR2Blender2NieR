@@ -1149,12 +1149,20 @@ class c_vertexGroup(object):
         if self.vertexFlags == 4:                                         
             self.vertexExDataSize = 8       
         elif self.vertexFlags in {5, 7}:                                          
-            self.vertexExDataSize = 8 if wmb4 else 12                                    
+            self.vertexExDataSize = 12                                    
         elif self.vertexFlags in {10, 14}:
-            self.vertexExDataSize = 8 if wmb4 else 16
+            self.vertexExDataSize = 16
         elif self.vertexFlags in {11, 12}:
             self.vertexExDataSize = 20
-
+        
+        if wmb4:
+            vertexFormat = bpy.data.collections['WMB']['vertexFormat']
+            if vertexFormat in {0x10337, 0x00337}:
+                self.vertexExDataSize = 8
+            elif vertexFormat == 0x10137:
+                self.vertexExDataSize = 4
+            else:
+                self.vertexExDataSize = 0
 
         def get_boneMap(self):
             boneMap = []
@@ -1652,6 +1660,8 @@ class c_generate_data(object):
             self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize
             
         else:
+            
+            self.vertexFormat = bpy.data.collections['WMB']['vertexFormat']
 
             self.vertexGroups_Offset = currentOffset
             self.vertexGroups = c_vertexGroups(self.vertexGroups_Offset, True)

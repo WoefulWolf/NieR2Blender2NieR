@@ -693,7 +693,6 @@ class wmb4_batchData(object):
         self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
         
         print("Batch: %s;   Mesh: %s;   Material: %s;   Bone set: %s" % (str(self.batchIndex).rjust(3, " "), str(self.meshIndex).rjust(3, " "), str(self.materialIndex).rjust(3, " "), str(self.boneSetsIndex).rjust(3, " ")))
-        
 
 class wmb4_bone(object):
     """docstring for wmb4_bone"""

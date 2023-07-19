@@ -230,7 +230,7 @@ def create_wmb_header(wmb_file, data, wmb4=False):
         write_uInt32(wmb_file, numUnknown0)                          # numUnknown0
         print(' + numUnknown0: ', numUnknown0)
     else:
-        write_uInt32(wmb_file, 0x137 if data.vertexGroups.vertexGroups[0].vertexFlags == 0 else 0x10337) # TODO make this read the vertex format
+        write_uInt32(wmb_file, data.vertexFormat)
         
         write_Int16(wmb_file, 0 if data.numBones > 0 else -1) # TODO should be unsigned?
         write_Int16(wmb_file, -1) # TODO flags
@@ -509,26 +509,46 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
                 writeTangent.write(wmb_file, vertex[1])
             writeUV.write(wmb_file, vertex[3][0]) # UVMap 1
             
-            if vertexGroup.vertexFlags == 0 or wmb4: # Normal
-                if not wmb4:
-                    writeNormal.write(wmb_file, vertex[2])
-                else:
-                    #print(hex(vertex[2]))
-                    write_uInt32(wmb_file, vertex[2])
+            if vertexGroup.vertexFlags == 0 and not wmb4: # Normal
+                writeNormal.write(wmb_file, vertex[2])
+            elif wmb4:
+                #print(hex(vertex[2]))
+                write_uInt32(wmb_file, vertex[2])
             if wmb4:
                 writeTangent.write(wmb_file, vertex[1])
-            if vertexGroup.vertexFlags in {1, 4, 5, 12, 14}:
-                writeUV.write(wmb_file, vertex[3][1]) # UVMap 2
-            if vertexGroup.vertexFlags in {7, 10, 11} or wmb4:
-                writeBoneIndexes.write(wmb_file, vertex[4])
-                writeBoneWeights.write(wmb_file, vertex[5])
-            if vertexGroup.vertexFlags in {4, 5, 12, 14}:
-                writeColor.write(wmb_file, vertex[6])
+            
+            # bits that change based on flags
+            if wmb4:
+                #if data.vertexFlags in {0x10337, 0x10137, 0x00337, 0x00137}:
+                if data.vertexFlags & 0x30 == 0x30: # hehe i'm clever
+                    writeBoneIndexes.write(wmb_file, vertex[4])
+                    writeBoneWeights.write(wmb_file, vertex[5])
+                if data.vertexFlags in {0x10307, 0x10107}:
+                    writeColor.write(wmb_file, vertex[6])
+                if data.vertexFlags == 0x10307:
+                    writeUV.write(wmb_file, vertex[3][1]) # UVMap 2
+            
+            else:
+                if vertexGroup.vertexFlags in {1, 4, 5, 12, 14}:
+                    writeUV.write(wmb_file, vertex[3][1]) # UVMap 2
+                if vertexGroup.vertexFlags in {7, 10, 11}:
+                    writeBoneIndexes.write(wmb_file, vertex[4])
+                    writeBoneWeights.write(wmb_file, vertex[5])
+                if vertexGroup.vertexFlags in {4, 5, 12, 14}:
+                    writeColor.write(wmb_file, vertex[6])
             
         if vertexGroup.vertexExDataOffset > 0:
             wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # [normal, uv_maps, color]
-            if vertexGroup.vertexFlags in {1, 4}:                   # [1, 4]
+            
+            if wmb4:
+                writeColor.write(wmb_file, vertexExData[2])
+                if data.vertexFormat in {0x10337, 0x00337}:
+                    writeUV.write(wmb_file, vertexExData[1][0])
+                elif data.vertexFormat != 0x10137:
+                    print("How the hell is there vertexExData with a vertexFormat of %s?" % hex(data.vertexFormat))
+            
+            elif vertexGroup.vertexFlags in {1, 4}:                   # [1, 4]
                 # for val in vertexExData[0]:                         # normal
                 #     write_float16(wmb_file, val)
                 writeNormal.write(wmb_file, vertexExData[0])
@@ -539,15 +559,11 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
                 # for val in vertexExData[1][0]:                      # UVMap 3
                 #     write_float16(wmb_file, val)
                 writeUV.write(wmb_file, vertexExData[1][0])
-            elif vertexGroup.vertexFlags == 7 or (wmb4 and vertexGroup.vertexFlags == 10): # [7]
-                if not wmb4:
-                    # UVMap 1
-                    writeUV.write(wmb_file, vertexExData[1][0])
-                    # normal
-                    writeNormal.write(wmb_file, vertexExData[0])
-                else:
-                    writeColor.write(wmb_file, vertexExData[2])
-                    writeUV.write(wmb_file, vertexExData[1][0])
+            elif vertexGroup.vertexFlags == 7: # [7]
+                # UVMap 1
+                writeUV.write(wmb_file, vertexExData[1][0])
+                # normal
+                writeNormal.write(wmb_file, vertexExData[0])
             elif vertexGroup.vertexFlags == 10:                     # [10]
                 # for val in vertexExData[1][0]:                      # UVMap 1
                 #     write_float16(wmb_file, val)
