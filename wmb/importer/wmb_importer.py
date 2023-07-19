@@ -644,7 +644,7 @@ def format_wmb_mesh(wmb, collection_name):
                 batch.vertexGroupIndex, # vertexGroupIndex
                 batchIndex,
                 [batchData.materialIndex],
-                wmb.boneSetArray[batchData.boneSetsIndex], # boneSet
+                wmb.boneSetArray[batchData.boneSetsIndex] if batchData.boneSetsIndex > -1 else None, # boneSet
                 meshInfo[5], # vertexStart
                 batch.batchGroup        # batch group, which of the four supplements
             ], collection_name)

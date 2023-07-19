@@ -1177,6 +1177,8 @@ class c_vertexGroup(object):
 
         def get_boneSet(self, boneSetIndex):
             boneSet = []
+            if boneSetIndex == -1:
+                return boneSet
             for obj in bpy.data.collections['WMB'].all_objects:
                 if obj.type == 'ARMATURE':
                     boneSetArrayRef = obj.data["boneSetArray"][boneSetIndex]

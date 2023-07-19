@@ -37,7 +37,7 @@ def create_wmb_batch_supplement(wmb_file, data): # wmb4
             write_uInt32(wmb_file, batch[0]) # batchIndex
             write_uInt32(wmb_file, batch[1]) # meshIndex
             write_uInt16(wmb_file, batch[2]) # materialIndex
-            write_uInt16(wmb_file, batch[3]) # boneSetsIndex
+            write_Int16(wmb_file, batch[3]) # boneSetsIndex
             write_uInt32(wmb_file, 0x100)    # unknown10, hopefully just padding
             # TODO fuck it wasn't padding, sometimes 0x100 sometimes not
 
@@ -519,13 +519,13 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
             
             # bits that change based on flags
             if wmb4:
-                #if data.vertexFlags in {0x10337, 0x10137, 0x00337, 0x00137}:
-                if data.vertexFlags & 0x30 == 0x30: # hehe i'm clever
+                #if data.vertexFormat in {0x10337, 0x10137, 0x00337, 0x00137}:
+                if data.vertexFormat & 0x30 == 0x30: # hehe i'm clever
                     writeBoneIndexes.write(wmb_file, vertex[4])
                     writeBoneWeights.write(wmb_file, vertex[5])
-                if data.vertexFlags in {0x10307, 0x10107}:
+                if data.vertexFormat in {0x10307, 0x10107}:
                     writeColor.write(wmb_file, vertex[6])
-                if data.vertexFlags == 0x10307:
+                if data.vertexFormat == 0x10307:
                     writeUV.write(wmb_file, vertex[3][1]) # UVMap 2
             
             else:
@@ -542,6 +542,8 @@ def create_wmb_vertexGroups(wmb_file, data, wmb4=False):
         for vertexExData in vertexGroup.vertexesExData:             # [normal, uv_maps, color]
             
             if wmb4:
+                if vertexGroup.vertexExDataOffset <= 0:
+                    break
                 writeColor.write(wmb_file, vertexExData[2])
                 if data.vertexFormat in {0x10337, 0x00337}:
                     writeUV.write(wmb_file, vertexExData[1][0])
