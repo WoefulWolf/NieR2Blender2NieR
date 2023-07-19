@@ -1282,7 +1282,24 @@ class c_vertexGroup(object):
                                     boneSetIndx = boneSet.index(boneMapIndx)
                                     boneIndexes.append(boneSetIndx)
                                 else:
-                                    boneSetIndx = boneSet.index(boneID)
+                                    try:
+                                        boneSetIndx = boneSet.index(boneID)
+                                    except: # bone not in set? well fuck that
+                                        for obj in bpy.data.collections['WMB'].all_objects:
+                                            if obj.type == 'ARMATURE':
+                                            
+                                                allbonesets = list(obj.data["boneSetArray"])
+                                                boneSet = list(allbonesets[bvertex_obj_obj["boneSetIndex"]])
+                                                if boneID not in boneSet:
+                                                    boneSet.append(boneID)
+                                                allbonesets[bvertex_obj_obj["boneSetIndex"]] = boneSet
+                                                obj.data["boneSetArray"] = allbonesets
+                                                boneSetIndx = boneSet.index(boneID) # i swear to god # !!!
+                                    
+                                    if boneSetIndx < 0 or boneSetIndx > 255:
+                                        print("Hmm, boneID of", boneSetIndx, "could be a problem...")
+                                        print(boneSet)
+                                    
                                     boneIndexes.append(boneSetIndx)
                         
                         if len(boneIndexes) == 0:
