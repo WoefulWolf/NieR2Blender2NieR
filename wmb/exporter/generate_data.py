@@ -1342,7 +1342,7 @@ class c_vertexGroup(object):
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
                     color = []
-                    if self.vertexFlags in {4, 5, 12, 14} or (wmb4 and self.vertexFlags == 7):
+                    if self.vertexFlags in {4, 5, 12, 14} or (wmb4 and vertexFormat >= 0x337):
                         if len (bvertex_obj_obj.data.vertex_colors) == 0:
                             print("Object had no vertex colour layer when one was expected - creating one.")
                             new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
@@ -1358,52 +1358,59 @@ class c_vertexGroup(object):
                     normal = []
                     uv_maps = []
                     color = []
-                    if self.vertexFlags in {10, 11}:
-                        if len (bvertex_obj_obj.data.vertex_colors) == 0:
-                            print("Object had no vertex colour layer when one was expected - creating one.")
-                            new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
-
-                    if self.vertexFlags in {1, 4, 5, 7, 10, 11, 12, 14}:
-                        normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                    if wmb4:
+                        if vertexFormat in {0x10337, 0x10137, 0x00337}:
+                            if vertexFormat != 0x10137:
+                                uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                                uv_maps.append(uv2)
+                            loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
+                            color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
                     
-                    if self.vertexFlags == 5:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
+                    else:
+                        
+                        if self.vertexFlags in {10, 11}:
+                            if len (bvertex_obj_obj.data.vertex_colors) == 0:
+                                print("Object had no vertex colour layer when one was expected - creating one.")
+                                new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
 
-                    elif self.vertexFlags == 7:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        if wmb4:
+                        if self.vertexFlags in {1, 4, 5, 7, 10, 11, 12, 14}:
+                            normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                        
+                        if self.vertexFlags == 5:
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
+                            uv_maps.append(uv3)
+
+                        elif self.vertexFlags == 7:
+                            uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv2)
+
+                        elif self.vertexFlags == 10:
+                            uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv2)
                             loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
                             color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
 
-                    elif self.vertexFlags == 10:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
+                        elif self.vertexFlags == 11:
+                            uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv2)
+                            loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
+                            color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv3)
 
-                    elif self.vertexFlags == 11:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv3)
+                        elif self.vertexFlags == 12:
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
+                            uv_maps.append(uv3)
+                            uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
+                            uv_maps.append(uv4)
+                            uv5 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 4)
+                            uv_maps.append(uv5)
 
-                    elif self.vertexFlags == 12:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-                        uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
-                        uv_maps.append(uv4)
-                        uv5 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 4)
-                        uv_maps.append(uv5)
-
-                    elif self.vertexFlags == 14:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-                        uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
-                        uv_maps.append(uv4)
+                        elif self.vertexFlags == 14:
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
+                            uv_maps.append(uv3)
+                            uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
+                            uv_maps.append(uv4)
                     
                     vertexExData = [normal, uv_maps, color]
                     vertexesExData.append(vertexExData)

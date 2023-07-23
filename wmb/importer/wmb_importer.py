@@ -136,8 +136,9 @@ def construct_mesh(mesh_data, collection_name):            # [meshName, vertices
             truename = obj.name
         if truename == name:
             matched_objs += 1
-    if matched_objs > 0:
-        name += "-%d" % matched_objs
+    # i'd prefer to avoid the numbers when there's only one mesh, but it's
+    # basically impossible to tell once the names contain hyphens
+    name += "-%d" % matched_objs
     vertices = mesh_data[1]
     faces = mesh_data[2]
     has_bone = mesh_data[3]
