@@ -9,6 +9,12 @@ import bpy, math
 from mathutils import Vector
 from time import time
 
+def getRealName(name):
+    splitname = name.split('-')
+    splitname.pop(0)
+    splitname.pop()
+    return '-'.join(splitname)
+
 class c_batch(object):
     def __init__(self, obj, vertexGroupIndex, indexStart, prev_numVertexes, boneSetIndex, vertexStart=0):
         self.vertexGroupIndex = vertexGroupIndex
@@ -749,9 +755,9 @@ def getMeshBoundingBox(meshObj):
     yVals = []
     zVals = []
 
-    meshName = meshObj.name.split("-")[1]
+    meshName = getRealName(meshObj.name)
     for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
-        if obj.name.split("-")[1] == meshName:
+        if getRealName(obj.name) == meshName:
             xVals.extend([getObjectCenter(obj)[0] - obj.dimensions[0]/2, getObjectCenter(obj)[0] + obj.dimensions[0]/2])
             yVals.extend([getObjectCenter(obj)[1] - obj.dimensions[1]/2, getObjectCenter(obj)[1] + obj.dimensions[1]/2])
             zVals.extend([getObjectCenter(obj)[2] - obj.dimensions[2]/2, getObjectCenter(obj)[2] + obj.dimensions[2]/2])
@@ -776,9 +782,9 @@ class c_mesh(object):
 
         def get_materials(self, obj):
             materials = []
-            obj_mesh_name = obj.name.split('-')[1]
+            obj_mesh_name = getRealName(obj.name)
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                if mesh.name.split('-')[1] == obj_mesh_name:
+                if getRealName(mesh.name) == obj_mesh_name:
                     for slot in mesh.material_slots:
                         material = slot.material
                         for indx, mat in enumerate(getUsedMaterials()):
@@ -793,9 +799,9 @@ class c_mesh(object):
         def get_bones(self, obj):
             bones = []
             numBones = 0
-            obj_mesh_name = obj.name.split('-')[1]
+            obj_mesh_name = getRealName(obj.name)
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                if mesh.name.split('-')[1] == obj_mesh_name:
+                if getRealName(mesh.name) == obj_mesh_name:
                     for vertexGroup in mesh.vertex_groups:
                         boneName = vertexGroup.name.replace('bone', '')
                         if int(boneName) not in bones:
@@ -813,12 +819,12 @@ class c_mesh(object):
 
         self.boundingBox = get_BoundingBox(self, obj)
 
-        self.name = obj.name.split('-')[1]
+        self.name = getRealName(obj.name)
         
         if wmb4:
             self.batches = []
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                if mesh.name.split('-')[1] == obj.name.split('-')[1]:
+                if getRealName(mesh.name) == getRealName(obj.name):
                     self.batches.append(mesh['ID'])
             
             self.batches = sorted(self.batches)
@@ -919,7 +925,7 @@ class c_meshes(object):
             meshNames = []
             
             for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                obj_name = obj.name.split('-')[1]
+                obj_name = getRealName(obj.name)
                 if obj_name not in meshNames:
                     meshNames.append(obj_name)
 
@@ -929,7 +935,7 @@ class c_meshes(object):
             meshNamesSorted = [None] * numMeshes
             for meshName in meshNames:
                 for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                    obj_name = obj.name.split('-')[1]
+                    obj_name = getRealName(obj.name)
                     if obj_name == meshName:
                         meshNamesSorted[obj["meshGroupIndex"]] = meshName
                         break
@@ -942,7 +948,7 @@ class c_meshes(object):
             
             for meshName in meshNamesSorted:
                 for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                    obj_name = obj.name.split('-')[1]
+                    obj_name = getRealName(obj.name)
                     if obj_name == meshName:
                         if obj_name not in meshes_added:
                             print('[+] Generating Mesh', meshName)
@@ -1730,7 +1736,8 @@ class c_generate_data(object):
                 currentOffset += self.boneIndexTranslateTable_Size
                 print('boneIndexTranslateTable_Size: ', self.boneIndexTranslateTable_Size)
 
-                #currentOffset += 16 - (currentOffset % 16)
+                # psyche, this one is padded
+                currentOffset += 16 - (currentOffset % 16)
             else:
                 self.bones_Offset = 0
                 self.bones = None

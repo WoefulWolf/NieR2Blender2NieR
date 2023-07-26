@@ -661,14 +661,14 @@ class wmb4_batch(object):
         self.indexStart = read_int32(wmb_fp)
         self.numVertexes = read_uint32(wmb_fp)
         self.numIndexes = read_uint32(wmb_fp)
-        """
+        
         print()
         print("vertexGroupIndex:", self.vertexGroupIndex)
         print("vertexStart:     ", self.vertexStart)
         print("vertexCount:     ", self.numVertexes)
         print("indexStart:      ", self.indexStart)
         print("indexCount:      ", self.numIndexes)
-        """
+        
 
 class wmb4_batchDescription(object):
     """docstring for wmb4_batchDescription"""
@@ -1363,7 +1363,17 @@ class WMB(object):
                     else:
                         #boneIndices = meshVertices[i].boneIndices
                         # this is really rather obvious
-                        boneIndices = [boneSet[index] for index in meshVertices[i].boneIndices]
+                        try:
+                            boneIndices = [boneSet[index] for index in meshVertices[i].boneIndices]
+                        except:
+                            print()
+                            print("Hey! Something's wrong with the bone set. The mesh %s has these bone indices:" % mesh.name)
+                            #print([vertexes.boneIndices for vertexes in meshVertices])
+                            print("...nevermind that's way too much to print")
+                            print("(They go up to %d)" % max([max(vertexes.boneIndices) for vertexes in meshVertices]))
+                            print("But the bone set (#%d) only has %d bones." % (bonesetIndex, len(boneSet)))
+                            print("How terrible! Time to crash.")
+                            assert False
                     boneWeightInfos[newIndex] = [boneIndices, meshVertices[i].boneWeights]
                     s = sum(meshVertices[i].boneWeights)
                     if s > 1.000000001 or s < 0.999999:
