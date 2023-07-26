@@ -1473,6 +1473,21 @@ class c_vertexGroup(object):
 class c_vertexGroups(object):
     def __init__(self, offsetVertexGroups, wmb4=False):
         self.offsetVertexGroups = offsetVertexGroups
+        
+        # Alright, before we do anything, let's fix the mess that is object IDs
+        allMeshes = [obj for obj in bpy.data.collections['WMB'].all_objects if obj.type == 'MESH']
+        for obj in allMeshes:
+            obj['ID'] += 1000 * obj['batchGroup'] # make sure it's sorted by batch group
+        
+        allIDs = sorted([obj['ID'] for obj in allMeshes])
+        allMeshes = sorted(allMeshes, key=lambda batch: batch['ID']) # sort
+        
+        for obj in allMeshes:
+            obj['ID'] = allIDs.index(obj['ID']) # masterstroke
+        
+        print("New IDs generated:")
+        print([(obj.name, obj['ID']) for obj in allMeshes])
+        
 
         def get_vertexGroups(self, offsetVertexGroups):
             vertexGroupIndex = []
