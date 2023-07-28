@@ -4,6 +4,9 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+# Add this import statement at the top of the file
+from ...scr.importer import scr_importer
+
 from ...consts import DAT_EXTENSIONS
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
@@ -26,6 +29,11 @@ def importDtt(only_extract, filepath):
     wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dtt', last_filename[:-4] + '.wmb')
     if not os.path.exists(wmb_filepath):
         wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4] + '.wmb')                     # if not in dtt, then must be in dat
+    # if not in dat, must be an scr
+    scr_mode = False
+    if not os.path.exists(wmb_filepath):
+        scr_mode = True
+        scr_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4].split("scr")[0] + '.scr')
 
     # WTA/WTP
     wtaPath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wta')
@@ -41,9 +49,21 @@ def importDtt(only_extract, filepath):
     setExportFieldsFromImportFile(filepath, True)
     enableVisibilitySelector()
 
-    # WMB
-    from ...wmb.importer import wmb_importer
-    wmb_importer.main(only_extract, wmb_filepath)
+    # SCR
+    #def execute(self, context):
+    #    if self.filepath.lower().endswith('.scr'):
+    #        return scr_importer.main(self.filepath)
+    #    else:
+    #        return importDtt(self.only_extract, self.filepath)
+    
+    # SCR but new and improved
+    if scr_mode:
+        from ...scr.importer import scr_importer
+        scr_importer.ImportSCR.main(scr_filepath, False)
+    else:
+        # WMB
+        from ...wmb.importer import wmb_importer
+        wmb_importer.main(only_extract, wmb_filepath)
 
     # COL
     col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
@@ -73,6 +93,7 @@ class ImportNierDtt(bpy.types.Operator, ImportHelper):
     only_extract: bpy.props.BoolProperty(name="Only Extract DTT/DAT Contents. (Experimental)", default=False)
 
     def execute(self, context):
+        print("Unpacking", self.filepath)
         from ...wmb.importer import wmb_importer
         if self.reset_blend and not self.only_extract:
             wmb_importer.reset_blend()
