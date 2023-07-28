@@ -4,6 +4,9 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
+# Add this import statement at the top of the file
+from ...scr.importer import scr_importer
+
 from ...consts import DAT_EXTENSIONS
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
@@ -40,6 +43,13 @@ def importDtt(only_extract, filepath):
 
     setExportFieldsFromImportFile(filepath, True)
     enableVisibilitySelector()
+
+    # SCR
+    def execute(self, context):
+        if self.filepath.lower().endswith('.scr'):
+            return scr_importer.main(self.filepath)
+        else:
+            return importDtt(self.only_extract, self.filepath)
 
     # WMB
     from ...wmb.importer import wmb_importer

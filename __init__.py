@@ -31,6 +31,7 @@ from .lay.importer.layImportOperator import ImportNierLay
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.exporter.wmbExportOperator import ExportMGRRWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
+from .scr.importer.scrImportOperator import ImportSCR
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
 
@@ -63,12 +64,14 @@ class CreateLayVisualization(bpy.types.Operator):
 
 def menu_func_import(self, context):
     pcoll = preview_collections["main"]
+    raiden_icon = pcoll["raiden"]
     yorha_icon = pcoll["yorha"]
     self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierWmb.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierDat.bl_idname, text="DAT File for Nier:Automata (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierCol.bl_idname, text="Collision File for Nier:Automata (.col)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierLay.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportSCR.bl_idname, text="SCR File for MGR: Revengeance (.scr)", icon_value=raiden_icon.icon_id)
     self.layout.operator(ImportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierGaArea.bl_idname, text="Visual Environment File (GAArea.bxm)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierYaxXml.bl_idname, text="YAX XML for Nier:Automata (.xml)", icon_value=yorha_icon.icon_id)
@@ -92,6 +95,7 @@ def menu_func_utils(self, context):
 
 classes = (
     ImportNierWmb,
+    ImportSCR,
     ImportNierDtt,
     ImportNierDat,
     ImportNierCol,
@@ -125,6 +129,7 @@ def register():
     my_icons_dir = os.path.join(os.path.dirname(__file__), "icons")
     pcoll.load("emil", os.path.join(my_icons_dir, "emil.png"), 'IMAGE')
     pcoll.load("yorha", os.path.join(my_icons_dir, "yorha-filled.png"), 'IMAGE')
+    pcoll.load("raiden", os.path.join(my_icons_dir, "raiden.png"), 'IMAGE')
     preview_collections["main"] = pcoll
 
     for cls in classes:
