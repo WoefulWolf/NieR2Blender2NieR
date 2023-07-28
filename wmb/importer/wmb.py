@@ -655,6 +655,7 @@ class wmb3_worldData(object):
 class wmb4_batch(object):
     """docstring for wmb4_batch"""
     def read(self, wmb_fp):
+        self.batchGroup = -1 # overwritten later
         self.vertexGroupIndex = read_uint32(wmb_fp)
         self.vertexStart = read_int32(wmb_fp)
         self.indexStart = read_int32(wmb_fp)
@@ -692,7 +693,6 @@ class wmb4_batchData(object):
         self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
         
         print("Batch: %s;   Mesh: %s;   Material: %s;   Bone set: %s" % (str(self.batchIndex).rjust(3, " "), str(self.meshIndex).rjust(3, " "), str(self.materialIndex).rjust(3, " "), str(self.boneSetsIndex).rjust(3, " ")))
-        
 
 class wmb4_bone(object):
     """docstring for wmb4_bone"""
@@ -738,6 +738,7 @@ class wmb4_boneSet(object):
         self.pointer = read_uint32(wmb_fp)
         self.count = read_uint32(wmb_fp)
         self.boneSet = load_data_array(wmb_fp, self.pointer, self.count, uint8)
+        print("Boneset:", self.count, self.boneSet)
 
 class wmb4_boneTranslateTable(object):
     """docstring for wmb4_boneTranslateTable"""
@@ -1265,6 +1266,11 @@ class WMB(object):
             for batchDataSubgroup in self.batchDescription.batchData:
                 self.batchDataArray.extend(batchDataSubgroup)
             
+            # hack
+            for dataNum, batchDataSubgroup in enumerate(self.batchDescription.batchData):
+                for batchData in batchDataSubgroup:
+                    self.batchArray[batchData.batchIndex].batchGroup = dataNum
+            
             self.hasBone = self.wmb_header.boneCount > 0
             print("Bones?", self.hasBone)
             self.boneArray = load_data_array(wmb_fp, self.wmb_header.bonePointer, self.wmb_header.boneCount, wmb4_bone, None, True)
@@ -1354,8 +1360,10 @@ class WMB(object):
                     boneSet = self.boneSetArray[bonesetIndex]
                     if not wmb4:
                         boneIndices = [self.boneMap[boneSet[index]] for index in meshVertices[i].boneIndices]
-                    else: # maps are for losers
-                        boneIndices = meshVertices[i].boneIndices
+                    else:
+                        #boneIndices = meshVertices[i].boneIndices
+                        # this is really rather obvious
+                        boneIndices = [boneSet[index] for index in meshVertices[i].boneIndices]
                     boneWeightInfos[newIndex] = [boneIndices, meshVertices[i].boneWeights]
                     s = sum(meshVertices[i].boneWeights)
                     if s > 1.000000001 or s < 0.999999:

@@ -53,9 +53,10 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
     #print([bone[1] for bone in bone_data_array])
     
     for bone_data in bone_data_array:
+        #print(bone_data[1])
         bone = amt.edit_bones.new(bone_data[1])
-        bone.head = Vector(bone_data[4]) - Vector((0 , 0.01, 0))  
-        bone.tail = Vector(bone_data[4]) #+ Vector((0 , 0.01, 0))                
+        bone.head = Vector(bone_data[4]) #- Vector((0 , 0.01, 0))  
+        bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))                
         bone['ID'] = bone_data[6]
 
         bone['localPosition'] = bone_data[7]
@@ -66,11 +67,19 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
     bones = amt.edit_bones
     for bone_data in bone_data_array:
         if bone_data[2] != -1:
+            #print(bone_data[1])
             bone = bones[bone_data[1]]
             bone.parent = bones[bone_data[3]]
             #if bone['ID'] <= len(bones): # probably make this be boneCount
-            if bones[bone_data[3]].tail != bone.tail:
-                bone.head = bone.parent.tail
+            if bone.parent.tail == bone.parent.head + Vector((0, 0.01, 0)):
+                bone.parent.tail = bone.head
+                if bone.parent.tail == bone.parent.head:
+                    bone.parent.tail += Vector((0, 0.01, 0))
+    
+    #for bone in amt.edit_bones:
+    #    if bone.tail == bone.head + Vector((0, 0.01, 0)):
+    #        bone.tail = bone.head
+    #        bone.head = bone.parent.head
     
     #for bone_data in bone_data_array:
     #    if bone_data[6] > len(bones):
@@ -115,7 +124,7 @@ def copy_bone_tree(source_root, target_amt):
     for child in source_root.children:
         copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):            # [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex, batchID?, materialArray?, boneSet?, vertexStart?], collection_name
+def construct_mesh(mesh_data, collection_name):            # [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex, batchID?, materialArray?, boneSet?, vertexStart?, batchGroup?], collection_name
     name = mesh_data[0]
     matched_objs = 0
     for obj in bpy.data.objects:
@@ -127,8 +136,9 @@ def construct_mesh(mesh_data, collection_name):            # [meshName, vertices
             truename = obj.name
         if truename == name:
             matched_objs += 1
-    if matched_objs > 0:
-        name += "-%d" % matched_objs
+    # i'd prefer to avoid the numbers when there's only one mesh, but it's
+    # basically impossible to tell once the names contain hyphens
+    name += "-%d" % matched_objs
     vertices = mesh_data[1]
     faces = mesh_data[2]
     has_bone = mesh_data[3]
@@ -185,6 +195,7 @@ def construct_mesh(mesh_data, collection_name):            # [meshName, vertices
         obj['ID'] = mesh_data[14]
         obj['Materials'] = mesh_data[15]
         obj['VertexIndexStart'] = mesh_data[17]
+        obj['batchGroup'] = mesh_data[18]
 
     obj.data.flip_normals()
     return obj
@@ -597,6 +608,9 @@ def format_wmb_mesh(wmb, collection_name):
                             meshes.append(obj)
         
     if wmb.wmb_header.magicNumber == b'WMB4':
+        # very important, should be somewhere else
+        bpy.data.collections['WMB']['vertexFormat'] = wmb.wmb_header.vertexFormat
+        
         for batchIndex, batch in enumerate(wmb.batchArray):
             batchData = wmb.batchDataArray[batchIndex]
             vertexGroup = wmb.vertexGroupArray[batch.vertexGroupIndex]
@@ -631,8 +645,9 @@ def format_wmb_mesh(wmb, collection_name):
                 batch.vertexGroupIndex, # vertexGroupIndex
                 batchIndex,
                 [batchData.materialIndex],
-                wmb.boneSetArray[batchData.boneSetsIndex], # boneSet
-                meshInfo[5]  # vertexStart
+                wmb.boneSetArray[batchData.boneSetsIndex] if batchData.boneSetsIndex > -1 else None, # boneSet
+                meshInfo[5], # vertexStart
+                batch.batchGroup        # batch group, which of the four supplements
             ], collection_name)
             meshes.append(obj)
     
@@ -787,9 +802,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
         armature_name_split = armature_no_wmb.split('/')
         armature_name = armature_name_split[-1]
         construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
-    else:
-        return
-
+    
     meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
     wmb_materials = get_wmb_material(wmb, texture_dir)
     materials = []

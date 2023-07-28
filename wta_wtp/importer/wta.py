@@ -13,6 +13,7 @@ class WTA(object):
             self.unknownArrayOffset1 = read_uint32(wta_fp)
             self.textureIdentifierArrayOffset = read_uint32(wta_fp)
             self.unknownArrayOffset2 = read_uint32(wta_fp)
+            
             self.wtaTextureOffset = [0] * self.textureCount
             self.wtaTextureSize = [0] * self.textureCount
             self.wtaTextureIdentifier = [0] * self.textureCount

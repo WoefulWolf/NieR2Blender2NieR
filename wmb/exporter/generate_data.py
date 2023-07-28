@@ -31,7 +31,9 @@ class c_batch_supplements(object): # wmb4
             batchDatum[1] = batch['meshGroupIndex']
             batchDatum[2] = batch['Materials'][0]
             batchDatum[3] = batch['boneSetIndex'] # erroneously counting up, they should be 0 # fine on sam
-            self.batchData[0].append(batchDatum) # TODO USE ALL FOUR BASED ON SOMETHING # what
+            if not batch['batchGroup'] or batch['batchGroup'] < 0:
+                batch['batchGroup'] = 0
+            self.batchData[batch['batchGroup']].append(batchDatum)
         
         self.batchOffsets = [-1] * 4
         curOffset = startPointer + 32
@@ -244,10 +246,9 @@ class c_bones(object):
                         localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
                         localScale = Vector3(1, 1, 1) # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
                         
-                        if wmb4:
-                            position = Vector3(bone.tail_local[0], bone.tail_local[1], bone.tail_local[2])
-                        else:
-                            position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                        #if wmb4:
+                        #    position = Vector3(bone.tail_local[0], bone.tail_local[1], bone.tail_local[2])
+                        position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
                         rotation = Vector3(bone['worldRotation'][0], bone['worldRotation'][1], bone['worldRotation'][2])
                         scale = localScale
 
@@ -701,8 +702,9 @@ class c_material(object):
         self.shaderName = self.b_material['Shader_Name']
 
         self.techniqueName = self.b_material['Technique_Name']
-
+        
         self.materialNames_StructSize = self.offsetVariables + get_variables_StructSize(self, self.variables) - self.offsetName
+        print(self.offsetShaderName, self.offsetTextures, self.offsetParameterGroups, self.materialNames_StructSize)
 
 class c_materials(object):
     def __init__(self, materialsStart, wmb4=False):
@@ -766,7 +768,7 @@ def getMeshBoundingBox(meshObj):
     return midPoint, scale
 
 class c_mesh(object):
-    def __init__(self, offsetMeshes, numMeshes, obj, wmb4=False):
+    def __init__(self, offsetMeshes, numMeshes, obj, wmb4=False, meshIDOffset=0):
 
         def get_BoundingBox(self, obj):
             midPoint, scale = getMeshBoundingBox(obj)
@@ -818,14 +820,66 @@ class c_mesh(object):
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
                 if mesh.name.split('-')[1] == obj.name.split('-')[1]:
                     self.batches.append(mesh['ID'])
-
-        self.offsetMaterials = self.nameOffset + len(self.name) + 1
+            
+            self.batches = sorted(self.batches)
+            
+            if meshIDOffset == 0:
+                prevBatch = self.batches[0] - 1
+                for batch in self.batches:
+                    if prevBatch + 1 < batch:
+                        meshIDOffset = batch - 1
+                        break
+                    prevBatch = batch
+            
+            self.batches0 = self.batches
+            self.batches1 = []
+            self.batches2 = []
+            self.batches3 = []
+            if meshIDOffset > 0:
+                for i, batch in enumerate(self.batches):
+                    if batch > meshIDOffset:
+                        self.batches0 = self.batches[0:i]
+                        self.batches3 = self.batches[i:]
+                        break
+                
+                self.batches3 = [batch - meshIDOffset - 1 for batch in self.batches3]
+            #print(self.name, self.batches0, self.batches1, self.batches2, self.batches3)
+        
+        self.meshIDOffset = meshIDOffset
+        
         if wmb4:
-            self.batchesPointer = self.offsetMaterials
-            self.offsetMaterials += len(self.batches) * 2
-            self.offsetMaterials += 16 - (self.offsetMaterials % 16)
+            self.batch0Pointer = self.nameOffset + len(self.name) + 1
+            
+            self.batch1Pointer = self.batch0Pointer
+            self.batch1Pointer += len(self.batches0) * 2
+            if (self.batch1Pointer % 16) > 0:
+                self.batch1Pointer += 16 - (self.batch1Pointer % 16)
+            
+            self.batch2Pointer = self.batch1Pointer
+            self.batch2Pointer += len(self.batches1) * 2
+            if (self.batch2Pointer % 16) > 0:
+                self.batch2Pointer += 16 - (self.batch2Pointer % 16)
+            
+            self.batch3Pointer = self.batch2Pointer
+            self.batch3Pointer += len(self.batches2) * 2
+            if (self.batch3Pointer % 16) > 0:
+                self.batch3Pointer += 16 - (self.batch3Pointer % 16)
+            
+            self.offsetMaterials = self.batch3Pointer
+            self.offsetMaterials += len(self.batches3) * 2
+            if (self.offsetMaterials % 16) > 0:
+                self.offsetMaterials += 16 - (self.offsetMaterials % 16)
+            
+            if len(self.batches1) == 0:
+                self.batch1Pointer = 0
+            if len(self.batches2) == 0:
+                self.batch2Pointer = 0
+            if len(self.batches3) == 0:
+                self.batch3Pointer = 0
+        else:
+            self.offsetMaterials = self.nameOffset + len(self.name) + 1
 
-        self.materials =  get_materials(self, obj)
+        self.materials = get_materials(self, obj)
 
         self.numMaterials = len(self.materials)
 
@@ -844,7 +898,7 @@ class c_mesh(object):
             mesh_StructSize += len(self.name) + 1
             if wmb4:
                 #print(mesh_StructSize % 16)
-                mesh_StructSize += self.offsetMaterials - self.batchesPointer
+                mesh_StructSize += self.offsetMaterials - self.batch0Pointer
                 mesh_StructSize += len(self.materials) * 2
             else:
                 mesh_StructSize += len(self.materials) * 2
@@ -857,7 +911,8 @@ class c_mesh(object):
 
 class c_meshes(object):
     def __init__(self, offsetMeshes, wmb4=False):
-
+        
+        self.meshIDOffset = 0
         def get_meshes(self, offsetMeshes):
             meshes = []
 
@@ -891,7 +946,8 @@ class c_meshes(object):
                     if obj_name == meshName:
                         if obj_name not in meshes_added:
                             print('[+] Generating Mesh', meshName)
-                            mesh = c_mesh(offsetMeshes, numMeshes, obj, wmb4)
+                            mesh = c_mesh(offsetMeshes, numMeshes, obj, wmb4, self.meshIDOffset)
+                            self.meshIDOffset = mesh.meshIDOffset
                             meshes.append(mesh)
                             meshes_added.append(obj_name)
                             offsetMeshes += mesh.mesh_StructSize
@@ -1093,12 +1149,20 @@ class c_vertexGroup(object):
         if self.vertexFlags == 4:                                         
             self.vertexExDataSize = 8       
         elif self.vertexFlags in {5, 7}:                                          
-            self.vertexExDataSize = 8 if wmb4 else 12                                    
+            self.vertexExDataSize = 12                                    
         elif self.vertexFlags in {10, 14}:
             self.vertexExDataSize = 16
         elif self.vertexFlags in {11, 12}:
             self.vertexExDataSize = 20
-
+        
+        if wmb4:
+            vertexFormat = bpy.data.collections['WMB']['vertexFormat']
+            if vertexFormat in {0x10337, 0x00337}:
+                self.vertexExDataSize = 8
+            elif vertexFormat == 0x10137:
+                self.vertexExDataSize = 4
+            else:
+                self.vertexExDataSize = 0
 
         def get_boneMap(self):
             boneMap = []
@@ -1113,6 +1177,8 @@ class c_vertexGroup(object):
 
         def get_boneSet(self, boneSetIndex):
             boneSet = []
+            if boneSetIndex == -1:
+                return boneSet
             for obj in bpy.data.collections['WMB'].all_objects:
                 if obj.type == 'ARMATURE':
                     boneSetArrayRef = obj.data["boneSetArray"][boneSetIndex]
@@ -1216,7 +1282,25 @@ class c_vertexGroup(object):
                                     boneSetIndx = boneSet.index(boneMapIndx)
                                     boneIndexes.append(boneSetIndx)
                                 else:
-                                    boneIndexes.append(boneID)
+                                    try:
+                                        boneSetIndx = boneSet.index(boneID)
+                                    except: # bone not in set? well fuck that
+                                        for obj in bpy.data.collections['WMB'].all_objects:
+                                            if obj.type == 'ARMATURE':
+                                            
+                                                allbonesets = list(obj.data["boneSetArray"])
+                                                boneSet = list(allbonesets[bvertex_obj_obj["boneSetIndex"]])
+                                                if boneID not in boneSet:
+                                                    boneSet.append(boneID)
+                                                allbonesets[bvertex_obj_obj["boneSetIndex"]] = boneSet
+                                                obj.data["boneSetArray"] = allbonesets
+                                                boneSetIndx = boneSet.index(boneID) # i swear to god # !!!
+                                    
+                                    if boneSetIndx < 0 or boneSetIndx > 255:
+                                        print("Hmm, boneID of", boneSetIndx, "could be a problem...")
+                                        print(boneSet)
+                                    
+                                    boneIndexes.append(boneSetIndx)
                         
                         if len(boneIndexes) == 0:
                             print(len(vertexes) ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
@@ -1258,7 +1342,7 @@ class c_vertexGroup(object):
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
                     color = []
-                    if self.vertexFlags in {4, 5, 12, 14} or (wmb4 and self.vertexFlags == 7):
+                    if self.vertexFlags in {4, 5, 12, 14} or (wmb4 and vertexFormat >= 0x337):
                         if len (bvertex_obj_obj.data.vertex_colors) == 0:
                             print("Object had no vertex colour layer when one was expected - creating one.")
                             new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
@@ -1274,52 +1358,59 @@ class c_vertexGroup(object):
                     normal = []
                     uv_maps = []
                     color = []
-                    if self.vertexFlags in {10, 11}:
-                        if len (bvertex_obj_obj.data.vertex_colors) == 0:
-                            print("Object had no vertex colour layer when one was expected - creating one.")
-                            new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
-
-                    if self.vertexFlags in {1, 4, 5, 7, 10, 11, 12, 14}:
-                        normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                    if wmb4:
+                        if vertexFormat in {0x10337, 0x10137, 0x00337}:
+                            if vertexFormat != 0x10137:
+                                uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                                uv_maps.append(uv2)
+                            loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
+                            color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
                     
-                    if self.vertexFlags == 5:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
+                    else:
+                        
+                        if self.vertexFlags in {10, 11}:
+                            if len (bvertex_obj_obj.data.vertex_colors) == 0:
+                                print("Object had no vertex colour layer when one was expected - creating one.")
+                                new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
 
-                    elif self.vertexFlags == 7:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        if wmb4:
+                        if self.vertexFlags in {1, 4, 5, 7, 10, 11, 12, 14}:
+                            normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                        
+                        if self.vertexFlags == 5:
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
+                            uv_maps.append(uv3)
+
+                        elif self.vertexFlags == 7:
+                            uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv2)
+
+                        elif self.vertexFlags == 10:
+                            uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv2)
                             loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
                             color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
 
-                    elif self.vertexFlags == 10:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
+                        elif self.vertexFlags == 11:
+                            uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv2)
+                            loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
+                            color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
+                            uv_maps.append(uv3)
 
-                    elif self.vertexFlags == 11:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv3)
+                        elif self.vertexFlags == 12:
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
+                            uv_maps.append(uv3)
+                            uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
+                            uv_maps.append(uv4)
+                            uv5 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 4)
+                            uv_maps.append(uv5)
 
-                    elif self.vertexFlags == 12:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-                        uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
-                        uv_maps.append(uv4)
-                        uv5 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 4)
-                        uv_maps.append(uv5)
-
-                    elif self.vertexFlags == 14:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-                        uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
-                        uv_maps.append(uv4)
+                        elif self.vertexFlags == 14:
+                            uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
+                            uv_maps.append(uv3)
+                            uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
+                            uv_maps.append(uv4)
                     
                     vertexExData = [normal, uv_maps, color]
                     vertexesExData.append(vertexExData)
@@ -1595,6 +1686,8 @@ class c_generate_data(object):
             self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize
             
         else:
+            
+            self.vertexFormat = bpy.data.collections['WMB']['vertexFormat']
 
             self.vertexGroups_Offset = currentOffset
             self.vertexGroups = c_vertexGroups(self.vertexGroups_Offset, True)
@@ -1682,7 +1775,8 @@ class c_generate_data(object):
             currentOffset += self.textures_Size
             print('textures_Size: ', self.textures_Size)
             
-            currentOffset += 16 - (currentOffset % 16)
+            if currentOffset % 16 > 0:
+                currentOffset += 16 - (currentOffset % 16)
             
             self.meshes_Offset = currentOffset
             self.meshes = c_meshes(self.meshes_Offset, True)
