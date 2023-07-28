@@ -63,7 +63,7 @@ class ImportSCR:
 
     @staticmethod
     def import_models(file_path):
-            wmb_importer.main(file_path)
+            wmb_importer.main(False, file_path)
 
 def reset_blend():
     #bpy.ops.object.mode_set(mode='OBJECT')

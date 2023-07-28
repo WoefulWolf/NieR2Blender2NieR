@@ -817,7 +817,7 @@ class wmb4_material(object):
 
 class wmb4_mesh(object):
     """docstring for wmb4_mesh"""
-    def read(self, wmb_fp):
+    def read(self, wmb_fp, scr_mode=None):
         super(wmb4_mesh, self).__init__()
         self.namePointer = read_uint32(wmb_fp)
         self.boundingBox = []
@@ -838,6 +838,12 @@ class wmb4_mesh(object):
         self.materialsCount = read_uint32(wmb_fp)
         
         self.name = load_data(wmb_fp, self.namePointer, filestring)
+        if scr_mode is not None and scr_mode[0]:
+            if self.name != "SCR_MESH":
+                print()
+                print("Hey, very interesting. A map file with custom mesh names.")
+            else:
+                self.name = scr_mode[1]
         print("\nMesh name: %s" % self.name)
         
         self.batches0 = load_data_array(wmb_fp, self.batch0Pointer, self.batch0Count, uint16)
@@ -1102,6 +1108,16 @@ class WMB(object):
             wmb_path = wmb_file.replace('.dat','.dtt')
         wtp_path = wmb_file.replace('.dat','.dtt').replace('.wmb','.wtp')
         wta_path = wmb_file.replace('.dtt','.dat').replace('.wmb','.wta')
+        scr_mode = False
+        if "extracted_scr" in wmb_path:
+            scr_mode = True
+            split_path = wmb_file.replace("/", "\\").split("\\")
+            wmbinscr_name = split_path.pop()[:-4] # wmb name
+            split_path.pop() # "extracted_scr"
+            datdttname = split_path.pop()[:-4] # e.g. "ra01"
+            # wtb is both wtp and wta
+            wtp_path = "\\".join(split_path) + "\\%s.dtt\\%sscr.wtb" % (datdttname, datdttname)
+            wta_path = "\\".join(split_path) + "\\%s.dtt\\%sscr.wtb" % (datdttname, datdttname)
 
         if os.path.exists(wtp_path):    
             print('open wtp file')
@@ -1119,6 +1135,7 @@ class WMB(object):
             wmb_fp = open(wmb_path, "rb")
         else:
             print("DTT/DAT does not contain WMB file.")
+            print("Last attempted path:", wmb_path)
             return
         
         
@@ -1290,7 +1307,7 @@ class WMB(object):
             
             self.textureArray = load_data_array(wmb_fp, self.wmb_header.texturePointer, self.wmb_header.textureCount, wmb4_texture)
             
-            self.meshArray = load_data_array(wmb_fp, self.wmb_header.meshPointer, self.wmb_header.meshCount, wmb4_mesh)
+            self.meshArray = load_data_array(wmb_fp, self.wmb_header.meshPointer, self.wmb_header.meshCount, wmb4_mesh, [scr_mode, wmbinscr_name])
             
             for mesh in self.meshArray:
                 for materialIndex, material in enumerate(mesh.materials):
