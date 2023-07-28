@@ -1018,11 +1018,12 @@ class c_textures(object): # wmb4
              wtf platinum
             """
             for index in [0, 1, 3, 5, 6, 7, 9, 10, 11, 12, 13]:
-                if index > len(mat.textures)-1:
+                if index >= len(mat.textures):
                     break
                 if mat.textures[index][1] not in (x[1] for x in self.textures):
                     self.textures.append([0x63, mat.textures[index][1]])
         
+        #print(self.textures)
         self.textures_StructSize = 8 * len(self.textures)
 
 class c_unknownWorldData(object):

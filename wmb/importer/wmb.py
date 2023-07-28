@@ -661,14 +661,14 @@ class wmb4_batch(object):
         self.indexStart = read_int32(wmb_fp)
         self.numVertexes = read_uint32(wmb_fp)
         self.numIndexes = read_uint32(wmb_fp)
-        
+        """
         print()
         print("vertexGroupIndex:", self.vertexGroupIndex)
         print("vertexStart:     ", self.vertexStart)
         print("vertexCount:     ", self.numVertexes)
         print("indexStart:      ", self.indexStart)
         print("indexCount:      ", self.numIndexes)
-        
+        """
 
 class wmb4_batchDescription(object):
     """docstring for wmb4_batchDescription"""

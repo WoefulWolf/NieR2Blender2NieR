@@ -840,7 +840,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
                 #if len(materials) > 0:
                     #print("Some materials made for", mesh.name)
                 # sanity checks are for wimps
-                print(mesh.name, materialIndex)
+                #print(mesh.name, materialIndex)
                 add_material_to_mesh(mesh, [materials[materialIndex]], uvMaps)
     
     if wmb.hasBone:
