@@ -671,7 +671,7 @@ def get_wmb_material(wmb, texture_dir):
                             textures[index] = wmb.textureArray[texture].id # change index to WTA identifier
                         except:
                             print("An error has occured! It seems that the global texture array doesn't have enough elements (%d). I think. This is a generic exception." % texture)
-                            print("I'm deleting this.")
+                            #print("I'm deleting this.")
                             textures[index] = -1
                     for index, texture in textures.copy().items():
                         if texture == -1:

@@ -29,12 +29,14 @@ class WTA(object):
                 self.wtaTextureIdentifier[i] = "%08x"%read_uint32(wta_fp)
                 wta_fp.seek(self.unknownArrayOffset1 + i * 4)
                 self.unknownArray1[i] = "%08x"%read_uint32(wta_fp)
+                """
                 print()
                 print("TEXTURE DATA YEAH BABY")
                 print("Texture pointer:", hex(self.wtaTextureOffset[i]))
                 print("Texture size:", hex(self.wtaTextureSize[i]))
                 print("Texture identifier:", self.wtaTextureIdentifier[i])
                 print("Un fucking known:", self.unknownArray1[i])
+                """
             wta_fp.seek(self.unknownArrayOffset2 )
             unknownval =  (wta_fp.read(4))
             while unknownval:
