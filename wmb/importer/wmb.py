@@ -1109,6 +1109,7 @@ class WMB(object):
         wtp_path = wmb_file.replace('.dat','.dtt').replace('.wmb','.wtp')
         wta_path = wmb_file.replace('.dtt','.dat').replace('.wmb','.wta')
         scr_mode = False
+        wmbinscr_name = ""
         if "extracted_scr" in wmb_path:
             scr_mode = True
             split_path = wmb_file.replace("/", "\\").split("\\")
