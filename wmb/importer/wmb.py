@@ -1119,7 +1119,9 @@ class WMB(object):
             # wtb is both wtp and wta
             wtp_path = "\\".join(split_path) + "\\%s.dtt\\%sscr.wtb" % (datdttname, datdttname)
             wta_path = "\\".join(split_path) + "\\%s.dtt\\%sscr.wtb" % (datdttname, datdttname)
-
+            if os.path.exists(wtp_path.replace('scr.wtb', 'cmn.wtb')):
+                # common files, jackpot!
+                pass # todo: load this somewhere other files can get it
         if os.path.exists(wtp_path):    
             print('open wtp file')
             self.wtp_fp = open(wtp_path,'rb')

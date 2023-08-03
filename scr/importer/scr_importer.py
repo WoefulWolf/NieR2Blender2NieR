@@ -55,15 +55,15 @@ class ImportSCR:
                     print('SCR extract completed')
                     if not (context):
                         print('Beginning WMB import')                    
-                        ImportSCR.import_models(file_path)  
+                        ImportSCR.import_models(file_path, header)  
                         
                 print('SCR extract completed')
                 
             return {'FINISHED'}
 
     @staticmethod
-    def import_models(file_path):
-            wmb_importer.main(False, file_path)
+    def import_models(file_path, scr_header):
+            wmb_importer.main(False, file_path, scr_header)
 
 def reset_blend():
     #bpy.ops.object.mode_set(mode='OBJECT')

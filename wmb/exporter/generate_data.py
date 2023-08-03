@@ -1278,7 +1278,7 @@ class c_vertexGroup(object):
                     # Bones
                     boneIndexes = []
                     boneWeights = []
-                    if self.vertexFlags in {7, 10, 11} or wmb4:
+                    if self.vertexFlags in {7, 10, 11} or (wmb4 and vertexFormat & 0x30 == 0x30):
                         # Bone Indices
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:

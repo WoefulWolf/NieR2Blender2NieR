@@ -124,7 +124,12 @@ def copy_bone_tree(source_root, target_amt):
     for child in source_root.children:
         copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):            # [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex, batchID?, materialArray?, boneSet?, vertexStart?, batchGroup?], collection_name
+def construct_mesh(mesh_data, collection_name):
+    # [meshName, vertices, faces, has_bone,
+    #  boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors,
+    #  LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex,
+    #  boundingBox, vertexGroupIndex, batchID?, materialArray?,
+    #  boneSet?, vertexStart?, batchGroup?, scr_header?], collection_name
     name = mesh_data[0]
     matched_objs = 0
     for obj in bpy.data.objects:
@@ -196,6 +201,12 @@ def construct_mesh(mesh_data, collection_name):            # [meshName, vertices
         obj['Materials'] = mesh_data[15]
         obj['VertexIndexStart'] = mesh_data[17]
         obj['batchGroup'] = mesh_data[18]
+        if mesh_data[19] is not None:
+            transform = mesh_data[19][2:11]
+            #print(mesh_data[19])
+            obj.location = Vector((transform[0], -transform[2], transform[1]))
+            obj.rotation_euler = (math.radians(90) + transform[3], transform[5], transform[4])
+            obj.scale = Vector((transform[6], transform[8], transform[7]))
 
     obj.data.flip_normals()
     return obj
@@ -486,7 +497,7 @@ def add_material_to_mesh(mesh, materials , uvs):
     #mesh.hide = True
     mesh.select_set(False)
     
-def format_wmb_mesh(wmb, collection_name):
+def format_wmb_mesh(wmb, collection_name, scr_header=None):
     meshes = []
     uvMaps = [[], [], [], [], []]
     usedVerticeIndexArrays = []
@@ -647,7 +658,8 @@ def format_wmb_mesh(wmb, collection_name):
                 [batchData.materialIndex],
                 wmb.boneSetArray[batchData.boneSetsIndex] if batchData.boneSetsIndex > -1 else None, # boneSet
                 meshInfo[5], # vertexStart
-                batch.batchGroup        # batch group, which of the four supplements
+                batch.batchGroup,       # batch group, which of the four supplements
+                scr_header   # header data for SCR transformations
             ], collection_name)
             meshes.append(obj)
     
@@ -773,7 +785,7 @@ def import_unknowWorldDataArray(wmb):
         unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
     bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
-def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb')):
+def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb'), scr_header = None):
     #reset_blend()
     wmb = WMB(wmb_file, only_extract)
     wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
@@ -803,7 +815,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
         armature_name = armature_name_split[-1]
         construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
     
-    meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
+    meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, scr_header)
     wmb_materials = get_wmb_material(wmb, texture_dir)
     materials = []
     bpy.context.scene.WTAMaterials.clear()
