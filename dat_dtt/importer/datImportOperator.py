@@ -33,6 +33,7 @@ def importDtt(only_extract, filepath):
     scr_mode = False
     if not os.path.exists(wmb_filepath):
         scr_mode = True
+        print("Could not find WMB at %s, switching to SCR" % wmb_filepath)
         scr_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4].split("scr")[0] + '.scr')
 
     # WTA/WTP

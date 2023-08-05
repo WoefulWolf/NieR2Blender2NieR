@@ -2,6 +2,7 @@
 import os
 import json
 import bpy
+import struct # even for only two lines
 from time import time
 
 from ...utils.util import print_class, create_dir
@@ -999,6 +1000,8 @@ class wmb4_vertex(object):
             self.color, \
             self.textureU2, self.textureV2 \
             = wmb4_vertex.smartRead10307.read(wmb_fp)
+            
+            self.color = list(struct.unpack("<BBBB", struct.pack("<I", self.color))) # byte me
             return
             
         elif vertexFormat == 0x10107:
@@ -1008,6 +1011,8 @@ class wmb4_vertex(object):
             self.tangentX, self.tangentY, self.tangentZ, self.tangentD, \
             self.color \
             = wmb4_vertex.smartRead10107.read(wmb_fp)
+            
+            self.color = list(struct.unpack("<BBBB", struct.pack("<I", self.color))) # byte me
             return
             
         elif vertexFormat == 0x00107:
@@ -1026,7 +1031,7 @@ class wmb4_vertexExData(object):
     """docstring for wmb4_vertexExData"""
     def read(self, wmb_fp, vertexFormat):
         if (vertexFormat & 0x337) == 0x337: # both 10337 and 00337
-            self.color = read_uint32(wmb_fp)
+            self.color = list(read_uint8_x4(wmb_fp))
             self.textureU2 = read_float16(wmb_fp)
             self.textureV2 = read_float16(wmb_fp)
             return
@@ -1368,10 +1373,10 @@ class WMB(object):
             usedVertices[newIndex] = (meshVertices[i].positionX, meshVertices[i].positionY, meshVertices[i].positionZ)
 
             # Vertex_Colors are stored in VertexData
-            if vertexGroup.vertexFlags in {4, 5, 12, 14}:
+            if vertexGroup.vertexFlags in {4, 5, 12, 14} or (wmb4 and self.wmb_header.vertexFormat in {0x10307, 0x10107}):
                 vertex_colors.append(meshVertices[i].color)
             # Vertex_Colors are stored in VertexExData
-            if vertexGroup.vertexFlags in {10, 11}:
+            if vertexGroup.vertexFlags in {10, 11} or (wmb4 and self.wmb_header.vertexFormat in {0x10337, 0x10137, 0x00337}):
                 vertex_colors.append(vertexesExData[i].color)
 
             if self.hasBone:

@@ -311,6 +311,7 @@ def construct_materials(texture_dir, material):
     # Albedo Nodes
     albedo_nodes = []
     albedo_mixRGB_nodes = []
+    albedo_invert_nodes = []
     for i, textureID in enumerate(albedo_maps.values()):
         texture_file = "%s/%s.dds" % (texture_dir, textureID)
         if os.path.exists(texture_file):
@@ -319,6 +320,11 @@ def construct_materials(texture_dir, material):
             albedo_image.location = 0,i*-60
             albedo_image.image = bpy.data.images.load(texture_file)
             albedo_image.hide = True
+                
+            invert_shader = nodes.new(type="ShaderNodeInvert")
+            albedo_invert_nodes.append(invert_shader)
+            invert_shader.location = 600, (i-1)*-60
+            invert_shader.hide = True
             if i > 0:
                 albedo_image.label = "g_AlbedoMap" + str(i-1)
             else:
@@ -332,7 +338,11 @@ def construct_materials(texture_dir, material):
     # Albedo Links
     if len(albedo_nodes) == 1:
         albedo_principled = links.new(albedo_nodes[0].outputs['Color'], principled.inputs['Base Color'])
-        alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
+        if shader_name[4] == "0":
+            glossy_in_link = links.new(albedo_nodes[0].outputs['Alpha'], albedo_invert_nodes[0].inputs['Color'])
+            rough_link = links.new(albedo_invert_nodes[0].outputs['Color'], principled.inputs['Roughness'])
+        else:
+            alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
     elif len(albedo_mixRGB_nodes) > 0:
         albedo_link = links.new(albedo_nodes[0].outputs['Color'], albedo_mixRGB_nodes[0].inputs['Color2'])
         for i, node in enumerate(albedo_mixRGB_nodes):
