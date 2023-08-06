@@ -9,6 +9,18 @@ from ...utils.util import print_class, create_dir
 from ...utils.ioUtils import SmartIO, read_uint8_x4, to_string, read_float, read_float16, read_uint16, read_uint8, read_uint64, read_int16, read_int32, read_string
 from ...wta_wtp.importer.wta import *
 
+DEBUG_HEADER_PRINT = True
+DEBUG_VERTEXGROUP_PRINT = False
+#DEBUG_VERTEX_PRINT = # Don't even *think* about it.
+DEBUG_BATCHES_PRINT = False
+DEBUG_BATCHSUPPLEMENT_PRINT = False
+DEBUG_BONE_PRINT = False # do not recommend, there can be lots of bones
+DEBUG_BITT_PRINT = False # nothing at all
+DEBUG_BONESET_PRINT = False
+DEBUG_MATERIAL_PRINT = False
+DEBUG_TEXTURE_PRINT = False # basically nothing at the moment
+DEBUG_MESH_PRINT = False
+
 class WMB_Header(object):
     """ fucking header    """
     size = 112 + 16 # apparently padding, can't be too safe
@@ -97,30 +109,30 @@ class WMB_Header(object):
             self.meshCount = read_uint32(wmb_fp)
             self.unknownPointer = read_uint32(wmb_fp)
             
-            print("WMB4 header information")
-            print(" version       %s" % self.version)
-            print(" vertexFormat  %s" % hex(self.vertexFormat))
-            print(" referenceBone %d" % self.referenceBone)
-            print(" flags         %s" % hex(self.flags))
-            print(" bounding_box1 %d" % self.bounding_box1)
-            print(" bounding_box2 %d" % self.bounding_box2)
-            print(" bounding_box3 %d" % self.bounding_box3)
-            print(" bounding_box4 %d" % self.bounding_box4)
-            print(" bounding_box5 %d" % self.bounding_box5)
-            print(" bounding_box6 %d" % self.bounding_box6)
-            print()
-            print(" Name               Pointer Count")
-            print(" vertexGroup        ", hex(self.vertexGroupPointer).rjust(7, " "), str(self.vertexGroupCount).rjust(6, " "))
-            print(" batch              ", hex(self.batchPointer).rjust(7, " "), str(self.batchCount).rjust(6, " "))
-            print(" batchDescription   ", hex(self.batchDescriptionPointer).rjust(7, " "))
-            print(" bone               ", hex(self.bonePointer).rjust(7, " "), str(self.boneCount).rjust(6, " "))
-            print(" boneTranslateTable ", hex(self.boneTranslateTablePointer).rjust(7, " "), str(self.boneTranslateTableSize).rjust(6, " "))
-            print(" boneSet            ", hex(self.boneSetPointer).rjust(7, " "), str(self.boneSetCount).rjust(6, " "))
-            print(" material           ", hex(self.materialPointer).rjust(7, " "), str(self.materialCount).rjust(6, " "))
-            print(" texture            ", hex(self.texturePointer).rjust(7, " "), str(self.textureCount).rjust(6, " "))
-            print(" mesh               ", hex(self.meshPointer).rjust(7, " "), str(self.meshCount).rjust(6, " "))
-            print(" ??????             ", hex(self.unknownPointer).rjust(7, " "))
-            print()
+            if DEBUG_HEADER_PRINT:
+                print("WMB4 header information")
+                print(" version       %s" % self.version)
+                print(" vertexFormat  %s" % hex(self.vertexFormat))
+                print(" referenceBone %d" % self.referenceBone)
+                print(" flags         %s" % hex(self.flags))
+                print(" bounding_box1 %d" % self.bounding_box1)
+                print(" bounding_box2 %d" % self.bounding_box2)
+                print(" bounding_box3 %d" % self.bounding_box3)
+                print(" bounding_box4 %d" % self.bounding_box4)
+                print(" bounding_box5 %d" % self.bounding_box5)
+                print(" bounding_box6 %d" % self.bounding_box6)
+                print()
+                print(" Name               Pointer Count")
+                print(" vertexGroup       ", hex(self.vertexGroupPointer).rjust(7, " "), str(self.vertexGroupCount).rjust(6, " "))
+                print(" batch             ", hex(self.batchPointer).rjust(7, " "), str(self.batchCount).rjust(6, " "))
+                print(" batchDescription  ", hex(self.batchDescriptionPointer).rjust(7, " "))
+                print(" bone              ", hex(self.bonePointer).rjust(7, " "), str(self.boneCount).rjust(6, " "))
+                print(" boneTranslateTable", hex(self.boneTranslateTablePointer).rjust(7, " "), str(self.boneTranslateTableSize).rjust(6, " "))
+                print(" boneSet           ", hex(self.boneSetPointer).rjust(7, " "), str(self.boneSetCount).rjust(6, " "))
+                print(" material          ", hex(self.materialPointer).rjust(7, " "), str(self.materialCount).rjust(6, " "))
+                print(" texture           ", hex(self.texturePointer).rjust(7, " "), str(self.textureCount).rjust(6, " "))
+                print(" mesh              ", hex(self.meshPointer).rjust(7, " "), str(self.meshCount).rjust(6, " "))
+                print(" ??????            ", hex(self.unknownPointer).rjust(7, " "))
 
 
 
@@ -662,14 +674,13 @@ class wmb4_batch(object):
         self.indexStart = read_int32(wmb_fp)
         self.numVertexes = read_uint32(wmb_fp)
         self.numIndexes = read_uint32(wmb_fp)
-        """
-        print()
-        print("vertexGroupIndex:", self.vertexGroupIndex)
-        print("vertexStart:     ", self.vertexStart)
-        print("vertexCount:     ", self.numVertexes)
-        print("indexStart:      ", self.indexStart)
-        print("indexCount:      ", self.numIndexes)
-        """
+        if DEBUG_BATCHES_PRINT:
+            print(" ",
+              self.vertexGroupIndex.ljust(10, " "),
+              ("%d-%d" % (self.vertexStart, self.vertexStart + self.numVertexes)).ljust(11, " "),
+              ("%d-%d" % (self.indexStart, self.indexStart + self.numIndexes))
+            )
+        
 
 class wmb4_batchDescription(object):
     """docstring for wmb4_batchDescription"""
@@ -679,6 +690,8 @@ class wmb4_batchDescription(object):
         self.batchData = []
         #print("Iterating over 4, length %d" % 4)
         for dataNum in range(4):
+            if DEBUG_BATCHSUPPLEMENT_PRINT:
+                print("Batch supplement for group", dataNum)
             self.batchDataPointers.append(read_uint32(wmb_fp))
             self.batchDataCounts.append(read_uint32(wmb_fp))
             self.batchData.append(load_data_array(wmb_fp, self.batchDataPointers[-1], self.batchDataCounts[-1], wmb4_batchData))
@@ -693,7 +706,8 @@ class wmb4_batchData(object):
         self.boneSetsIndex = read_int16(wmb_fp)
         self.unknown10 = read_uint32(wmb_fp) # again, maybe just padding
         
-        print("Batch: %s;   Mesh: %s;   Material: %s;   Bone set: %s" % (str(self.batchIndex).rjust(3, " "), str(self.meshIndex).rjust(3, " "), str(self.materialIndex).rjust(3, " "), str(self.boneSetsIndex).rjust(3, " ")))
+        if DEBUG_BATCHSUPPLEMENT_PRINT:
+            print(" Batch: %s;   Mesh: %s;   Material: %s;   Bone set: %s" % (str(self.batchIndex).rjust(3, " "), str(self.meshIndex).rjust(3, " "), str(self.materialIndex).rjust(3, " "), str(self.boneSetsIndex).rjust(3, " ")))
 
 class wmb4_bone(object):
     """docstring for wmb4_bone"""
@@ -721,16 +735,18 @@ class wmb4_bone(object):
         #self.boneNumber = self.boneIndex
         # self... wait, why is world_rotation used twice?
         self.world_position_tpose = (0, 0, 0)
-        """
-        print()
-        print("index:      ", index)
-        print("ID:         ", self.boneNumber)
-        print("Unknown:    ", self.unknown02)
-        print("Parent:     ", self.parentIndex)
-        print("Rotation(?):", self.unknownRotation)
-        print("Position A: ", "(%s, %s, %s)" % self.local_position)
-        print("Position B: ", "(%s, %s, %s)" % self.world_position)
-        """
+        
+        if DEBUG_BONE_PRINT:
+            # there are lots of bones, so this should be compressed better
+            print()
+            print("index:      ", index)
+            print("ID:         ", self.boneNumber)
+            print("Unknown:    ", self.unknown02)
+            print("Parent:     ", self.parentIndex)
+            print("Rotation(?):", self.unknownRotation)
+            print("Position A: ", "(%s, %s, %s)" % self.local_position)
+            print("Position B: ", "(%s, %s, %s)" % self.world_position)
+        
 
 class wmb4_boneSet(object):
     """docstring for wmb4_boneSet"""
@@ -739,7 +755,8 @@ class wmb4_boneSet(object):
         self.pointer = read_uint32(wmb_fp)
         self.count = read_uint32(wmb_fp)
         self.boneSet = load_data_array(wmb_fp, self.pointer, self.count, uint8)
-        print("Boneset:", self.count, self.boneSet)
+        if DEBUG_BONESET_PRINT:
+            print("Count:", self.count, "Data:", self.boneSet)
 
 class wmb4_boneTranslateTable(object):
     """docstring for wmb4_boneTranslateTable"""
@@ -810,9 +827,9 @@ class wmb4_material(object):
             else:
                 self.textureArray["tex" + str(i)] = texture
         
-        print("Textures!", texturesArray)
-        self.parameterGroups = self.parameters # we back
-        #self.parameterGroups = [] # look: there are no materials, materials no longer exist
+        if DEBUG_MATERIAL_PRINT:
+            print("Count:", self.trueTexturesCount*2, "Data:", texturesArray)
+        self.parameterGroups = self.parameters
         self.materialName = "UnusedMaterial" # mesh name overrides
         self.wmb4 = True
 
@@ -845,13 +862,15 @@ class wmb4_mesh(object):
                 print("Hey, very interesting. A map file with custom mesh names.")
             else:
                 self.name = scr_mode[1]
-        print("\nMesh name: %s" % self.name)
+        if DEBUG_MESH_PRINT:
+            print("\nMesh name: %s" % self.name)
         
         self.batches0 = load_data_array(wmb_fp, self.batch0Pointer, self.batch0Count, uint16)
         self.batches1 = load_data_array(wmb_fp, self.batch1Pointer, self.batch1Count, uint16)
         self.batches2 = load_data_array(wmb_fp, self.batch2Pointer, self.batch2Count, uint16)
         self.batches3 = load_data_array(wmb_fp, self.batch3Pointer, self.batch3Count, uint16)
-        print("Batches:", self.batches0, self.batches1, self.batches2, self.batches3)
+        if DEBUG_MESH_PRINT:
+            print("Batches:", self.batches0, self.batches1, self.batches2, self.batches3)
         
         self.materials = load_data_array(wmb_fp, self.materialsPointer, self.materialsCount, uint16)
 
@@ -877,12 +896,13 @@ class wmb4_vertexGroup(object):
         self.faceIndexesCount = read_uint32(wmb_fp)
         
         
-        print("Vertex group information    Pointer Count")
-        print(" vertexesData            " + hex(self.vertexesDataPointer).rjust(10, " ") + str(self.vertexesCount).rjust(6, " "))
-        print(" extraVertexesData       " + hex(self.extraVertexesDataPointer).rjust(10, " "))
-        print(" unknown                 " + hex(self.unknownPointer).rjust(10, " ") + str(self.unknownCount).rjust(6, " "))
-        print(" faceIndexes             " + hex(self.faceIndexesPointer).rjust(10, " ") + str(self.faceIndexesCount).rjust(6, " "))
-        print()
+        if DEBUG_VERTEXGROUP_PRINT:
+            print()
+            print("Vertex group information    Pointer Count")
+            print(" vertexesData            " + hex(self.vertexesDataPointer).rjust(10, " ") + str(self.vertexesCount).rjust(6, " "))
+            print(" extraVertexesData       " + hex(self.extraVertexesDataPointer).rjust(10, " "))
+            print(" unknown                 " + hex(self.unknownPointer).rjust(10, " ") + str(self.unknownCount).rjust(6, " "))
+            print(" faceIndexes             " + hex(self.faceIndexesPointer).rjust(10, " ") + str(self.faceIndexesCount).rjust(6, " "))
         
         
         self.vertexArray = load_data_array(wmb_fp, self.vertexesDataPointer, self.vertexesCount, wmb4_vertex, vertexFormat)
@@ -1284,8 +1304,15 @@ class WMB(object):
         elif self.wmb_header.magicNumber == b'WMB4':
             self.vertexGroupArray = load_data_array(wmb_fp, self.wmb_header.vertexGroupPointer, self.wmb_header.vertexGroupCount, wmb4_vertexGroup, self.wmb_header.vertexFormat)
             
+            if DEBUG_BATCHES_PRINT:
+                print()
+                print("Batches:")
+                print("vertexGroup vertexRange indexRange")
             self.batchArray = load_data_array(wmb_fp, self.wmb_header.batchPointer, self.wmb_header.batchCount, wmb4_batch)
             
+            if DEBUG_BATCHSUPPLEMENT_PRINT:
+                print()
+                print("Batch supplement data:")
             self.batchDescription = load_data(wmb_fp, self.wmb_header.batchDescriptionPointer, wmb4_batchDescription)
             self.batchDataArray = []
             for batchDataSubgroup in self.batchDescription.batchData:
@@ -1297,24 +1324,45 @@ class WMB(object):
                     self.batchArray[batchData.batchIndex].batchGroup = dataNum
             
             self.hasBone = self.wmb_header.boneCount > 0
-            print("Bones?", self.hasBone)
+            if DEBUG_BONE_PRINT:
+                print()
+                print("Bones?", self.hasBone)
+                if self.hasBone:
+                    print("Enjoy the debug bone data:")
             self.boneArray = load_data_array(wmb_fp, self.wmb_header.bonePointer, self.wmb_header.boneCount, wmb4_bone, None, True)
             
+            if DEBUG_BITT_PRINT:
+                print()
+                print("The boneIndexTranslateTable? I got no debug info besides what's in the header.")
             boneTranslateTable = load_data(wmb_fp, self.wmb_header.boneTranslateTablePointer, wmb4_boneTranslateTable)
             if boneTranslateTable is not None:
                 self.firstLevel = boneTranslateTable.firstLevel
                 self.secondLevel = boneTranslateTable.secondLevel
                 self.thirdLevel = boneTranslateTable.thirdLevel
             
+            if DEBUG_BONESET_PRINT:
+                print()
+                print("Bonesets:")
             boneSetArrayTrue = load_data_array(wmb_fp, self.wmb_header.boneSetPointer, self.wmb_header.boneSetCount, wmb4_boneSet)
             # is this cheating
             self.boneSetArray = [item.boneSet for item in boneSetArrayTrue]
             #print(self.boneSetArray)
             
+            if DEBUG_MATERIAL_PRINT:
+                print()
+                print("Material info (specifically textures, not shaders; not yet):")
             self.materialArray = load_data_array(wmb_fp, self.wmb_header.materialPointer, self.wmb_header.materialCount, wmb4_material)
             
+            if DEBUG_TEXTURE_PRINT:
+                print()
+                print("Just have the textures array if you care so bad")
             self.textureArray = load_data_array(wmb_fp, self.wmb_header.texturePointer, self.wmb_header.textureCount, wmb4_texture)
+            if DEBUG_TEXTURE_PRINT:
+                print([item.id for item in self.textureArray])
             
+            if DEBUG_MESH_PRINT:
+                print()
+                print("Meshes (batches separated by batchGroup, naturally):")
             self.meshArray = load_data_array(wmb_fp, self.wmb_header.meshPointer, self.wmb_header.meshCount, wmb4_mesh, [scr_mode, wmbinscr_name])
             
             for mesh in self.meshArray:
@@ -1324,6 +1372,9 @@ class WMB(object):
             self.boneMap = None # <trollface>
             self.hasColTreeNodes = False # maybe this could be before the version check
             self.hasUnknownWorldData = False
+            
+            print("\n\n")
+            print("Continuing to wmb_importer.py...\n")
         
         else:
             print("You madman! This isn't WMB3 or WMB4, but %s!" % self.wmb_header.magicNumber.decode("ascii"))
