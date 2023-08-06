@@ -197,12 +197,12 @@ def construct_mesh(mesh_data, collection_name):
     obj['LOD_Level'] = mesh_data[9]
     obj['colTreeNodeIndex'] = mesh_data[10]
     obj['unknownWorldDataIndex'] = mesh_data[11]
-    if len(mesh_data) > 14:
+    if len(mesh_data) > 14: # wmb4
         obj['ID'] = mesh_data[14]
         obj['Materials'] = mesh_data[15]
         obj['VertexIndexStart'] = mesh_data[17]
         obj['batchGroup'] = mesh_data[18]
-        if mesh_data[19] is not None:
+        if mesh_data[19] is not None: # scr import
             transform = mesh_data[19][2:11]
             #print(mesh_data[19])
             obj.location = Vector((transform[0], -transform[2], transform[1]))
@@ -210,6 +210,7 @@ def construct_mesh(mesh_data, collection_name):
             obj.scale = Vector((transform[6], transform[8], transform[7]))
 
     obj.data.flip_normals()
+    
     return obj
 
 def set_partent(parent, child):
@@ -820,7 +821,8 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
     #reset_blend()
     wmb = WMB(wmb_file, only_extract)
     wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
-
+    wmb4 = wmb.wmb_header.magicNumber == b'WMB4'
+    
     if only_extract:
         texture_dir = wmb_file.replace(wmbname, 'textures')
         wmb_materials = get_wmb_material(wmb, texture_dir)
@@ -854,7 +856,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
         addWtaExportMaterial(texture_dir, material)
         materials.append(construct_materials(texture_dir, material))
     print('Linking materials to objects...')
-    if hasattr(wmb, "meshGroupInfoArray"):
+    if not wmb4: # formerly "hasattr(wmb, "meshGroupInfoArray")":
         for meshGroupInfo in wmb.meshGroupInfoArray:
             mesh_start = meshGroupInfo.meshStart
             for Index in range(len(meshGroupInfo.groupedMeshArray)):
@@ -891,6 +893,11 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
     if wmb.hasBone:
         for mesh in meshes:
             set_partent(amt,mesh)
+    if wmb4: # batchgroup sets some meshes as shadow only or low-LOD
+        for obj in [x for x in col.all_objects if x.type == "MESH"]:
+            if obj['batchGroup'] > 0:
+                obj.hide_set(True)
+                obj.hide_render = True
     if wmb.hasColTreeNodes:
         import_colTreeNodes(wmb, col)
     if wmb.hasUnknownWorldData:
