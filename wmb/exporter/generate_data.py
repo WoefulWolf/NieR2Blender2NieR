@@ -553,10 +553,11 @@ class c_material(object):
             offset = offsetTextures
             numTextures = 0
             textures = []
+            
             for key, value in material.items():
                 #print(key, value)
                 if (isinstance(value, str)):
-                    if (key.find('g_') != -1) or(wmb4 and key.find('_') == -1):
+                    if (key.find('g_') != -1) or(wmb4 and (key.find('tex') != -1 or key.find('Map') != -1)):
                         #print(key, value)
                         numTextures += 1
 
@@ -564,14 +565,31 @@ class c_material(object):
 
 
             for key, value in material.items():
-                if (isinstance(value, str)) and ((key.find('g_') != -1) or(wmb4 and key.find('_') == -1)):
+                if (isinstance(value, str)) and ((key.find('g_') != -1) or(wmb4 and (key.find('tex') != -1 or key.find('Map') != -1))):
                     texture = value
                     name = key
-
-                    offset += 4 + 4 + len(key)
+                    
+                    offset += 4 + 4 + len(key) # but it isn't used after this?
                     textures.append([offsetName, texture, name])
                     if not wmb4:
                         offsetName += len(name) + 1
+            
+            if wmb4: # proper sorting
+                sortedTextures = []
+                for tex in textures:
+                    name = tex[2]
+                    if name.find('tex') != -1:
+                        num = name[3:]
+                    else:
+                        mapIndx = name.find('Map')
+                        num = name[(mapIndx + 3):]
+                    sortedTextures.append([tex, num])
+                
+                # I'm using "tex" really loosely here, since it's become:
+                # [[offsetName, texture, name], num]
+                sortedTextures = sorted(sortedTextures, key=lambda tex: tex[1])
+                return [tex[0] for tex in sortedTextures]
+            
             return textures
 
         def get_textures_StructSize(self, textures):
@@ -614,9 +632,13 @@ class c_material(object):
                     index = -1
 
                 parameters = []
-                for key, value in material.items():
-                    if key[0] == str(i):
-                        parameters.append(value)
+                if not wmb4:
+                    for key, value in material.items():
+                        if key[0] == str(i):
+                            parameters.append(value)
+                else:
+                    for j in range(4):
+                        parameters.append(material[str(i)][j])
                         
                 numParameters = len(parameters)
 

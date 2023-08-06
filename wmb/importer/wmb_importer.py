@@ -164,8 +164,8 @@ def construct_mesh(mesh_data, collection_name):
             vcol_layer = objmesh.vertex_colors.active
         else:
             vcol_layer = objmesh.vertex_colors.new()
-
-        for loop_idx, loop in enumerate(objmesh.loops):    
+        
+        for loop_idx, loop in enumerate(objmesh.loops):
             meshColor = vcol_layer.data[loop_idx]
             dataColor = mesh_data[7][loop.vertex_index]
             meshColor.color = [
@@ -174,6 +174,7 @@ def construct_mesh(mesh_data, collection_name):
                 dataColor[2]/255,
                 dataColor[3]/255
             ]
+            
 
     if has_bone:
         weight_infos = mesh_data[4]
@@ -274,18 +275,21 @@ def construct_materials(texture_dir, material):
     shaders = json.load(shaderFile)
 
     for gindx, parameterGroup in enumerate(parameterGroups):
+        # let's group these into lists
+        if (gindx != 0) or (shader_name not in shaders):
+            material[str(gindx)] = [0.0] * 4
         if type(parameterGroup) is not list:
             for pindx, parameter in enumerate([parameterGroup.x, parameterGroup.y, parameterGroup.z, parameterGroup.w]):
                 if (gindx == 0) and (shader_name in shaders):
                     material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
                 else:
-                    material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
+                    material[str(gindx)][pindx] = parameter
         else:
             for pindx, parameter in enumerate(parameterGroup):
                 if (gindx == 0) and (shader_name in shaders):
                     material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
                 else:
-                    material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
+                    material[str(gindx)][pindx] = parameter
 
     albedo_maps = {}
     normal_maps = {}
@@ -312,6 +316,7 @@ def construct_materials(texture_dir, material):
     albedo_nodes = []
     albedo_mixRGB_nodes = []
     albedo_invert_nodes = []
+    colornode = None
     for i, textureID in enumerate(albedo_maps.values()):
         texture_file = "%s/%s.dds" % (texture_dir, textureID)
         if os.path.exists(texture_file):
@@ -335,6 +340,11 @@ def construct_materials(texture_dir, material):
                 albedo_mixRGB_nodes.append(mixRGB_shader)
                 mixRGB_shader.location = 300,(i-1)*-60
                 mixRGB_shader.hide = True
+                
+                colornode = nodes.new(type='ShaderNodeAttribute')
+                colornode.attribute_name = "Col"
+                colornode.location = 100,(i-1)*-30
+                colornode.hide = True
     # Albedo Links
     if len(albedo_nodes) == 1:
         albedo_principled = links.new(albedo_nodes[0].outputs['Color'], principled.inputs['Base Color'])
@@ -344,12 +354,23 @@ def construct_materials(texture_dir, material):
         else:
             alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
     elif len(albedo_mixRGB_nodes) > 0:
-        albedo_link = links.new(albedo_nodes[0].outputs['Color'], albedo_mixRGB_nodes[0].inputs['Color2'])
+        # first mixer node has two input albedos
+        # subsequently each has one albedo and one mixer node
         for i, node in enumerate(albedo_mixRGB_nodes):
-            albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], node.inputs['Color1'])
-            alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], node.inputs['Fac'])
-            if i > 0:
-                mixRGB_link = links.new(albedo_mixRGB_nodes[i-1].outputs['Color'], node.inputs['Color2'])
+            # input 1
+            if i == 0:
+                albedoInFirst = albedo_nodes[i]
+                albedo_link = links.new(albedoInFirst.outputs['Color'], node.inputs['Color1'])
+            else:
+                previousRGBNode = albedo_mixRGB_nodes[i-1]
+                mixRGB_link = links.new(previousRGBNode.outputs['Color'], node.inputs['Color1'])
+            
+            # input 2 and blend (or should blend come from input 1? how do i do that? reverse node order?)
+            albedoInSecond = albedo_nodes[i+1]
+            albedo_link = links.new(albedoInSecond.outputs['Color'], node.inputs['Color2'])
+            #alpha_link = links.new(albedoInSecond.outputs['Alpha'], node.inputs['Fac']) # the blend i think
+            # screw texture alpha, vertex color alpha is my new best friend
+            alpha_link = links.new(colornode.outputs['Alpha'], node.inputs['Fac'])
         mixRGB_link = links.new(albedo_mixRGB_nodes[-1].outputs['Color'], principled.inputs['Base Color'])
 
     # Mask Nodes

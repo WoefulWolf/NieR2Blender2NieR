@@ -803,10 +803,10 @@ class wmb4_material(object):
         self.uniformArray = {}
         self.textureArray = {}
         for i, texture in enumerate(texturesArray):
-            if i == 1:
-                self.textureArray["albedoMap"] = texture
+            if i in {1, 3}:
+                self.textureArray["albedoMap" + str(i)] = texture
             elif i == 7:
-                self.textureArray["normalMap"] = texture
+                self.textureArray["normalMap" + str(i)] = texture
             else:
                 self.textureArray["tex" + str(i)] = texture
         
