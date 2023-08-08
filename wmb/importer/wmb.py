@@ -1057,7 +1057,7 @@ class wmb4_vertexExData(object):
             return
             
         elif vertexFormat == 0x10137:
-            self.color = read_uint32(wmb_fp)
+            self.color = list(read_uint8_x4(wmb_fp))
             return
         
         else:
