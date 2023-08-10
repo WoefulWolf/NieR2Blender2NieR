@@ -1,23 +1,12 @@
 from ....utils.util import getUsedMaterials
-from ....utils.util import allObjectsInCollectionInOrder
 
 class c_meshMaterials(object):
-    def __init__(self):
+    def __init__(self, meshes, lods):
         def get_meshMaterials(self):
             meshMaterials = []
-            meshNames = []
-
-            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                obj_name = obj.name.split('-')[1]
-                if obj_name not in meshNames:
-                    meshNames.append(obj_name)
-
-            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                obj_name = obj.name.split('-')[1]
-
-                mesh_index = meshNames.index(obj_name)
-                
-                for slot in obj.material_slots:
+            for mesh_index, mesh in enumerate(meshes.meshes):
+                blenderObj = mesh.blenderObj
+                for slot in blenderObj.material_slots:
                     material = slot.material
                     for mat_index, mat in enumerate(getUsedMaterials()):
                         if mat == material:
@@ -30,7 +19,6 @@ class c_meshMaterials(object):
         self.meshMaterials = get_meshMaterials(self)
         self.meshMaterials_StructSize = len(self.meshMaterials) * 8
         
-    def updateLods(self, lods):
         # Update LODS meshMatPairs
         for lod in lods.lods:
             for batchInfo in lod.batchInfos:

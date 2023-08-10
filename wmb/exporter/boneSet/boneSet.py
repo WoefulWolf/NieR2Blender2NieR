@@ -1,5 +1,5 @@
 import bpy
-from ....utils.util import getBoneIndexByName
+
 
 class c_boneSet(object):
     def __init__(self, boneMap, boneSets_Offset):
@@ -46,23 +46,10 @@ class c_b_boneSets(object):
             if obj.type == 'ARMATURE':
                 amt = obj
 
-        # Generate boneMap
+        # Get boneMap
         boneMap = []
-        for obj in bpy.data.collections['WMB'].all_objects:
-            if obj.type == 'MESH':
-                for group in obj.vertex_groups:
-                    boneID = getBoneIndexByName("WMB", group.name)
-                    if boneID not in boneMap:
-                        #print("Adding ID to boneMap: " + str(boneID))
-                        if boneID != None:
-                            boneMap.append(boneID)
-
-        # Set boneMap to armature
-        boneMap = sorted(boneMap)
-        for obj in bpy.data.collections['WMB'].all_objects:
-            if obj.type == 'ARMATURE':
-                obj.data['boneMap'] = boneMap
-                break
+        for val in amt.data['boneMap']:
+            boneMap.append(val)
 
         # Get boneSets
         b_boneSets = []
@@ -71,11 +58,9 @@ class c_b_boneSets(object):
                 vertex_group_bones = []
                 if obj['boneSetIndex'] != -1:
                     for group in obj.vertex_groups:
-                        boneID = getBoneIndexByName("WMB", group.name)
-                        if boneID != None:
-                            boneMapIndex = boneMap.index(boneID)
-                            vertex_group_bones.append(boneMapIndex)
-                        
+                        boneID = int(group.name.replace("bone", ""))
+                        boneMapIndex = boneMap.index(boneID)
+                        vertex_group_bones.append(boneMapIndex)
                     if vertex_group_bones not in b_boneSets:
                         b_boneSets.append(vertex_group_bones)
                         obj["boneSetIndex"] = len(b_boneSets)-1

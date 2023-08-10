@@ -4,7 +4,7 @@ import bpy
 import bmesh
 import math
 from typing import List, Tuple
-from mathutils import Vector, Matrix
+from mathutils import Vector
 
 from ...utils.util import ShowMessageBox, getPreferences, printTimings
 from .wmb import *
@@ -31,7 +31,6 @@ def reset_blend():
 def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):            # bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
     print('[+] importing armature')
     amt = bpy.data.armatures.new(name +'Amt')
-    #amt.pose_position = 'REST'
     ob = bpy.data.objects.new(name, amt)
     #ob = bpy.context.active_object
     if getPreferences().armatureDefaultDisplayType != "DEFAULT":
@@ -42,7 +41,7 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.mode_set(mode='EDIT')
-    
+     
     amt['firstLevel'] = firstLevel
     amt['secondLevel'] = secondLevel
     amt['thirdLevel'] = thirdLevel
@@ -71,30 +70,24 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
             #print(bone_data[1])
             bone = bones[bone_data[1]]
             bone.parent = bones[bone_data[3]]
-            # this breaks animations, sadge
+            #if bone['ID'] <= len(bones): # probably make this be boneCount
             if bone.parent.tail == bone.parent.head + Vector((0, 0.01, 0)):
                 bone.parent.tail = bone.head
                 if bone.parent.tail == bone.parent.head:
                     bone.parent.tail += Vector((0, 0.01, 0))
-
-    bpy.ops.object.mode_set(mode='POSE')
-
-    for pose_bone in ob.pose.bones:
-        rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
-
-        pose_bone.matrix_basis = rot_mat @ pose_bone.matrix_basis
-        bpy.context.view_layer.update()
-
-    bpy.ops.pose.armature_apply()
-
-    for pose_bone in ob.pose.bones:
-        rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
-
-        pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
-        bpy.context.view_layer.update()
-
+    
+    #for bone in amt.edit_bones:
+    #    if bone.tail == bone.head + Vector((0, 0.01, 0)):
+    #        bone.tail = bone.head
+    #        bone.head = bone.parent.head
+    
+    #for bone_data in bone_data_array:
+    #    if bone_data[6] > len(bones):
+    #        bones[bone_data[1]].name = "fakeBone%d" % bone_data[6]
+    
     bpy.ops.object.mode_set(mode='OBJECT')
     ob.rotation_euler = (math.radians(90),0,0)
+    
     # split armature
     return ob
 

@@ -1621,6 +1621,7 @@ class c_generate_data(object):
                 self.boneIndexTranslateTable_Offset = 0
                 self.boneIndexTranslateTable_Size = 0
 
+
             currentOffset += 16 - (currentOffset % 16)
 
             self.vertexGroups_Offset = currentOffset
@@ -1760,8 +1761,6 @@ class c_generate_data(object):
             #currentOffset += 16 - (currentOffset % 16)
             
             if hasArmature:
-                self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones) # needed for mots
-                
                 self.bones_Offset = currentOffset
                 self.bones = c_bones(True)
                 self.numBones = len(self.bones.bones)
@@ -1772,7 +1771,7 @@ class c_generate_data(object):
                 #currentOffset += 16 - (currentOffset % 16)
 
                 self.boneIndexTranslateTable_Offset = currentOffset
-                #self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones) # moved above bones
+                self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones)
                 self.boneIndexTranslateTable_Size = self.boneIndexTranslateTable.boneIndexTranslateTable_StructSize
                 currentOffset += self.boneIndexTranslateTable_Size
                 print('boneIndexTranslateTable_Size: ', self.boneIndexTranslateTable_Size)
@@ -1835,4 +1834,4 @@ class c_generate_data(object):
             if not hasArmature:
                 for mesh in self.meshes.meshes:
                     mesh.numBones = 0
-
+            
