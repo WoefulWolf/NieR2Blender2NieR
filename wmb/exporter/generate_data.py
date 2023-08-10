@@ -1,13 +1,11 @@
 # save data from Blender to Python object (still dependent on too many custom properties)
-# these imports look redundant but idk todo check
-from ...utils.util import allObjectsInCollectionInOrder
-from ...utils.util import Vector3
 from ...utils.util import *
-from ...utils.util import getUsedMaterials
-from ...utils.util import ShowMessageBox
 import bpy, math
 from mathutils import Vector
 from time import time
+# these two are for bones
+import numpy as np
+import mathutils as mu
 
 def getRealName(name):
     splitname = name.split('-')
@@ -98,7 +96,7 @@ class c_batches(object):
         self.batches_StructSize = len(self.batches) * (20 if wmb4 else 28)
 
 class c_boneIndexTranslateTable(object):
-    def __init__(self, bones):
+    def __init__(self): # formerly included bones
 
         self.firstLevel = []
         self.secondLevel = []
@@ -106,21 +104,98 @@ class c_boneIndexTranslateTable(object):
 
         for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == 'ARMATURE':
-                for idx in range(len(obj.data['firstLevel'])):
-                    self.firstLevel.append(obj.data['firstLevel'][idx])
+                #for idx in range(len(obj.data['firstLevel'])):
+                #    self.firstLevel.append(obj.data['firstLevel'][idx])
+                #
+                #for idx in range(len(obj.data['secondLevel'])):
+                #    self.secondLevel.append(obj.data['secondLevel'][idx])
+                #
+                #for idx in range(len(obj.data['thirdLevel'])):
+                #    self.thirdLevel.append(obj.data['thirdLevel'][idx])
+                self.firstLevel = obj.data['firstLevel']
+                self.secondLevel = obj.data['secondLevel']
+                # we regenerate the third level
+        
+        secondLevelRanges = []
+        for i, val in enumerate(self.firstLevel):
+            if val != -1:
+                secondLevelRanges.append(i * 256)
+        
+        thirdLevelRanges = []
+        couter = 0
+        #print(secondLevelRanges)
+        for i, val in enumerate(self.secondLevel):
+            if i % 16 == 0:
+                counter = secondLevelRanges.pop(0)
+            if val != -1:
+                thirdLevelRanges.append(counter)
+            counter += 16
+            
+        # Generate empty table
+        newThirdLevel = []
+        for val in thirdLevelRanges:
+            for i in range(16):
+                newThirdLevel.append(0xfff)
+        
+        # Populate the third level
+        for i, bone in enumerate(getAllBonesInOrder("WMB")):
+            if 'ID' not in bone:
+                continue
+            boneID = bone['ID']         
+            for k, domain in enumerate(thirdLevelRanges):
+                if boneID >= domain and boneID < domain + 16:
+                    newThirdLevel[k * 16 + boneID - domain] = i
+                    break
 
-                for idx in range(len(obj.data['secondLevel'])):
-                    self.secondLevel.append(obj.data['secondLevel'][idx])
+        # Temp here for Baal # what's Baal
+        newBones = []
 
-                for idx in range(len(obj.data['thirdLevel'])):
-                    self.thirdLevel.append(obj.data['thirdLevel'][idx])
+        # Add new bones that dont have ID
+        # what if there are no empty spots?
+        for i, bone in enumerate(getAllBonesInOrder("WMB")):
+            if 'ID' not in bone:
+                for k in range(len(newThirdLevel) - 1, 0, -1):
+                    if newThirdLevel[k] == 0xfff:
+                        newThirdLevel[k] = i
+                        bone['ID'] = thirdLevelRanges[k//16] + k%16
+                        print("Added new bone to table", bone.name, "assigning ID", bone['ID'], "at thirdLevel translateTableIndex", k)
+                        newBones.append(bone)
+                        break
+
+        #Print the shit for the XML
+        for bone in newBones:
+            no = bone["ID"]
+            if bone.parent in newBones:
+                noUp = bone.parent['ID']
+            else:
+                noUp = 0xfff
+            if bone.children and bone.children[0] in newBones:
+                noDown = bone.children[0]['ID']
+            else:
+                noDown = 0xfff
+
+            out = """<CLOTH_WK>
+    <no>{}</no>
+    <noUp>{}</noUp>
+    <noDown>{}</noDown>
+    <noSide>4095</noSide>
+    <noPoly>4095</noPoly>
+    <noFix>4095</noFix>
+    <rotLimit>0.5236</rotLimit>
+    <offset>0 -0.1 0</offset>
+    <m_OriginalRate>0</m_OriginalRate>
+</CLOTH_WK>""".format(no, noUp, noDown)
+
+            print(out)
+        print("COPY TO YOUR <CLOTH_WK_LIST> AND REMEMBER TO ADD +{} TO THE <CLOTH_HEADER><m_Num> VALUE!".format(len(newBones)))
+
+        self.thirdLevel = newThirdLevel
 
         self.firstLevel_Size = len(self.firstLevel)
 
         self.secondLevel_Size = len(self.secondLevel)   
 
         self.thirdLevel_Size = len(self.thirdLevel)
-
 
         self.boneIndexTranslateTable_StructSize = self.firstLevel_Size*2 + self.secondLevel_Size*2 + self.thirdLevel_Size*2
 
@@ -130,6 +205,7 @@ class c_boneMap(object):
         for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == 'ARMATURE':
                 boneMap = obj.data['boneMap']
+                break
         
         self.boneMap = boneMap
 
@@ -175,9 +251,6 @@ class c_boneSet(object):
                 
             return boneSet_StructSize
 
-
-        #self.boneSet_StructSize = get_boneSet_StructSize(self)
-
 class c_b_boneSets(object):
     def __init__(self, wmb4=False):
         # Find Armature
@@ -193,8 +266,8 @@ class c_b_boneSets(object):
                 boneMap.append(val)
         
         #fuck it
-        if wmb4:
-            return
+        #if wmb4:
+        #    return
         
         
         # Get boneSets
@@ -204,15 +277,16 @@ class c_b_boneSets(object):
                 vertex_group_bones = []
                 if obj['boneSetIndex'] != -1:
                     for group in obj.vertex_groups:
-                        boneID = int(group.name.replace("bone", ""))
-                        boneMapIndex = boneMap.index(boneID) if not wmb4 else boneID
-                        vertex_group_bones.append(boneMapIndex)
+                        boneID = getBoneIndexByName("WMB", group.name)
+                        if boneID != None:
+                            boneMapIndex = boneMap.index(boneID) if not wmb4 else boneID
+                            vertex_group_bones.append(boneMapIndex)
                     print(vertex_group_bones)
                     if vertex_group_bones not in b_boneSets:
                         if wmb4:
                             if len(b_boneSets) <= obj["boneSetIndex"]:
                                 b_boneSets.append(vertex_group_bones)
-                            else:
+                            else: # no idea how often this ends up called
                                 b_boneSets[obj["boneSetIndex"]].extend(vertex_group_bones)
                         else:
                             b_boneSets.append(vertex_group_bones)
@@ -225,64 +299,110 @@ class c_b_boneSets(object):
         
         amt.data['boneSetArray'] = b_boneSets
 
+def get_bone_tPosition(bone):
+    if 'TPOSE_worldPosition' in bone:
+        return Vector3(bone['TPOSE_worldPosition'][0], bone['TPOSE_worldPosition'][1], bone['TPOSE_worldPosition'][2])
+    else:
+        return Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+
+def get_bone_localPosition(bone):
+    if bone.parent:
+        if 'TPOSE_worldPosition' in bone.parent:
+            parentTPosition = Vector3(bone.parent['TPOSE_worldPosition'][0], bone.parent['TPOSE_worldPosition'][1], bone.parent['TPOSE_worldPosition'][2])
+            return get_bone_tPosition(bone) - parentTPosition
+        else:
+            return get_bone_tPosition(bone) - bone.parent.head_local
+    else:
+        return Vector3(0, 0, 0)
+
 class c_bones(object):
     def __init__(self, wmb4=False):
 
         def get_bones(self):
             _bones = []
             numBones = 0
-            armatures = [x for x in bpy.data.collections['WMB'].all_objects if x.type == 'ARMATURE']
-            for obj in armatures:
-                numBones = len(obj.data.bones)
-                first_bone = obj.data.bones[0]
+            numBones = len(getAllBonesInOrder("WMB"))
 
             if numBones > 1:
-                for obj in armatures:
-                    for bone in obj.data.bones:
-                        ID = bone['ID']
+                for bone in getAllBonesInOrder("WMB"):
+                    ID = bone['ID']
+                    
+                    if bone.parent:
+                        parentIndex = getAllBonesInOrder("WMB").index(bone.parent)
+                    else:
+                        parentIndex = -1
 
-                        if bone.parent:
-                            parent_name = bone.parent.name
-                            parentIndex = int(parent_name.replace('bone', '').replace('fakeBone', ''))
-                        else:
-                            parentIndex = -1
+                    #localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
 
-                        localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
+                    #localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
+                    #localScale = Vector3(1, 1, 1) # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
+                    
+                    # APOSE_position
+                    position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                    
+                    localRotation = [0, 0, 0]
+                    rotation = [0, 0, 0]
+                    
+                    tPosition = [0, 0, 0]
+                    localPosition = [0, 0, 0]
+                    
+                    armature = [x for x in bpy.data.collections["WMB"].all_objects if x.type == "ARMATURE"][0]
+                    for pBone in armature.pose.bones:
+                        if pBone.name == bone.name:
+                            #localRotation
+                            mat = pBone.matrix_basis.inverted().to_euler()
+                            localRotation[0] = mat.x
+                            localRotation[1] = mat.y
+                            localRotation[2] = mat.z
 
-                        localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
-                        localScale = Vector3(1, 1, 1) # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
-                        
-                        #if wmb4:
-                        #    position = Vector3(bone.tail_local[0], bone.tail_local[1], bone.tail_local[2])
-                        position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
-                        rotation = Vector3(bone['worldRotation'][0], bone['worldRotation'][1], bone['worldRotation'][2])
-                        scale = localScale
+                            #rotation
+                            full_rot_mat = pBone.matrix_basis.inverted().copy()
+                            for parent_pb in pBone.parent_recursive:
+                                full_rot_mat = parent_pb.matrix_basis.inverted() @ full_rot_mat
+                            euler = full_rot_mat.to_euler()
+                            rotation[0] = euler.x
+                            rotation[1] = euler.y
+                            rotation[2] = euler.z
+                            
+                            #TPOSE_worldPosition
+                            full_trans = pBone.head
+                            tPosition[0] = full_trans.x
+                            tPosition[1] = full_trans.y
+                            tPosition[2] = full_trans.z
 
-                        tPosition = Vector3(bone['TPOSE_worldPosition'][0], bone['TPOSE_worldPosition'][1], bone['TPOSE_worldPosition'][2])
+                            #TPOSE_localPosition
+                            trans = pBone.head - (pBone.parent.head if pBone.parent else mu.Vector([0, 0, 0]))
+                            localPosition[0] = trans[0]
+                            localPosition[1] = trans[1]
+                            localPosition[2] = trans[2]
+                            # it's funny that I'm copying all this useless garbage
+                            break
+                    
+                    localScale = Vector3(1, 1, 1)                           
+                    scale = localScale
+                    
+                    blenderName = bone.name
 
-                        blenderName = bone.name
-
-                        bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
-                        _bones.append(bone)
+                    bone = [ID, parentIndex, localPosition, localRotation, localScale.xyz, position.xyz, rotation, scale.xyz, tPosition, blenderName]
+                    _bones.append(bone)
                 
             elif numBones == 1:
-                for obj in armatures:
-                    for bone in obj.data.bones:
-                        ID = bone['ID']
-                        parentIndex = -1
-                        localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
-                        localRotation = Vector3(0, 0, 0) # I haven't seen anything here besides 0, 0, 0.
-                        localScale = Vector3(1, 1, 1) # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
+                bone = getAllBonesInOrder("WMB")[0]
+                ID = bone['ID']
+                parentIndex = -1
+                localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
+                localRotation = Vector3(0, 0, 0) # I haven't seen anything here besides 0, 0, 0.
+                localScale = Vector3(1, 1, 1) # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
 
-                        position = localPosition
-                        rotation = localRotation
-                        scale = localScale
+                position = localPosition
+                rotation = localRotation
+                scale = localScale
 
-                        tPosition = localPosition
+                tPosition = localPosition
 
-                        blenderName = bone.name
-                        bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
-                        _bones.append(bone)
+                blenderName = bone.name
+                bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                _bones.append(bone)
 
             return _bones
                         
@@ -827,9 +947,9 @@ class c_mesh(object):
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
                 if getRealName(mesh.name) == obj_mesh_name:
                     for vertexGroup in mesh.vertex_groups:
-                        boneName = vertexGroup.name.replace('bone', '')
-                        if int(boneName) not in bones:
-                            bones.append(int(boneName))
+                        boneName = getBoneIndexByName("WMB", vertexGroup.name)
+                        if boneName not in bones:
+                            bones.append(boneName)
                             numBones += 1
             if len(bones) == 0:
                 bones.append(0)
@@ -997,12 +1117,22 @@ class c_meshes(object):
         self.meshes_StructSize = get_meshes_StructSize(self, self.meshes)
 
 class c_meshMaterials(object):
-    def __init__(self, meshes, lods):
+    def __init__(self): # formerly took meshes and lods, now re-generates
         def get_meshMaterials(self):
             meshMaterials = []
-            for mesh_index, mesh in enumerate(meshes.meshes):
-                blenderObj = mesh.blenderObj
-                for slot in blenderObj.material_slots:
+            meshNames = []
+
+            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                obj_name = getRealName(obj.name)
+                if obj_name not in meshNames:
+                    meshNames.append(obj_name)
+
+            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
+                obj_name = getRealName(obj.name)
+
+                mesh_index = meshNames.index(obj_name)
+                
+                for slot in obj.material_slots:
                     material = slot.material
                     for mat_index, mat in enumerate(getUsedMaterials()):
                         if mat == material:
@@ -1015,6 +1145,7 @@ class c_meshMaterials(object):
         self.meshMaterials = get_meshMaterials(self)
         self.meshMaterials_StructSize = len(self.meshMaterials) * 8
         
+    def updateLods(self, lods):
         # Update LODS meshMatPairs
         if lods is not None:
             for lod in lods.lods:
@@ -1307,7 +1438,7 @@ class c_vertexGroup(object):
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:
                                 boneGroupName = bvertex_obj_obj.vertex_groups[groupRef.group].name
-                                boneID = int(boneGroupName.replace("bone", ""))
+                                boneID = getBoneIndexByName("WMB", boneGroupName)
                                 if not wmb4:
                                     boneMapIndx = self.boneMap.index(boneID)
                                     boneSetIndx = boneSet.index(boneMapIndx)
@@ -1599,6 +1730,8 @@ class c_generate_data(object):
         if not wmb4:
             
             if hasArmature:
+                self.boneIndexTranslateTable = c_boneIndexTranslateTable()
+                
                 self.bones_Offset = currentOffset
                 self.bones = c_bones()
                 self.numBones = len(self.bones.bones)
@@ -1609,7 +1742,7 @@ class c_generate_data(object):
                 currentOffset += 16 - (currentOffset % 16)
 
                 self.boneIndexTranslateTable_Offset = currentOffset
-                self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones)
+                #self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones)
                 self.boneIndexTranslateTable_Size = self.boneIndexTranslateTable.boneIndexTranslateTable_StructSize
                 currentOffset += self.boneIndexTranslateTable_Size
                 print('boneIndexTranslateTable_Size: ', self.boneIndexTranslateTable_Size)
@@ -1661,7 +1794,8 @@ class c_generate_data(object):
             currentOffset += 16 - (currentOffset % 16)
 
             self.meshMaterials_Offset = currentOffset
-            self.meshMaterials_Size = len(self.batches.batches) * 8
+            self.meshMaterials = c_meshMaterials(self.meshes, self.lods)
+            self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize
             currentOffset += self.meshMaterials_Size
             print('meshMaterials_Size: ', self.meshMaterials_Size)
 
@@ -1728,8 +1862,7 @@ class c_generate_data(object):
                 self.unknownWorldData_Offset = 0
                 self.unknownWorldDataCount = 0
 
-            self.meshMaterials = c_meshMaterials(self.meshes, self.lods)
-            self.meshMaterials_Size = self.meshMaterials.meshMaterials_StructSize
+            self.meshMaterials.updateLods(self.lods)
             
         else:
             
@@ -1761,6 +1894,8 @@ class c_generate_data(object):
             #currentOffset += 16 - (currentOffset % 16)
             
             if hasArmature:
+                self.boneIndexTranslateTable = c_boneIndexTranslateTable()
+            
                 self.bones_Offset = currentOffset
                 self.bones = c_bones(True)
                 self.numBones = len(self.bones.bones)
@@ -1771,13 +1906,14 @@ class c_generate_data(object):
                 #currentOffset += 16 - (currentOffset % 16)
 
                 self.boneIndexTranslateTable_Offset = currentOffset
-                self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones)
+                #self.boneIndexTranslateTable = c_boneIndexTranslateTable(self.bones)
                 self.boneIndexTranslateTable_Size = self.boneIndexTranslateTable.boneIndexTranslateTable_StructSize
                 currentOffset += self.boneIndexTranslateTable_Size
                 print('boneIndexTranslateTable_Size: ', self.boneIndexTranslateTable_Size)
 
                 # psyche, this one is padded
-                currentOffset += 16 - (currentOffset % 16)
+                if (currentOffset % 16) > 0:
+                    currentOffset += 16 - (currentOffset % 16)
             else:
                 self.bones_Offset = 0
                 self.bones = None
