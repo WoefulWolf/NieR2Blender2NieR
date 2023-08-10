@@ -67,8 +67,8 @@ class PropertyAnimation:
 
 		# set all keyframe interpolations
 		fCurve = self.getFCurve()
-		for i in range(len(self.keyFrames)):
-			curKf = KeyFrameCombo(self.keyFrames[i], fCurve.keyframe_points[i])
+		for i, keyFrame in enumerate(self.keyFrames):
+			curKf = KeyFrameCombo(keyFrame, fCurve.keyframe_points[i])
 			prevKf = None
 			if i > 0:
 				prevKf = KeyFrameCombo(self.keyFrames[i-1], fCurve.keyframe_points[i-1])

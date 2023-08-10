@@ -28,21 +28,21 @@ def reset_blend():
         bpy.data.objects.remove(obj)
         obj.user_clear()
 
-def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
-	print('[+] importing armature')
-	amt = bpy.data.armatures.new(name +'Amt')
-	#amt.pose_position = 'REST'
-	ob = bpy.data.objects.new(name, amt)
-	#ob = bpy.context.active_object
-	if getPreferences().armatureDefaultDisplayType != "DEFAULT":
-		amt.display_type = getPreferences().armatureDefaultDisplayType
-	ob.show_in_front = getPreferences().armatureDefaultInFront
-	ob.name = name
-	bpy.data.collections.get(collection_name).objects.link(ob)
+def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):            # bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
+    print('[+] importing armature')
+    amt = bpy.data.armatures.new(name +'Amt')
+    #amt.pose_position = 'REST'
+    ob = bpy.data.objects.new(name, amt)
+    #ob = bpy.context.active_object
+    if getPreferences().armatureDefaultDisplayType != "DEFAULT":
+        amt.display_type = getPreferences().armatureDefaultDisplayType
+    ob.show_in_front = getPreferences().armatureDefaultInFront
+    ob.name = name
+    bpy.data.collections.get(collection_name).objects.link(ob)
 
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.mode_set(mode='EDIT')
-     
+    
     amt['firstLevel'] = firstLevel
     amt['secondLevel'] = secondLevel
     amt['thirdLevel'] = thirdLevel
@@ -65,50 +65,38 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
         bone['worldRotation'] = bone_data[9]
         bone['TPOSE_worldPosition'] = bone_data[10]
 
-	for bone_data in bone_data_array:
-		bone = amt.edit_bones.new(bone_data[1])
-		bone.head = Vector(bone_data[10]) 
-		bone.tail = Vector(bone_data[10]) + Vector((0 , 0.1, 0))
-
-		bone['ID'] = bone_data[6]
-		#bone['APOSE_position'] = bone_data[4]
-		#bone['TPose_localPosition'] = bone_data[7]
-		bone['localRotation'] = bone_data[8]
-		#bone['worldRotation'] = bone_data[9]
-		#bone['TPOSE_worldPosition'] = bone_data[10]
-
-	bones = amt.edit_bones
-	for bone_data in bone_data_array:
+    bones = amt.edit_bones
+    for bone_data in bone_data_array:
         if bone_data[2] != -1:
             #print(bone_data[1])
             bone = bones[bone_data[1]]
             bone.parent = bones[bone_data[3]]
-            #if bone['ID'] <= len(bones): # probably make this be boneCount
-            if bone.parent.tail == bone.parent.head + Vector((0, 0.01, 0)):
-                bone.parent.tail = bone.head
-                if bone.parent.tail == bone.parent.head:
-                    bone.parent.tail += Vector((0, 0.01, 0))
+            # this breaks animations, sadge
+            #if bone.parent.tail == bone.parent.head + Vector((0, 0.01, 0)):
+            #    bone.parent.tail = bone.head
+            #    if bone.parent.tail == bone.parent.head:
+            #        bone.parent.tail += Vector((0, 0.01, 0))
 
-	bpy.ops.object.mode_set(mode='POSE')
+    bpy.ops.object.mode_set(mode='POSE')
 
-	for pose_bone in ob.pose.bones:
-		rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+    for pose_bone in ob.pose.bones:
+        rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
 
-		pose_bone.matrix_basis = rot_mat @ pose_bone.matrix_basis
-		bpy.context.view_layer.update()
+        pose_bone.matrix_basis = rot_mat @ pose_bone.matrix_basis
+        bpy.context.view_layer.update()
 
-	bpy.ops.pose.armature_apply()
+    bpy.ops.pose.armature_apply()
 
-	for pose_bone in ob.pose.bones:
-		rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+    for pose_bone in ob.pose.bones:
+        rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
 
-		pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
-		bpy.context.view_layer.update()
+        pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
+        bpy.context.view_layer.update()
 
-	bpy.ops.object.mode_set(mode='OBJECT')
-	ob.rotation_euler = (math.radians(90),0,0)
-	# split armature
-	return ob
+    bpy.ops.object.mode_set(mode='OBJECT')
+    ob.rotation_euler = (math.radians(90),0,0)
+    # split armature
+    return ob
 
 def split_armature(name):
     amt = bpy.data.armatures[name]
