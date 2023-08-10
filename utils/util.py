@@ -46,11 +46,25 @@ def drawMultilineLabel(context, text, parent):
 
 def getUsedMaterials():
     materials = []
-    for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+    falseMaterials = {}
+    meshOrder = []
+    # i hate wmb i hate wmb
+    for obj in sorted([x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"], key=lambda mesh: mesh['ID']):
+        mesh_name = obj.name.split("-")[1]
+        if mesh_name not in falseMaterials:
+            falseMaterials[mesh_name] = []
+            meshOrder.append(mesh_name)
+        
         for slot in obj.material_slots:
             material = slot.material
             if material not in materials:
                 materials.append(material)
+                falseMaterials[mesh_name].append(material)
+    
+    materials = []
+    for meshname in meshOrder:
+        materials.extend(falseMaterials[meshname])
+    
     return materials
 
 def getObjectCenter(obj):

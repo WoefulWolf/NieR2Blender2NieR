@@ -213,8 +213,11 @@ def create_wmb(filepath):
 
 
 def close_wmb(wmb_file, generated_data):
-    wmb_file.seek(generated_data.lods_Offset-52)
-    write_string(wmb_file, 'WMB created with Blender2NieR v0.3.1 by Woeful_Wolf')
+    if hasattr(generated_data, "lods_Offset"):
+        wmb_file.seek(generated_data.lods_Offset-52)
+    else:
+        wmb_file.seek(0, 2)
+    write_string(wmb_file, 'WMB created with Blender2NieR v0.(who knows) by Woeful_Wolf and Space Core')
     wmb_file.flush()
     wmb_file.close()
 

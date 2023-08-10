@@ -35,7 +35,9 @@ from .mot.common.pl000fChecks import HidePl000fIrrelevantBones, RemovePl000fIrre
 from .sync import install_dependencies
 from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
+from .wmb.exporter.wmbExportOperator import ExportMGRRWmb
 from .wmb.importer.wmbImportOperator import ImportNierWmb
+from .scr.importer.scrImportOperator import ImportSCR
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
 from .bxm.importer import physPanel
@@ -84,12 +86,14 @@ class CreateLayVisualization(bpy.types.Operator):
 
 def menu_func_import(self, context):
     pcoll = preview_collections["main"]
+    raiden_icon = pcoll["raiden"]
     yorha_icon = pcoll["yorha"]
     self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierWmb.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierDat.bl_idname, text="DAT File for Nier:Automata (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierCol.bl_idname, text="Collision File for Nier:Automata (.col)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierLay.bl_idname, text="Layout File for Nier:Automata (.lay)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportSCR.bl_idname, text="SCR File for MGR: Revengeance (.scr)", icon_value=raiden_icon.icon_id)
     self.layout.operator(ImportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierGaArea.bl_idname, text="Visual Environment File (GAArea.bxm)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportNierMot.bl_idname, text="Motion File for Nier:Automata (.mot)", icon_value=yorha_icon.icon_id)
@@ -100,7 +104,8 @@ def menu_func_export(self, context):
     pcoll = preview_collections["main"]
     emil_icon = pcoll["emil"]
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(ExportNierWmb.bl_idname, text="WMB File for NieR:Automata (.wmb)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierWmb.bl_idname, text="WMB3 File for NieR:Automata (.wmb)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportMGRRWmb.bl_idname, text="WMB4 File for MGR: Revengeance (.wmb)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierCol.bl_idname, text="Collision File for NieR:Automata (.col)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierLay.bl_idname, text="Layout File for NieR:Automata (.lay)", icon_value=emil_icon.icon_id)
     self.layout.operator(ExportNierSar.bl_idname, text="Audio Environment File (.sar)", icon_value=emil_icon.icon_id)
@@ -119,6 +124,7 @@ def menu_func_editbone_utils(self, context):
 
 classes = (
     ImportNierWmb,
+    ImportSCR,
     ImportNierDtt,
     ImportNierDat,
     ImportNierCol,
@@ -128,6 +134,7 @@ classes = (
     ImportNierMot,
     ImportNierYaxXml,
     ExportNierWmb,
+    ExportMGRRWmb,
     ExportNierCol,
     ExportNierSar,
     ExportNierLay,
@@ -158,6 +165,7 @@ def register():
     my_icons_dir = os.path.join(os.path.dirname(__file__), "icons")
     pcoll.load("emil", os.path.join(my_icons_dir, "emil.png"), 'IMAGE')
     pcoll.load("yorha", os.path.join(my_icons_dir, "yorha-filled.png"), 'IMAGE')
+    pcoll.load("raiden", os.path.join(my_icons_dir, "raiden.png"), 'IMAGE')
     preview_collections["main"] = pcoll
 
     for cls in classes:
