@@ -72,10 +72,10 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
             bone = bones[bone_data[1]]
             bone.parent = bones[bone_data[3]]
             # this breaks animations, sadge
-            #if bone.parent.tail == bone.parent.head + Vector((0, 0.01, 0)):
-            #    bone.parent.tail = bone.head
-            #    if bone.parent.tail == bone.parent.head:
-            #        bone.parent.tail += Vector((0, 0.01, 0))
+            if bone.parent.tail == bone.parent.head + Vector((0, 0.01, 0)):
+                bone.parent.tail = bone.head
+                if bone.parent.tail == bone.parent.head:
+                    bone.parent.tail += Vector((0, 0.01, 0))
 
     bpy.ops.object.mode_set(mode='POSE')
 
