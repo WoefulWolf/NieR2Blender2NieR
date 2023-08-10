@@ -18,7 +18,7 @@ DEBUG_BONE_PRINT = False # do not recommend, there can be lots of bones
 DEBUG_BITT_PRINT = False # nothing at all
 DEBUG_BONESET_PRINT = False
 DEBUG_MATERIAL_PRINT = False
-DEBUG_TEXTURE_PRINT = False # basically nothing at the moment
+DEBUG_TEXTURE_PRINT = True # pretty short, pretty worthwhile
 DEBUG_MESH_PRINT = False
 
 class WMB_Header(object):
@@ -819,13 +819,19 @@ class wmb4_material(object):
         self.techniqueName = "NoTechnique"
         self.uniformArray = {}
         self.textureArray = {}
+        self.textureFlagArray = []
         for i, texture in enumerate(texturesArray):
-            if i in {1, 3}:
-                self.textureArray["albedoMap" + str(i)] = texture
-            elif i == 7:
-                self.textureArray["normalMap" + str(i)] = texture
+            if i % 2 == 0:
+                self.textureFlagArray.append(texture)
+                trueI = -1
             else:
-                self.textureArray["tex" + str(i)] = texture
+                trueI = int((i - 1) / 2) # bad method, don't care tonight
+            if trueI in {0, 1}:
+                self.textureArray["albedoMap" + str(trueI)] = texture
+            elif trueI == 3:
+                self.textureArray["normalMap" + str(trueI)] = texture
+            elif trueI != -1:
+                self.textureArray["tex" + str(trueI)] = texture
         
         if DEBUG_MATERIAL_PRINT:
             print("Count:", self.trueTexturesCount*2, "Data:", texturesArray)

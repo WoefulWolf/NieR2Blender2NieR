@@ -238,10 +238,14 @@ def construct_materials(texture_dir, material):
     shader_name = material[3]
     technique_name = material[4]
     parameterGroups = material[5]
+    textureFlags = material[6] # wmb4
     print('[+] importing material %s' % material_name)
+    # oh, real smooth, reusing a variable name
     material = bpy.data.materials.new( '%s' % (material_name))
     material['Shader_Name'] = shader_name
     material['Technique_Name'] = technique_name
+    if textureFlags is not None:
+        material['Texture_Flags'] = textureFlags
     # Enable Nodes
     material.use_nodes = True
     # Clear Nodes and Links
@@ -707,6 +711,10 @@ def get_wmb_material(wmb, texture_dir):
                 technique_name = material.techniqueName
                 uniforms = material.uniformArray
                 textures = material.textureArray
+                if hasattr(material, "textureFlagArray"): # wmb4
+                    textureFlags = material.textureFlagArray
+                else:
+                    textureFlags = None
                 if hasattr(wmb, 'textureArray'):
                     for index, texture in textures.items():
                         if texture == -1:
@@ -741,7 +749,7 @@ def get_wmb_material(wmb, texture_dir):
                     except:
                         continue
                 
-                materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
+                materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups, textureFlags])
                 #print(materials)
         else:
             texture_dir = texture_dir.replace('.dat','.dtt')

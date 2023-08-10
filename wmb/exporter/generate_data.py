@@ -579,10 +579,10 @@ class c_material(object):
                 for tex in textures:
                     name = tex[2]
                     if name.find('tex') != -1:
-                        num = name[3:]
+                        num = int(name[3:])
                     else:
                         mapIndx = name.find('Map')
-                        num = name[(mapIndx + 3):]
+                        num = int(name[(mapIndx + 3):])
                     sortedTextures.append([tex, num])
                 
                 # I'm using "tex" really loosely here, since it's become:
@@ -596,7 +596,7 @@ class c_material(object):
             textures_StructSize = 0
             for texture in textures:
                 #print(texture[1])
-                textures_StructSize += 8 if not wmb4 else 4
+                textures_StructSize += 8 # if not wmb4 else 4 # the other 4 are flags and now considered such
                 if not wmb4:
                     textures_StructSize += len(texture[2]) + 1
             #print(textures_StructSize)
@@ -707,6 +707,8 @@ class c_material(object):
             self.offsetTextures += 16 - (self.offsetTextures % 16)
 
         self.textures = get_textures(self, self.b_material, self.offsetTextures)
+        if wmb4:
+            self.textureFlags = list(material['Texture_Flags'])
 
         self.numTextures = len(self.textures)
 
@@ -1039,11 +1041,11 @@ class c_textures(object): # wmb4
              is it just skipping 2, 4, 8?
              wtf platinum
             """
-            for index in [0, 1, 3, 5, 6, 7, 9, 10, 11, 12, 13]:
-                if index >= len(mat.textures):
-                    break
-                if mat.textures[index][1] not in (x[1] for x in self.textures):
-                    self.textures.append([0x63, mat.textures[index][1]])
+            # Wonderful news! All of that was just because evens are a myth. They've been culled.
+            #for index in [0, 1, 3, 5, 6, 7, 9, 10, 11, 12, 13]:
+            for tex in mat.textures:
+                if tex[1] not in (x[1] for x in self.textures):
+                    self.textures.append([0x63, tex[1]]) # gotta fix these flags sometime
         
         #print(self.textures)
         self.textures_StructSize = 8 * len(self.textures)

@@ -347,7 +347,7 @@ def create_wmb_materials(wmb_file, data, wmb4=False):
             write_uInt32(wmb_file, 0) # unknown08. pointer?
             write_uInt32(wmb_file, material.offsetParameterGroups)
             write_uInt16(wmb_file, 8) # what even
-            write_uInt16(wmb_file, int(material.numTextures/2)) # 5 or 4
+            write_uInt16(wmb_file, material.numTextures) # 5 or 4, usually
             write_uInt16(wmb_file, 0) # mystery value
             write_uInt16(wmb_file, material.numParameterGroups*4)
         if not wmb4:
@@ -373,15 +373,20 @@ def create_wmb_materials(wmb_file, data, wmb4=False):
             write_string(wmb_file, material.techniqueName)          # techniqueName
         if wmb4:
             wmb_file.seek(material.offsetTextures)
-        for texture in material.textures:                       # [offsetName, texture, name]
+        for i, texture in enumerate(material.textures):                       # [offsetName, texture, name]
             if not wmb4:
                 write_uInt32(wmb_file, texture[0])
                 write_uInt32(wmb_file, int(texture[1], 16))
             if wmb4:
+                worked = False
                 for key, value in enumerate(data.textures.textures):
                     if value[1] == texture[1]:
+                        write_uInt32(wmb_file, material.textureFlags[i])
                         write_uInt32(wmb_file, key)
+                        worked = True
                         break
+                if not worked:
+                    print("WARNING! Could not find texture", texture[1])
         if not wmb4:
             for texture in material.textures:
                 write_string(wmb_file, texture[2])
