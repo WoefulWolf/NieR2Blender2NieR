@@ -792,7 +792,11 @@ def get_wmb_material(wmb, texture_dir):
             uniforms = material.uniformArray
             textures = material.textureArray
             parameterGroups = material.parameterGroups
-            materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
+            if hasattr(material, "textureFlagArray"): # wmb4
+                textureFlags = material.textureFlagArray
+            else:
+                textureFlags = None
+            materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups,textureFlags])
         
     return materials
 
