@@ -1633,6 +1633,8 @@ class c_vertexGroups(object):
         # Alright, before we do anything, let's fix the mess that is object IDs
         allMeshes = [obj for obj in bpy.data.collections['WMB'].all_objects if obj.type == 'MESH']
         for obj in allMeshes:
+            if 'ID' not in obj:
+                obj['ID'] = 900
             obj['ID'] += 1000 * obj['batchGroup'] # make sure it's sorted by batch group
         
         allIDs = sorted([obj['ID'] for obj in allMeshes])
