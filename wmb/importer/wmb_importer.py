@@ -369,7 +369,7 @@ def construct_materials(texture_dir, material):
                 colornode.hide = True
     # Albedo Links
     organic = shader_name[0:3] in {"eye", "har", "skn"}
-    if len(albedo_nodes) == 1 or organic:
+    if len(albedo_nodes) == 1 or (organic and len(albedo_nodes) >= 1):
         albedo_principled = links.new(albedo_nodes[0].outputs['Color'], principled.inputs['Base Color'])
         if shader_name[4] == "0" and not organic:
             glossy_in_link = links.new(albedo_nodes[0].outputs['Alpha'], albedo_invert_nodes[0].inputs['Color'])
