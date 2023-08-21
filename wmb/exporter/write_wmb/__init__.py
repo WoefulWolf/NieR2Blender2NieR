@@ -233,7 +233,10 @@ def create_wmb_header(wmb_file, data, wmb4=False):
         write_uInt32(wmb_file, data.vertexFormat)
         
         write_Int16(wmb_file, 0 if data.numBones > 0 else -1) # TODO should be unsigned?
-        write_Int16(wmb_file, -1) # TODO flags
+        if data.vertexFormat > 0x107: # TODO more precise
+            write_Int16(wmb_file, -1)
+        else:
+            write_Int16(wmb_file, 0)
         
         boundingBoxXYZ, boundingBoxUVW = getGlobalBoundingBox()
         write_xyz(wmb_file, boundingBoxXYZ) # boundingBox: x y z 
