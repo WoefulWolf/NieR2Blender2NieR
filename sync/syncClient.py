@@ -119,7 +119,7 @@ def connectToWebsocket(resultCallback: callable):
 	if _isConnectedToWs:
 		return
 	
-	_ws = WebSocketApp(f"ws://localhost:{_wsPort}", on_message=_onMessage, on_close=_onEnd, on_error=_onError)
+	_ws = WebSocketApp(f"ws://127.0.0.1:{_wsPort}", on_message=_onMessage, on_close=_onEnd, on_error=_onError)
 	_wsThread = WsThread(resultCallback)
 	confirmConnectionTimer = threading.Timer(0.2, _confirmIsConnected)
 	confirmConnectionTimer.start()
