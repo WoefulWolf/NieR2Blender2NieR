@@ -33,8 +33,8 @@ class c_batch_supplements(object): # wmb4
             batchDatum = [0] * 4
             batchDatum[0] = batch['ID']
             batchDatum[1] = batch['meshGroupIndex']
-            batchDatum[2] = batch['Materials'][0]
-            batchDatum[3] = batch['boneSetIndex'] # erroneously counting up, they should be 0 # fine on sam
+            batchDatum[2] = batch.material_slots[0].material['ID']
+            batchDatum[3] = batch['boneSetIndex']
             if not batch['batchGroup'] or batch['batchGroup'] < 0:
                 batch['batchGroup'] = 0
             self.batchData[batch['batchGroup']].append(batchDatum)
@@ -863,8 +863,12 @@ class c_materials(object):
             materials = []
             offsetMaterialName = materialsStart
 
-            for mat in getUsedMaterials():
-                offsetMaterialName += 48 if not wmb4 else 24 # Material Headers
+            # Material Headers
+            if wmb4:
+                offsetMaterialName += 24 * len(getUsedMaterials())
+            else:
+                offsetMaterialName += 48 * len(getUsedMaterials())
+            
             if wmb4 and (offsetMaterialName%16>0):
                 offsetMaterialName += 16 - (offsetMaterialName%16)
 

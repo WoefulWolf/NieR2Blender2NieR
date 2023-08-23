@@ -46,24 +46,30 @@ def drawMultilineLabel(context, text, parent):
 
 def getUsedMaterials():
     materials = []
-    falseMaterials = {}
+    falseMaterials = [] # {}
     meshOrder = []
     # i hate wmb i hate wmb
+    
     for obj in sorted([x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"], key=lambda mesh: mesh['ID']):
+        # fortunately I don't need to do this because I just added a material ID
+        """
         mesh_name = obj.name.split("-")[1]
         if mesh_name not in falseMaterials:
             falseMaterials[mesh_name] = []
             meshOrder.append(mesh_name)
-        
+        """
         for slot in obj.material_slots:
             material = slot.material
-            if material not in materials:
-                materials.append(material)
-                falseMaterials[mesh_name].append(material)
-    
-    materials = []
-    for meshname in meshOrder:
-        materials.extend(falseMaterials[meshname])
+            if material not in falseMaterials:
+                falseMaterials.append(material)
+        
+    # I'll keep some backwards compatibility for once in my life.
+    if len(falseMaterials) > 0 and ('ID' in falseMaterials[0]):
+        materials = sorted(falseMaterials, key=lambda x: x['ID'])
+    else:
+        materials = falseMaterials
+    #for meshname in meshOrder:
+    #    materials.extend(falseMaterials[meshname])
     
     return materials
 

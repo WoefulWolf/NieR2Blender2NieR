@@ -209,17 +209,20 @@ def construct_mesh(mesh_data, collection_name):
     if mesh_data[5] != "None":
         obj['boneSetIndex'] = mesh_data[5]
     obj['meshGroupIndex'] = mesh_data[6]
-    obj['vertexGroup'] = mesh_data[13]
-    obj['LOD_Name'] = mesh_data[8]
-    obj['LOD_Level'] = mesh_data[9]
-    obj['colTreeNodeIndex'] = mesh_data[10]
-    obj['unknownWorldDataIndex'] = mesh_data[11]
+    if len(mesh_data) <= 14: # let's only do these in WMB3
+        obj['LOD_Name'] = mesh_data[8]
+        obj['LOD_Level'] = mesh_data[9]
+        obj['colTreeNodeIndex'] = mesh_data[10]
+        obj['unknownWorldDataIndex'] = mesh_data[11]
+        # this one is in both but we have it in the name
+        obj['vertexGroup'] = mesh_data[13]
     if len(mesh_data) > 14: # wmb4
         obj['ID'] = mesh_data[14]
+        obj['batchGroup'] = mesh_data[18]
+        # can't ditch these two, they're used later during import
         obj['Materials'] = mesh_data[15]
         obj['VertexIndexStart'] = mesh_data[17]
-        obj['batchGroup'] = mesh_data[18]
-        if mesh_data[19] is not None: # scr import
+        if mesh_data[19] is not None: # scr import, TODO expand for props
             transform = mesh_data[19][2:11]
             #print(mesh_data[19])
             obj.location = Vector((transform[0], -transform[2], transform[1]))
@@ -248,7 +251,7 @@ def addWtaExportMaterial(texture_dir, material):
     ]
     makeWtaMaterial(material_name, wtaTextures)
 
-def construct_materials(texture_dir, material):
+def construct_materials(texture_dir, material, material_index=-1):
     material_name = material[0]
     textures = material[1]
     uniforms = material[2]
@@ -259,6 +262,7 @@ def construct_materials(texture_dir, material):
     print('[+] importing material %s' % material_name)
     # oh, real smooth, reusing a variable name
     material = bpy.data.materials.new( '%s' % (material_name))
+    material['ID'] = material_index
     material['Shader_Name'] = shader_name
     material['Technique_Name'] = technique_name
     if textureFlags is not None:
@@ -884,7 +888,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
     bpy.context.scene.WTAMaterials.clear()
     for materialIndex, material in enumerate(wmb_materials):
         addWtaExportMaterial(texture_dir, material)
-        materials.append(construct_materials(texture_dir, material))
+        materials.append(construct_materials(texture_dir, material, materialIndex))
     print('Linking materials to objects...')
     if not wmb4: # formerly "hasattr(wmb, "meshGroupInfoArray")":
         for meshGroupInfo in wmb.meshGroupInfoArray:
