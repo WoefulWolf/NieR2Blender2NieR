@@ -44,7 +44,7 @@ def generate(context):
         texture_paths_array.append(texture.texture_path)
 
         # Assign Albedo & EnvMap Indexes
-        if texture.texture_map_type in ['g_AlbedoMap', 'g_EnvMap']:
+        if texture.texture_map_type in ['g_EnvMap'] or 'g_AlbedoMap' in texture.texture_map_type:
             albedo_indexes.append(true_index)
         
         true_index += 1
