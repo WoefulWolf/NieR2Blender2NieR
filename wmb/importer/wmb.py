@@ -1364,7 +1364,7 @@ class WMB(object):
                 print("Just have the textures array if you care so bad")
             self.textureArray = load_data_array(wmb_fp, self.wmb_header.texturePointer, self.wmb_header.textureCount, wmb4_texture)
             if DEBUG_TEXTURE_PRINT:
-                print([item.id for item in self.textureArray])
+                print([(item.id, hex(item.flags)) for item in self.textureArray])
             
             if DEBUG_MESH_PRINT:
                 print()
