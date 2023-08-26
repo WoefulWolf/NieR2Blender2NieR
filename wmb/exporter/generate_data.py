@@ -1443,6 +1443,8 @@ class c_vertexGroup(object):
                             if len(boneIndexes) < 4:
                                 boneGroupName = bvertex_obj_obj.vertex_groups[groupRef.group].name
                                 boneID = getBoneIndexByName("WMB", boneGroupName)
+                                if boneID is None: # nonexistent group epic fail
+                                    continue
                                 if not wmb4:
                                     boneMapIndx = self.boneMap.index(boneID)
                                     boneSetIndx = boneSet.index(boneMapIndx)
