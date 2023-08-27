@@ -970,11 +970,25 @@ class c_mesh(object):
         self.name = getRealName(obj.name)
         
         if wmb4:
-            self.batches = []
+            self.batches0 = []
+            self.batches1 = []
+            self.batches2 = []
+            self.batches3 = []
             for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
                 if getRealName(mesh.name) == getRealName(obj.name):
-                    self.batches.append(mesh['ID'])
+                    if 'batchGroup' not in mesh:
+                        mesh['batchGroup'] = 0
+                    if mesh['batchGroup'] == 0:
+                        self.batches0.append(mesh['ID'])
+                    elif mesh['batchGroup'] == 1:
+                        self.batches1.append(mesh['ID'])
+                    elif mesh['batchGroup'] == 2:
+                        self.batches2.append(mesh['ID'])
+                    elif mesh['batchGroup'] == 3:
+                        self.batches3.append(mesh['ID'])
             
+            # this code was garbage let us never speak of it again
+            """
             self.batches = sorted(self.batches)
             
             if meshIDOffset == 0:
@@ -997,6 +1011,8 @@ class c_mesh(object):
                         break
                 
                 self.batches3 = [batch - meshIDOffset - 1 for batch in self.batches3]
+            """
+            
             #print(self.name, self.batches0, self.batches1, self.batches2, self.batches3)
         
         self.meshIDOffset = meshIDOffset

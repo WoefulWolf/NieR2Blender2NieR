@@ -823,14 +823,14 @@ class wmb4_material(object):
         for i, texture in enumerate(texturesArray):
             if i % 2 == 0:
                 self.textureFlagArray.append(texture)
-                trueI = -1
+                continue
             else:
                 trueI = int((i - 1) / 2) # bad method, don't care tonight
-            if trueI in {0, 1}:
+            if self.textureFlagArray[trueI] in {0, 1}:
                 self.textureArray["albedoMap" + str(trueI)] = texture
-            elif trueI == 3:
+            elif self.textureFlagArray[trueI] == 2:
                 self.textureArray["normalMap" + str(trueI)] = texture
-            elif trueI != -1:
+            else:
                 self.textureArray["tex" + str(trueI)] = texture
         
         if DEBUG_MATERIAL_PRINT:
