@@ -13,11 +13,11 @@ DEBUG_HEADER_PRINT = True
 DEBUG_VERTEXGROUP_PRINT = False
 #DEBUG_VERTEX_PRINT = # Don't even *think* about it.
 DEBUG_BATCHES_PRINT = False
-DEBUG_BATCHSUPPLEMENT_PRINT = False
+DEBUG_BATCHSUPPLEMENT_PRINT = True
 DEBUG_BONE_PRINT = False # do not recommend, there can be lots of bones
 DEBUG_BITT_PRINT = False # nothing at all
 DEBUG_BONESET_PRINT = False
-DEBUG_MATERIAL_PRINT = False
+DEBUG_MATERIAL_PRINT = True
 DEBUG_TEXTURE_PRINT = True # pretty short, pretty worthwhile
 DEBUG_MESH_PRINT = False
 
@@ -835,6 +835,7 @@ class wmb4_material(object):
         
         if DEBUG_MATERIAL_PRINT:
             print("Count:", self.trueTexturesCount*2, "Data:", texturesArray)
+            print("Shader params:", [(a.x, a.y, a.z, a.w) for a in self.parameters])
         self.parameterGroups = self.parameters
         self.materialName = "UnusedMaterial" # mesh name overrides
         self.wmb4 = True
