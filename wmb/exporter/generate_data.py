@@ -922,7 +922,7 @@ def getMeshBoundingBox(meshObj):
     return midPoint, scale
 
 class c_mesh(object):
-    def __init__(self, offsetMeshes, numMeshes, obj, wmb4=False, meshIDOffset=0):
+    def __init__(self, offsetMeshes, numMeshes, obj, wmb4=False, meshIDOffset=0, batchDescriptions=None):
 
         def get_BoundingBox(self, obj):
             midPoint, scale = getMeshBoundingBox(obj)
@@ -978,14 +978,16 @@ class c_mesh(object):
                 if getRealName(mesh.name) == getRealName(obj.name):
                     if 'batchGroup' not in mesh:
                         mesh['batchGroup'] = 0
+                    relevantBatchData = batchDescriptions.batchData[mesh['batchGroup']]
+                    idToAppend = [x[0] for x in relevantBatchData].index(mesh['ID'])
                     if mesh['batchGroup'] == 0:
-                        self.batches0.append(mesh['ID'])
+                        self.batches0.append(idToAppend)
                     elif mesh['batchGroup'] == 1:
-                        self.batches1.append(mesh['ID'])
+                        self.batches1.append(idToAppend)
                     elif mesh['batchGroup'] == 2:
-                        self.batches2.append(mesh['ID'])
+                        self.batches2.append(idToAppend)
                     elif mesh['batchGroup'] == 3:
-                        self.batches3.append(mesh['ID'])
+                        self.batches3.append(idToAppend)
             
             # this code was garbage let us never speak of it again
             """
@@ -1080,7 +1082,7 @@ class c_mesh(object):
         self.blenderObj = obj
 
 class c_meshes(object):
-    def __init__(self, offsetMeshes, wmb4=False):
+    def __init__(self, offsetMeshes, wmb4=False, batchDescriptions=None):
         
         self.meshIDOffset = 0
         def get_meshes(self, offsetMeshes):
@@ -1116,7 +1118,7 @@ class c_meshes(object):
                     if obj_name == meshName:
                         if obj_name not in meshes_added:
                             print('[+] Generating Mesh', meshName)
-                            mesh = c_mesh(offsetMeshes, numMeshes, obj, wmb4, self.meshIDOffset)
+                            mesh = c_mesh(offsetMeshes, numMeshes, obj, wmb4, self.meshIDOffset, batchDescriptions)
                             self.meshIDOffset = mesh.meshIDOffset
                             meshes.append(mesh)
                             meshes_added.append(obj_name)
@@ -1986,7 +1988,7 @@ class c_generate_data(object):
                 currentOffset += 16 - (currentOffset % 16)
             
             self.meshes_Offset = currentOffset
-            self.meshes = c_meshes(self.meshes_Offset, True)
+            self.meshes = c_meshes(self.meshes_Offset, True, self.batchDescriptions)
             self.meshes_Size = self.meshes.meshes_StructSize
             currentOffset += self.meshes_Size
             print('meshes_Size: ', self.meshes_Size)
