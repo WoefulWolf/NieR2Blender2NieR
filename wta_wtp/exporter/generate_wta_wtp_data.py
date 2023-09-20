@@ -18,8 +18,8 @@ def generate(context):
 
         # Check if identifier is 8 chars long
         if len( texture.texture_identifier) != 8:
-            print('[!] WTA/WTP Export Error: A texture identifier is not characters long.')
-            ShowMessageBox('A texture identifier is not characters long.', 'WTA/WTP Export Error', 'ERROR')
+            print('[!] WTA/WTP Export Error: A texture identifier is not 8 characters long.')
+            ShowMessageBox('A texture identifier is not 8 characters long.', 'WTA/WTP Export Error', 'ERROR')
             return None, None, None
 
         # Check if identifier is valid hex
