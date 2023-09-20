@@ -217,8 +217,11 @@ class AssignBulkTextures(bpy.types.Operator, ImportHelper):
 
         directory = os.path.dirname(self.filepath)
         for filename in os.listdir(directory):
+            if not filename.endswith('.dds'):
+                continue
+            file_texture_id = filename[:-4].lower()
             for item in context.scene.WTAMaterials:
-                if item.texture_identifier == filename[:-4] and filename[-4:] == '.dds':
+                if item.texture_identifier.lower() == file_texture_id:
                     item.texture_path = directory + '/' + filename
                     # Keep track of what was assigned, without duplicates.
                     if filename not in assigned_textures:
