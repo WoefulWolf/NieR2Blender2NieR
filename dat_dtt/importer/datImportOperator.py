@@ -10,7 +10,7 @@ from ...scr.importer import scr_importer
 from ...consts import DAT_EXTENSIONS
 from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
-from ...utils.util import setExportFieldsFromImportFile
+from ...utils.util import setExportFieldsFromImportFile, ShowMessageBox
 
 def importDtt(only_extract, filepath):
     head = os.path.split(filepath)[0]
@@ -20,21 +20,34 @@ def importDtt(only_extract, filepath):
     extract_dir = os.path.join(head, 'nier2blender_extracted')
     from . import dat_unpacker
     if os.path.isfile(dat_filepath):
-        dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + '.dat'), dat_filepath)   # dat
+        alt_filename = dat_unpacker.main(dat_filepath, os.path.join(extract_dir, tailless_tail + '.dat'), dat_filepath)   # dat
     else:
         print('DAT not found. Only extracting DTT. (No materials, collisions or layouts will automatically be imported)')
-
-    extracted_files = dat_unpacker.main(filepath, os.path.join(extract_dir, tailless_tail + '.dtt'), filepath)       # dtt
-
-    wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dtt', tailless_tail + '.wmb')
-    if not os.path.exists(wmb_filepath):
-        wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wmb')                     # if not in dtt, then must be in dat
+    
+    last_filename = dat_unpacker.main(filepath, os.path.join(extract_dir, tailless_tail + '.dtt'), filepath)       # dtt
+    if last_filename == False: # empty dtt
+        last_filename = alt_filename[:10]
+        # cheating but this is already an error case
+        # (two chars prefix, four chars ID, four chars filetype/discard)
+    
+    # try a bunch of methods of finding the filepath
+    wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dtt', last_filename[:-4] + '.wmb')
+    if not os.path.exists(wmb_filepath): # if not in dtt, then must be in dat
+        wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4] + '.wmb')
+    if not os.path.exists(wmb_filepath): # try looking based on the dat name
+        wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wmb')
     # if not in dat, must be an scr
     scr_mode = False
     if not os.path.exists(wmb_filepath):
         scr_mode = True
         print("Could not find WMB at %s, switching to SCR" % wmb_filepath)
         scr_filepath = os.path.join(extract_dir, tailless_tail + '.dat', last_filename[:-4].split("scr")[0] + '.scr')
+        if not os.path.exists(scr_filepath): # try based on the dat name
+            scr_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.scr')
+        if not os.path.exists(scr_filepath):
+            print("Could not find model file in DAT! Please import WMB manually.")
+            ShowMessageBox("Could not find model file in DAT! Please import WMB manually.", "No Model Found", "ERROR")
+            only_extract = True
 
     # WTA/WTP
     wtaPath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wta')
