@@ -16,6 +16,7 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
     centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended)", default=True)
     triangulate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times", default=True)
     delete_loose_geometry: bpy.props.BoolProperty(name="Delete Loose Geometry", description="This automatically runs the 'Delete Loose Geometry (All)' operator before exporting. It deletes all loose vertices or edges that could result in unwanted results in-game", default=True)
+    delete_unused_vertexgroups: bpy.props.BoolProperty(name="Delete Unused Vertex Groups", description="This authomatically runs the 'Remove Unused Vertex Groups' operator before exporting. It removes all vertex groups (bone weights) which are not applied to any vertices on a mesh, which can reduce the number of bones per boneSet and avoid 'white-out' glitches", default=True)
 
     def execute(self, context):
         from . import wmb_exporter
@@ -39,7 +40,11 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
         if self.delete_loose_geometry:
             print("Deleting loose geometry...")
             bpy.ops.b2n.deleteloosegeometryall()
-
+        
+        if self.delete_unused_vertexgroups:
+            print("Deleting unused vertex groups...")
+            bpy.ops.b2n.removeunusedvertexgroups()
+        
         try:
             print("Starting export...")
             wmb_exporter.main(self.filepath)
@@ -60,6 +65,7 @@ class ExportMGRRWmb(bpy.types.Operator, ExportHelper):
     centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended)", default=True)
     triangulate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times", default=True)
     delete_loose_geometry: bpy.props.BoolProperty(name="Delete Loose Geometry", description="This automatically runs the 'Delete Loose Geometry (All)' operator before exporting. It deletes all loose vertices or edges that could result in unwanted results in-game", default=True)
+    delete_unused_vertexgroups: bpy.props.BoolProperty(name="Delete Unused Vertex Groups", description="This authomatically runs the 'Remove Unused Vertex Groups' operator before exporting. It removes all vertex groups (bone weights) which are not applied to any vertices on a mesh, which can reduce the number of bones per boneSet and avoid 'white-out' glitches", default=True)
 
     def execute(self, context):
         from . import wmb_exporter
@@ -86,6 +92,10 @@ class ExportMGRRWmb(bpy.types.Operator, ExportHelper):
             print("Deleting loose geometry...")
             bpy.ops.b2n.deleteloosegeometryall()
 
+        if self.delete_unused_vertexgroups:
+            print("Deleting unused vertex groups...")
+            bpy.ops.b2n.removeunusedvertexgroups()
+        
         try:
             print("Starting export...")
             wmb_exporter.main(self.filepath, True)
