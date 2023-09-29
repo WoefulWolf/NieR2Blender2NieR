@@ -36,6 +36,7 @@ from .sync import install_dependencies
 from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
 from .wmb.exporter.wmbExportOperator import ExportMGRRWmb
+from .wmb.exporter.wmbMaterialJSON import *
 from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .scr.importer.scrImportOperator import ImportSCR
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
@@ -133,6 +134,7 @@ classes = (
     ImportNierGaArea,
     ImportNierMot,
     ImportNierYaxXml,
+    
     ExportNierWmb,
     ExportMGRRWmb,
     ExportNierCol,
@@ -141,6 +143,7 @@ classes = (
     ExportNierGaArea,
     ExportNierMot,
     ExtractNierWtaWtp,
+    
     CreateLayVisualization,
     NierObjectMenu,
     NierArmatureMenu,
@@ -153,7 +156,12 @@ classes = (
     ClearSelectedBoneIDs,
     RestoreImportPose,
     HidePl000fIrrelevantBones,
-    RemovePl000fIrrelevantAnimations
+    RemovePl000fIrrelevantAnimations,
+    WMBMaterialToJSON,
+    WMBMaterialFromJSON,
+    WMBCopyMaterialJSON,
+    WMBPasteMaterialJSON,
+    WMBMaterialJSONPanel
 )
 
 preview_collections = {}
@@ -185,6 +193,7 @@ def register():
     bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
     bpy.types.Object.slidable = bpy.props.BoolProperty(name="Slidable/Modifier")
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
+    bpy.types.Material.wmb_mat_as_json = bpy.props.StringProperty(name="JSON")
 
     bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
     bpy.app.handlers.load_post.append(checkOldVersionMigration)
