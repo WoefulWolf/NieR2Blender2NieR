@@ -94,7 +94,10 @@ class ExportMGRRWmb(bpy.types.Operator, ExportHelper):
 
         if self.delete_unused_vertexgroups:
             print("Deleting unused vertex groups...")
-            bpy.ops.b2n.removeunusedvertexgroups()
+            for mesh in [x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"]:
+                bpy.context.view_layer.objects.active = mesh
+                bpy.ops.b2n.removeunusedvertexgroups()
+            bpy.data.collections['WMB'].all_objects[0].select_set(True)
         
         try:
             print("Starting export...")

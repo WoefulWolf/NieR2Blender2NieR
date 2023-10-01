@@ -796,6 +796,21 @@ def get_wmb_material(wmb, texture_dir):
             technique_name = material.techniqueName
             uniforms = material.uniformArray
             textures = material.textureArray
+            # why the fuck was this not already here, it doesn't need the wta
+            if hasattr(wmb, 'textureArray'):
+                for index, texture in textures.items():
+                    if texture == -1:
+                        continue
+                    try:
+                        textures[index] = wmb.textureArray[texture].id # change index to WTA identifier
+                    except:
+                        print("An error has occured! It seems that the global texture array doesn't have enough elements (%d). I think. This is a generic exception." % texture)
+                        #print("I'm deleting this.")
+                        textures[index] = -1
+                for index, texture in textures.copy().items():
+                    if texture == -1:
+                        del textures[index]
+                print("Textures on %s:"%material_name, textures)
             parameterGroups = material.parameterGroups
             if hasattr(material, "textureFlagArray"): # wmb4
                 textureFlags = material.textureFlagArray
