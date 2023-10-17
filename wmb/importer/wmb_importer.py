@@ -318,6 +318,7 @@ def construct_materials(texture_dir, material, material_index=-1):
                     material[str(gindx)][pindx] = parameter
 
     albedo_maps = {}
+    specular_maps = {}
     normal_maps = {}
     mask_maps = {}
     curvature_maps = {}
@@ -329,6 +330,8 @@ def construct_materials(texture_dir, material, material_index=-1):
         if os.path.exists(texture_file):
             if textures_type.find('albedo') > -1:
                 albedo_maps[textures_type] = textures.get(texturesType)
+            elif textures_type.find('specular') > -1:
+                specular_maps[textures_type] = textures.get(texturesType)
             elif textures_type.find('normal') > -1:
                 normal_maps[textures_type] = textures.get(texturesType)
             elif textures_type.find('mask') > -1:
@@ -357,9 +360,9 @@ def construct_materials(texture_dir, material, material_index=-1):
             invert_shader.location = 600, (i-1)*-60
             invert_shader.hide = True
             if i > 0:
-                albedo_image.label = "g_AlbedoMap" + str(i-1)
+                albedo_image.label = "albedoMap1" + str(i-1)
             else:
-                albedo_image.label = "g_AlbedoMap"
+                albedo_image.label = "albedoMap0"
 
             if i > 0:
                 mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
@@ -372,12 +375,14 @@ def construct_materials(texture_dir, material, material_index=-1):
                 colornode.location = 100,(i-1)*-30
                 colornode.hide = True
     # Albedo Links
-    organic = shader_name[0:3] in {"eye", "har", "skn"}
+    organic = shader_name [0:3] in {"eye", "har", "skn", "siv20_wxmvx", "sis20_xxmfx", "har00_sbXtX"} or shader_name [0:11] in {"eye", "sis20_xxmfx", "siv00_sxmvx", "siv20_wxmvx", "har00_sbXtX"}  
     if len(albedo_nodes) == 1 or (organic and len(albedo_nodes) >= 1):
         albedo_principled = links.new(albedo_nodes[0].outputs['Color'], principled.inputs['Base Color'])
-        if shader_name[4] == "0" and not organic:
+        if 'ois00_xxmeX' not in material['Shader_Name']:
+         if shader_name[4] == "0" and not organic :
             glossy_in_link = links.new(albedo_nodes[0].outputs['Alpha'], albedo_invert_nodes[0].inputs['Color'])
             rough_link = links.new(albedo_invert_nodes[0].outputs['Color'], principled.inputs['Roughness'])
+            specular_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Specular'])
         else:
             alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
     elif len(albedo_mixRGB_nodes) > 0:
@@ -399,6 +404,39 @@ def construct_materials(texture_dir, material, material_index=-1):
             # screw texture alpha, vertex color alpha is my new best friend
             alpha_link = links.new(colornode.outputs['Alpha'], node.inputs['Fac'])
         mixRGB_link = links.new(albedo_mixRGB_nodes[-1].outputs['Color'], principled.inputs['Base Color'])
+        
+   # Specular Nodes
+    specular_nodes = []
+    specular_sepRGB_nodes = []
+    colornode = None
+    for i, textureID in enumerate(specular_maps.values()):
+        texture_file = "%s/%s.dds" % (texture_dir, textureID)
+        if os.path.exists(texture_file):
+            specular_image = nodes.new(type='ShaderNodeTexImage')
+            specular_nodes.append(specular_image)
+            specular_image.location = 0,i*-60
+            specular_image.image = bpy.data.images.load(texture_file)
+            specular_image.hide = True
+                
+            if i > 0:
+                specular_image.label = "specularMap0" + str(i-1)
+            else:
+                specular_image.label = "specularMap1"
+                
+            if 'Hair' not in material['Shader_Name']:
+                sepRGB_shader = nodes.new(type="ShaderNodeSeparateRGB")
+                specular_sepRGB_nodes.append(sepRGB_shader)
+                sepRGB_shader.location = 300, ((len(albedo_maps)+1)*-60)-i*60
+                sepRGB_shader.hide = True
+
+   # specular Links
+    organic = shader_name [0:3] in {"eye", "har", "skn", "siv20_wxmvx", "sis20_xxmfx", "har00_sbXtX"} or shader_name [0:11] in {"eye", "sis20_xxmfx", "siv00_sxmvx", "siv20_wxmvx", "har00_sbXtX"}
+    if len(specular_nodes) == 1 or (organic and len(specular_nodes) >= 1):
+        specular_principled = links.new(specular_nodes[0].outputs['Color'], principled.inputs['Specular'])
+        if shader_name[4] == "0" and not organic :
+            specular_link = links.new(specular_nodes[0].outputs['Color'], principled.inputs['Specular'])
+            
+     
 
     # Mask Nodes
     # Mask Image Texture (R = Metallic, G = Glossines (Inverted Roughness), B = AO)
@@ -452,9 +490,9 @@ def construct_materials(texture_dir, material, material_index=-1):
             normal_image.image.colorspace_settings.name = 'Non-Color'
             normal_image.hide = True
             if i > 0:
-                normal_image.label = "g_NormalMap" + str(i-1)
+                normal_image.label = "normalMap4" + str(i-1)
             else:
-                normal_image.label = "g_NormalMap"
+                normal_image.label = "normalMap3"
 
             if i > 0:
                 n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
@@ -469,9 +507,13 @@ def construct_materials(texture_dir, material, material_index=-1):
         normalmap_link = links.new(normalmap_shader.outputs['Normal'], principled.inputs['Normal'])
         normalmap_shader.hide = True
     # Normal Links
+    organic = shader_name[0:3] in {"siv20", "sis", "skn"}
     if len(normal_nodes) == 1:
         normal_link = links.new(normal_nodes[0].outputs['Color'], normalmap_shader.inputs['Color'])
+        if shader_name[4] == "0" and not organic:
+            metal_link = links.new(normal_nodes[0].outputs['Alpha'], principled.inputs['Metallic'])
     elif len(normal_mixRGB_nodes) > 0:
+        normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
         normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
         for i, node in enumerate(normal_mixRGB_nodes):
             normal_link = links.new(normal_nodes[i+1].outputs['Color'], node.inputs['Color1'])

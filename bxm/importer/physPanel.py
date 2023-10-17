@@ -49,7 +49,7 @@ class SaveBXMFile(bpy.types.Operator, ExportHelper):
         return {"FINISHED"}
 
 class B2NPhysicsEditor(bpy.types.Panel):
-    bl_label = "NieR:Automata Physics Editor"
+    bl_label = "Metal Gear Rising Revengeance Physics Editor"
     bl_idname = "B2N_PT_PhysicsEditorToplevel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"

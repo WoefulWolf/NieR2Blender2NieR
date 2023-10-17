@@ -118,8 +118,14 @@ def handleAutoSetTextureWarnings(operatorSelf, warnings: List[str]):
     print("\n".join(warnings))
 
 def isTextureTypeSupported(textureType: str) -> bool:
-    for supportedTex in ['g_AlbedoMap', 'g_MaskMap', 'g_NormalMap', 'g_EnvMap', 'g_DetailNormalMap', 'g_IrradianceMap', 'g_CurvatureMap', 'g_SpreadPatternMap', 'g_LUT', 'g_LightMap', 'g_GradationMap', 'g_ParallaxMap']:
+    for supportedTex in ['Shader_Name', 'albedoMap0', 'normalMap3', 'specularMap1', 'tex2', 'specularMap0', 'tex4', 'tex5', 'tex6', 'tex7', 'tex9', 'tex8']:
         if supportedTex in textureType:
+            return True
+    return False
+
+def isShaderTypeSupported(shaderType: str) -> bool:
+    for supportedShader in ['Shader_Name']:
+        if supportedShader in ShaderType:
             return True
     return False
 
@@ -137,7 +143,7 @@ def makeWtaMaterial(matName, textures: List[Tuple[str, str, str]]):
             newTex.texture_path = "None"
 
 class GetMaterialsOperator(bpy.types.Operator):
-    '''Fetch all NieR:Automata materials in scene'''
+    '''Fetch all Metal Gear:Rising Revengeance materials in scene'''
     bl_idname = "na.get_wta_materials"
     bl_label = "Fetch All Materials"
     bl_options = {"UNDO"}
@@ -166,7 +172,7 @@ class GetMaterialsOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 class GetNewMaterialsOperator(bpy.types.Operator):
-    '''Fetch newly added NieR:Automata materials in scene'''
+    '''Fetch newly added Metal Gear:Rising Revengeance materials in scene'''
     bl_idname = "na.get_new_wta_materials"
     bl_label = "Fetch New Materials"
     bl_options = {"UNDO"}
@@ -217,8 +223,11 @@ class AssignBulkTextures(bpy.types.Operator, ImportHelper):
 
         directory = os.path.dirname(self.filepath)
         for filename in os.listdir(directory):
+            if not filename.endswith('.dds'):
+                continue
+            file_texture_id = filename[:-4].lower()
             for item in context.scene.WTAMaterials:
-                if item.texture_identifier == filename[:-4] and filename[-4:] == '.dds':
+                if item.texture_identifier.lower() == file_texture_id:
                     item.texture_path = directory + '/' + filename
                     # Keep track of what was assigned, without duplicates.
                     if filename not in assigned_textures:
@@ -260,7 +269,7 @@ class RemoveWtaMaterial(bpy.types.Operator):
         return{'FINISHED'}
 
 class ExportWTPOperator(bpy.types.Operator, ExportHelper):
-    '''Export a NieR:Automata WTP File'''
+    '''Export a Metal Gear:Rising Revengeance WTP File'''
     bl_idname = "na.export_wtp"
     bl_label = "Export WTP"
     bl_options = {'PRESET'}
@@ -275,7 +284,7 @@ class ExportWTPOperator(bpy.types.Operator, ExportHelper):
         return{'FINISHED'}
 
 class ExportWTAOperator(bpy.types.Operator, ExportHelper):
-    '''Export a NieR:Automata WTA File'''
+    '''Export a Metal Gear:Rising Revengeance WTA File'''
     bl_idname = "na.export_wta"
     bl_label = "Export WTA"
     bl_options = {"PRESET"}
@@ -293,7 +302,7 @@ class FilepathSelector(bpy.types.Operator, ImportHelper):
     bl_label = "Select Texture"
     bl_options = {"UNDO"}
 
-    filename_ext = ".dds"
+    filename_ext = ".png"
     filter_glob: StringProperty(default="*.dds", options={'HIDDEN'})
 
     id : bpy.props.IntProperty(options={'HIDDEN'})
@@ -326,7 +335,7 @@ class SyncBlenderMaterials(bpy.types.Operator):
                         if node.label == item.texture_map_type:
                             hasFoundNode = True
                             node.image = bpy.data.images.load(item.texture_path)
-                            if "MaskMap" in node.label or "NormalMap" in node.label:
+                            if "roughness" in node.label or "NormalMap" in node.label:
                                 node.image.colorspace_settings.name = 'Non-Color'
                             break
                     if not hasFoundNode:
@@ -334,13 +343,15 @@ class SyncBlenderMaterials(bpy.types.Operator):
                         node = nodes.new("ShaderNodeTexImage")
                         node.label = item.texture_map_type
                         node.image = bpy.data.images.load(item.texture_path)
-                        if "MaskMap" in node.label or "NormalMap" in node.label:
+                        if "roughness" in node.label or "NormalMap" in node.label:
                             node.image.colorspace_settings.name = "Non-Color"
                         # link up
-                        if "Albedo" in node.label:
+                        if "AlbedoMap0" in node.label:
                             mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Base Color"])
                         elif "Alpha" in node.label:
                             mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Alpha"])
+                        if "NormalMap3" in node.label:
+                            mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Normalmap"])
                         else:
                             print("Unhandled texture map type:", node.label)
 
@@ -443,7 +454,7 @@ class MassTextureReplacer(bpy.types.Operator):
         return{'FINISHED'}
 
 class WTA_WTP_PT_Export(bpy.types.Panel):
-    bl_label = "NieR:Automata WTP/WTA Textures"
+    bl_label = "Metal Gear:Rising Revengeance WTP/WTA Textures"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "output"

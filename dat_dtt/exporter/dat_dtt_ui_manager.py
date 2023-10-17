@@ -13,7 +13,7 @@ from ...utils.util import importContentsFileFromFolder, readFileOrderMetadata, r
 
 class ExportAllSteps(bpy.types.PropertyGroup):
     useWmbStep: bpy.props.BoolProperty(
-        name = "Export WMB",
+        name = "Export WMB4",
         default = True
     )
     useWtpStep: bpy.props.BoolProperty(
@@ -64,7 +64,7 @@ class ExportAllSteps(bpy.types.PropertyGroup):
     )
 
 class DAT_DTT_PT_Export(bpy.types.Panel):
-    bl_label = "NieR:Automata Export"
+    bl_label = "Metal Gear Rising Revengeance Export"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "output"
@@ -220,10 +220,10 @@ class SelectFolder(bpy.types.Operator, ImportHelper):
         return {'FINISHED'}
 
 class ExportAll(bpy.types.Operator):
-    '''Export wmb, wat, wtp, dat, dtt'''
+    '''Export Wmb4,Wta,Wtp,Dat,Dtt'''
     bl_idname = "na.export_all"
     bl_label = "Export all"
-    bl_description = "Export scene to wmb, wat, wtp, dat, dtt files"
+    bl_description = "Export scene to wmb4 not working, wat, wtp, dat, dtt files"
 
     def execute(self, context):
         t1 = time.time()
@@ -253,11 +253,11 @@ class ExportAll(bpy.types.Operator):
                 gaFilePath = item.filepath
             elif item.filepath.endswith('.sar'):
                 sarFilePath = item.filepath
+            elif item.filepath.endswith('.wmb'):
+                wmbFilePath = item.filepath
 
         for item in context.scene.DttContents:
-            if item.filepath.endswith('.wmb'):
-                wmbFilePath = item.filepath
-            elif item.filepath.endswith('.wtp'):
+            if item.filepath.endswith('.wtp'):
                 wtpFilePath = item.filepath        
 
         datFileName = baseFilename + "." + datExt
@@ -267,14 +267,14 @@ class ExportAll(bpy.types.Operator):
 
         from ...wmb.exporter import wmb_exporter
         if exportSteps.useWmbStep:
-            print("Exporting WMB")
+            print("Exporting WMB4 not working")
             if exportSteps.triangulateMeshes:
                 triangulate_meshes("WMB")
             if exportSteps.centerOrigins:
                 centre_origins("WMB")
             if exportSteps.deleteLoose:
                 bpy.ops.b2n.deleteloosegeometryall()
-            wmb_exporter.main(wmbFilePath)
+            wmb_exporter.main(wmbFilePath, True)
             exportedFilesCount += 1
         from ...wta_wtp.exporter import export_wta, export_wtp
         if exportSteps.useWtaStep:
