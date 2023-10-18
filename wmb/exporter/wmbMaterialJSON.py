@@ -11,10 +11,14 @@ class WMBMaterialToJSON(bpy.types.Operator):
         for key, value in material.items():
             if key in ["wmb_mat_as_json", "ID"]:
                 continue
-            if type(value) is idprop.types.IDPropertyArray:
-                dictForString.append((key, list(value)))
-            else:
-                dictForString.append((key, value))
+            if ("Map" in key) \
+              or (key[0:3] == "tex" and key[3].isnumeric()) \
+              or (key in ("Shader_Name", "Texture_Flags")) \
+              or (key.isnumeric()):
+                if type(value) is idprop.types.IDPropertyArray:
+                    dictForString.append((key, list(value)))
+                else:
+                    dictForString.append((key, value))
         material["wmb_mat_as_json"] = json.dumps(dictForString)
         return {'FINISHED'}
 
