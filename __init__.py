@@ -1,15 +1,17 @@
 bl_info = {
-    "name": "(Metal Gear:Rising Revengeance Data Exporter)",
-    "author": "Woeful_Wolf & RaiderB and Space core for porting it to WMB4",
+    "name": "Nier2Blender2NieR (NieR:Automata Data Exporter)",
+    "author": "Woeful_Wolf & RaiderB",
     "version": (0, 3, 1),
     "blender": (2, 80, 0),
-    "description": "Import/Export Metal Gear:Rising Revengeance WMB4/WTP/WTA/DTT/DAT/COL/LAY files.",
+    "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files.",
     "category": "Import-Export"}
 
 
 import bpy
 from bpy.app.handlers import persistent
 from . import preferences
+from .col.exporter import col_ui_manager
+from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionTools
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
@@ -25,8 +27,8 @@ from .mot.common.pl000fChecks import HidePl000fIrrelevantBones, RemovePl000fIrre
 from .sync import install_dependencies
 from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportMGRRWmb
-from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .wmb.exporter.wmbMaterialJSON import *
+from .wmb.importer.wmbImportOperator import ImportNierWmb
 from .scr.importer.scrImportOperator import ImportSCR
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .bxm.importer import physPanel
@@ -58,23 +60,38 @@ class NierArmatureMenu(bpy.types.Menu):
     def draw(self, context):
         self.layout.operator(ClearSelectedBoneIDs.bl_idname, icon='BONE_DATA')
 
+class CreateLayVisualization(bpy.types.Operator):
+    """Create Layout Object Visualization"""
+    bl_idname = "n2b.create_lay_vis"
+    bl_label = "Create Layout Object Visualization"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        from .lay.importer.lay_importer import updateVisualizationObject
+        for obj in bpy.context.selected_objects:
+            if len(obj.name) < 6:
+                self.report({"ERROR"}, f"{obj.name} name needs to be at least 6 characters long!")
+                return {"CANCELLED"}
+            updateVisualizationObject(obj, obj.name[:6], True)
+        return {'FINISHED'}
 
 def menu_func_import(self, context):
     pcoll = preview_collections["main"]
     raiden_icon = pcoll["raiden"]
     yorha_icon = pcoll["yorha"]
-    self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for Metal Gear:Rising Revengeance (.dtt)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportNierWmb.bl_idname, text="WMB4 File for Metal Gear:Rising Revengeance (.wmb)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportNierDat.bl_idname, text="DAT File for Metal Gear:Rising Revengeance (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportNierMot.bl_idname, text="Motion File for Metal Gear:Rising Revengeance (.mot)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierWmb.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierDat.bl_idname, text="DAT File for Nier:Automata (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportSCR.bl_idname, text="SCR File for MGR: Revengeance (.scr)", icon_value=raiden_icon.icon_id)
+    self.layout.operator(ImportNierMot.bl_idname, text="Motion File for Nier:Automata (.mot)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ExtractNierWtaWtp.bl_idname, text="Extract Textures (.wta/.wtp)", icon_value=yorha_icon.icon_id)
 
 def menu_func_export(self, context):
     pcoll = preview_collections["main"]
     emil_icon = pcoll["emil"]
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(ExportMGRRWmb.bl_idname, text="WMB4 File for Metal Gear:Rising Revengeance (.wmb)", icon_value=emil_icon.icon_id)
-    self.layout.operator(ExportNierMot.bl_idname, text="Motion File for Metal Gear:Rising Revengeance (.mot)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportMGRRWmb.bl_idname, text="WMB4 File for MGR: Revengeance (.wmb)", icon_value=emil_icon.icon_id)
+    self.layout.operator(ExportNierMot.bl_idname, text="Motion File for NieR:Automata (.mot)", icon_value=emil_icon.icon_id)
 
 def menu_func_utils(self, context):
     pcoll = preview_collections["main"]
@@ -87,15 +104,16 @@ def menu_func_editbone_utils(self, context):
     self.layout.menu(NierArmatureMenu.bl_idname, icon_value=yorha_icon.icon_id)
 
 classes = (
-    ImportNierWmb,
     ImportSCR,
     ImportNierDtt,
     ImportNierDat,
     ImportNierMot,
+    
     ExportMGRRWmb,
     ExportNierMot,
-    
     ExtractNierWtaWtp,
+    
+    CreateLayVisualization,
     NierObjectMenu,
     NierArmatureMenu,
     RecalculateObjectIndices,
@@ -145,6 +163,7 @@ def register():
     bpy.types.Object.slidable = bpy.props.BoolProperty(name="Slidable/Modifier")
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
     bpy.types.Material.wmb_mat_as_json = bpy.props.StringProperty(name="JSON")
+
     bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
     bpy.app.handlers.load_post.append(checkOldVersionMigration)
     bpy.app.handlers.depsgraph_update_post.append(initialCheckCustomPanelsEnableDisable)
@@ -159,6 +178,7 @@ def unregister():
 
     wta_wtp_ui_manager.unregister()
     dat_dtt_ui_manager.unregister()
+    col_ui_manager.unregister()
     visibilitySwitcher.unregister()
     physPanel.unregister()
     preferences.unregister()
@@ -179,6 +199,10 @@ def checkCustomPanelsEnableDisable(_, __):
         enableVisibilitySelector()
     else:
         disableVisibilitySelector()
+    if "COL" in bpy.data.collections:
+        enableCollisionTools()
+    else:
+        disableCollisionTools()
 
 def initialCheckCustomPanelsEnableDisable(_, __):
     # during registration bpy.data is not yet available, so wait for first depsgraph update
@@ -192,7 +216,7 @@ def checkOldVersionMigration(_, __):
     migrateDatDirs()
 
 def migrateOldWmbCollection():
-    # check if current file is an old wmb4 import
+    # check if current file is an old wmb import
     if "hasMigratedToN2B2N" in bpy.context.scene:
         return
     if "WMB" in bpy.data.collections:
