@@ -29,6 +29,36 @@ class c_batch_supplements(object): # wmb4
         allBatches = [x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"]
         allBatches = sorted(allBatches, key=lambda batch: batch['ID'])
         self.batchData = [[], [], [], []] # stupid pass by reference
+        
+        # sort meshes
+        for obj in allBatches:
+            obj_name = getRealName(obj.name)
+            if obj_name not in meshNames:
+                meshNames.append(obj_name)
+
+        numMeshes = len(meshNames)
+        meshNamesSorted = [None] * numMeshes
+        apparentNewMeshes = []
+        for meshName in meshNames:
+            for obj in allBatches:
+                obj_name = getRealName(obj.name)
+                if obj_name == meshName:
+                    if (meshNamesSorted[obj["meshGroupIndex"]] is None):
+                        meshNamesSorted[obj["meshGroupIndex"]] = meshName
+                    else: # someone made a new mesh and didn't fix it
+                        apparentNewMeshes.append(meshName)
+                    break
+        
+        for meshName in apparentNewMeshes:
+            for i, name in enumerate(meshNamesSorted):
+                if (name is not None):
+                    continue
+                meshNamesSorted[i] = meshName
+                for obj in allBatches: # rename
+                    if getRealName(obj.name) == meshName:
+                        obj["meshGroupIndex"] = i
+        
+        # okay back to batch supplements
         for batch in allBatches:
             batchDatum = [0] * 4
             batchDatum[0] = batch['ID']
