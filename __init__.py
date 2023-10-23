@@ -79,11 +79,11 @@ def menu_func_import(self, context):
     pcoll = preview_collections["main"]
     raiden_icon = pcoll["raiden"]
     yorha_icon = pcoll["yorha"]
-    self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for Nier:Automata (.dtt)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportNierWmb.bl_idname, text="WMB File for Nier:Automata (.wmb)", icon_value=yorha_icon.icon_id)
-    self.layout.operator(ImportNierDat.bl_idname, text="DAT File for Nier:Automata (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierDtt.bl_idname, text="DTT File for MGR: Revengeance (.dtt)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierWmb.bl_idname, text="WMB File for MGR: Revengeance (.wmb)", icon_value=raiden_icon.icon_id)
+    self.layout.operator(ImportNierDat.bl_idname, text="DAT File for MGR: Revengeance (col+lay) (.dat)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ImportSCR.bl_idname, text="SCR File for MGR: Revengeance (.scr)", icon_value=raiden_icon.icon_id)
-    self.layout.operator(ImportNierMot.bl_idname, text="Motion File for Nier:Automata (.mot)", icon_value=yorha_icon.icon_id)
+    self.layout.operator(ImportNierMot.bl_idname, text="Motion File for MGR: Revengeance (.mot)", icon_value=yorha_icon.icon_id)
     self.layout.operator(ExtractNierWtaWtp.bl_idname, text="Extract Textures (.wta/.wtp)", icon_value=yorha_icon.icon_id)
 
 def menu_func_export(self, context):
@@ -108,7 +108,7 @@ classes = (
     ImportNierDtt,
     ImportNierDat,
     ImportNierMot,
-    
+    ImportNierWmb,
     ExportMGRRWmb,
     ExportNierMot,
     ExtractNierWtaWtp,
