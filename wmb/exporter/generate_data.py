@@ -31,6 +31,7 @@ class c_batch_supplements(object): # wmb4
         self.batchData = [[], [], [], []] # stupid pass by reference
         
         # sort meshes
+        meshNames = []
         for obj in allBatches:
             obj_name = getRealName(obj.name)
             if obj_name not in meshNames:
