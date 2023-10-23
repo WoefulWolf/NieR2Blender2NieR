@@ -29,6 +29,36 @@ class c_batch_supplements(object): # wmb4
         allBatches = [x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"]
         allBatches = sorted(allBatches, key=lambda batch: batch['ID'])
         self.batchData = [[], [], [], []] # stupid pass by reference
+        
+        # sort meshes
+        for obj in allBatches:
+            obj_name = getRealName(obj.name)
+            if obj_name not in meshNames:
+                meshNames.append(obj_name)
+
+        numMeshes = len(meshNames)
+        meshNamesSorted = [None] * numMeshes
+        apparentNewMeshes = []
+        for meshName in meshNames:
+            for obj in allBatches:
+                obj_name = getRealName(obj.name)
+                if obj_name == meshName:
+                    if (meshNamesSorted[obj["meshGroupIndex"]] is None):
+                        meshNamesSorted[obj["meshGroupIndex"]] = meshName
+                    else: # someone made a new mesh and didn't fix it
+                        apparentNewMeshes.append(meshName)
+                    break
+        
+        for meshName in apparentNewMeshes:
+            for i, name in enumerate(meshNamesSorted):
+                if (name is not None):
+                    continue
+                meshNamesSorted[i] = meshName
+                for obj in allBatches: # rename
+                    if getRealName(obj.name) == meshName:
+                        obj["meshGroupIndex"] = i
+        
+        # okay back to batch supplements
         for batch in allBatches:
             batchDatum = [0] * 4
             batchDatum[0] = batch['ID']
@@ -272,30 +302,32 @@ class c_b_boneSets(object):
         
         # Get boneSets
         b_boneSets = []
-        for obj in bpy.data.collections['WMB'].all_objects:
-            if obj.type == 'MESH':
-                vertex_group_bones = []
-                if obj['boneSetIndex'] != -1:
-                    for group in obj.vertex_groups:
-                        boneID = getBoneIndexByName("WMB", group.name)
-                        if boneID != None:
-                            boneMapIndex = boneMap.index(boneID) if not wmb4 else boneID
-                            vertex_group_bones.append(boneMapIndex)
-                    print(vertex_group_bones)
-                    if vertex_group_bones not in b_boneSets:
-                        if wmb4:
-                            if len(b_boneSets) <= obj["boneSetIndex"]:
-                                b_boneSets.append(vertex_group_bones)
-                            else: # no idea how often this ends up called
-                                b_boneSets[obj["boneSetIndex"]].extend(vertex_group_bones)
-                        else:
-                            b_boneSets.append(vertex_group_bones)
-                            obj["boneSetIndex"] = len(b_boneSets)-1
-                    elif not wmb4:
-                        obj["boneSetIndex"] = b_boneSets.index(vertex_group_bones)
+        allmeshes = [x for x in bpy.data.collections['WMB'].all_objects if x.type == 'MESH']
+        allmeshes = sorted(allmeshes, key=lambda x: x['boneSetIndex'])
+        for obj in allmeshes:
+            vertex_group_bones = []
+            if obj['boneSetIndex'] != -1:
+                for group in obj.vertex_groups:
+                    boneID = getBoneIndexByName("WMB", group.name)
+                    if boneID != None:
+                        boneMapIndex = boneMap.index(boneID) if not wmb4 else boneID
+                        vertex_group_bones.append(boneMapIndex)
+                vertex_group_bones = sorted(vertex_group_bones)
+                print(vertex_group_bones)
+                if vertex_group_bones not in b_boneSets:
+                    #if wmb4:
+                    #    if len(b_boneSets) <= obj["boneSetIndex"]:
+                    #        b_boneSets.append(vertex_group_bones)
+                    #    else: # no idea how often this ends up called
+                    #        b_boneSets[obj["boneSetIndex"]].extend(vertex_group_bones)
+                    #else:
+                    b_boneSets.append(vertex_group_bones)
+                    obj["boneSetIndex"] = len(b_boneSets)-1
+                else:#if not wmb4:
+                    obj["boneSetIndex"] = b_boneSets.index(vertex_group_bones)
         
-        if wmb4:
-            b_boneSets = [sorted(list(set(boneSet))) for boneSet in b_boneSets] # removing duplicates trick
+        #if wmb4:
+        #    b_boneSets = [sorted(list(set(boneSet))) for boneSet in b_boneSets] # removing duplicates trick
         
         amt.data['boneSetArray'] = b_boneSets
 
