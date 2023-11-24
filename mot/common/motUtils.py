@@ -4,6 +4,9 @@ from typing import Callable
 import bpy
 from mathutils import Vector
 
+cameraId = 0x7000
+camTargetId = 0x7001
+
 class KeyFrame:
 	interpolationType: str
 	frame: int
@@ -53,6 +56,49 @@ def getArmatureObject() -> bpy.types.Object:
 	if len(armaturesInWmbColl) == 0:
 		return allArmatures[0]
 	return armaturesInWmbColl[0]
+
+def getCameraObject() -> bpy.types.Object:
+	activeObj = bpy.context.active_object
+	if activeObj is not None and activeObj.type == "CAMERA" and activeObj.name.startswith("MOT Camera"):
+		return activeObj
+	collection: bpy.types.Collection = bpy.data.collections.get("MOT")
+	if collection:
+		cameras = [
+			obj
+			for obj in collection.all_objects
+			if obj.type == "CAMERA" and obj.name.startswith("MOT Camera")
+		]
+		if len(cameras) > 0:
+			return cameras[0]
+	else:
+		collection = bpy.data.collections.new("MOT")
+		bpy.context.scene.collection.children.link(collection)
+	cam = bpy.data.objects.new("MOT Camera", bpy.data.cameras.new("Camera"))
+	trackingConstraint = cam.constraints.new("TRACK_TO")
+	trackingConstraint.target = getCameraTarget()
+	collection.objects.link(cam)
+	return cam
+
+def getCameraTarget() -> bpy.types.Object:
+	activeObj = bpy.context.active_object
+	if activeObj is not None and activeObj.type == "EMPTY" and activeObj.name.startswith("MOT Camera Target"):
+		return activeObj
+	collection: bpy.types.Collection = bpy.data.collections.get("MOT")
+	if collection:
+		target = [
+			obj
+			for obj in collection.all_objects
+			if obj.type == "EMPTY" and obj.name.startswith("MOT Camera Target")
+		]
+		if len(target) > 0:
+			return target[0]
+	else:
+		collection = bpy.data.collections.new("MOT")
+		bpy.context.scene.collection.children.link(collection)
+	target = bpy.data.objects.new("MOT Camera Target", None)
+	target.empty_display_size = 0.15
+	collection.objects.link(target)
+	return target
 
 def getBoneFCurve(armatureObj: bpy.types.Object, bone: bpy.types.PoseBone, property: str, index: int) -> bpy.types.FCurve:
 	for fCurve in armatureObj.animation_data.action.fcurves:

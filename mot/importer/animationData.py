@@ -73,3 +73,50 @@ class PropertyAnimation:
 			if i > 0:
 				prevKf = KeyFrameCombo(self.keyFrames[i-1], fCurve.keyframe_points[i-1])
 			curKf.mot.applyInterpolation(prevKf, curKf)
+
+
+class PropertyObjectAnimation:
+	_propertyNameToIndex = {
+		"location": 0,
+		"rotation_euler": 1,
+		"scale": 2,
+	}
+	propertyName: str
+	propertyNameIndex: int
+	channelIndex: int
+	object: bpy.types.Object|None
+	keyFrames: List[KeyFrame]
+	flag: int
+	
+	@staticmethod
+	def fromRecord(record: MotRecord, object: bpy.types.Object) -> PropertyObjectAnimation:
+		anim = PropertyObjectAnimation()
+		anim.propertyName = record.getPropertyPath()
+		anim.propertyNameIndex = PropertyAnimation._propertyNameToIndex[anim.propertyName]
+		anim.channelIndex = record.getPropertyIndex()
+		anim.object = object
+		anim.flag = record.interpolationType
+		anim.keyFrames = record.interpolation.toKeyFrames()
+		return anim
+
+	def getFCurve(self) -> bpy.types.FCurve:
+		return getObjFCurve(self.object, self.propertyName, self.channelIndex)
+			
+	def applyToBlender(self):
+		animProp = self.object.path_resolve(self.propertyName)
+		c = self.channelIndex
+		# set all keyframe values
+		for motKeyFrame in self.keyFrames:
+			value = motKeyFrame.value
+
+			animProp[c] = value
+			self.object.keyframe_insert(data_path=self.propertyName, index=c, frame=motKeyFrame.frame)
+
+		# set all keyframe interpolations
+		fCurve = self.getFCurve()
+		for i in range(len(self.keyFrames)):
+			curKf = KeyFrameCombo(self.keyFrames[i], fCurve.keyframe_points[i])
+			prevKf = None
+			if i > 0:
+				prevKf = KeyFrameCombo(self.keyFrames[i-1], fCurve.keyframe_points[i-1])
+			curKf.mot.applyInterpolation(prevKf, curKf)

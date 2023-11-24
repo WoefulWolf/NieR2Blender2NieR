@@ -1,16 +1,23 @@
 import bpy
 
-from .animationData import PropertyAnimation
+from .animationData import PropertyAnimation, PropertyObjectAnimation
 from ..common.mot import *
 from ..common.motUtils import *
 from .rotationWrapperObj import objRotationWrapper
 from .tPoseFixer import fixTPose
 
 def importMot(file: str, printProgress: bool = True) -> None:
-	# import mot file
 	mot = MotFile()
 	with open(file, "rb") as f:
 		mot.fromFile(f)
+	
+	if mot.header.animationName.startswith("camera"):
+		importCameraMot(mot, printProgress)
+	else:
+		importArmatureMot(mot, printProgress)
+
+def importArmatureMot(mot: MotFile, printProgress: bool = True) -> None:
+	# import mot file
 	header = mot.header
 	records = mot.records
 	
@@ -38,7 +45,6 @@ def importMot(file: str, printProgress: bool = True) -> None:
 	
 	# create keyframes
 	motRecords: List[MotRecord] = []
-	record: MotRecord
 	for record in records:
 		if not record.getBone() and record.boneIndex != -1:
 			print(f"WARNING: Bone {record.boneIndex} not found in armature")
@@ -60,4 +66,76 @@ def importMot(file: str, printProgress: bool = True) -> None:
 	bpy.context.scene.frame_end = header.frameCount - 1
 	bpy.context.scene.render.fps = 60
 	
-	print(f"Imported {header.animationName} from {file}")
+	print(f"Imported {header.animationName}")
+
+def importCameraMot(mot: MotFile, printProgress: bool = True):
+	# Steps:
+	# 1. Find or create camera
+	# 2. Find or create camera target
+	# 3. Create camera animation
+	# 4. Create camera target animation
+	# 5. Load .mot file
+	
+	# import mot file
+	header = mot.header
+	records = mot.records
+
+	# set up camera and target
+	target = getCameraTarget()
+	cam = getCameraObject()
+	objRotationWrapper(cam)
+	objRotationWrapper(target)
+
+	# new animation actions
+	camAnimationName = f"{header.animationName} Camera"
+	targetAnimationName = f"{header.animationName} Target"
+	if camAnimationName in bpy.data.actions:
+		bpy.data.actions.remove(bpy.data.actions[camAnimationName])
+	if targetAnimationName in bpy.data.actions:
+		bpy.data.actions.remove(bpy.data.actions[targetAnimationName])
+	camAction = bpy.data.actions.new(camAnimationName)
+	targetAction = bpy.data.actions.new(targetAnimationName)
+	if not cam.animation_data:
+		cam.animation_data_create()
+	if not target.animation_data:
+		target.animation_data_create()
+	cam.animation_data.action = camAction
+	target.animation_data.action = targetAction
+	camAction["headerFlag"] = header.flag
+	camAction["headerUnknown"] = header.unknown
+	targetAction["headerFlag"] = header.flag
+	targetAction["headerUnknown"] = header.unknown
+
+	# create keyframes
+	motRecords: List[MotRecord] = []
+	for record in records:
+		if record.boneIndex not in { cameraId, camTargetId }:
+			print(f"WARNING: ID {record.boneIndex} doesn't match camera or target")
+			continue
+		if record.propertyIndex > 9:
+			print(f"WARNING: Property index {record.propertyIndex} is out of range")
+			continue
+		motRecords.append(record)
+
+	camAnimations: List[PropertyObjectAnimation] = []
+	targetAnimations: List[PropertyObjectAnimation] = []
+	for record in motRecords:
+		if record.boneIndex == cameraId:
+			camAnimations.append(PropertyObjectAnimation.fromRecord(record, cam))
+		elif record.boneIndex == camTargetId:
+			targetAnimations.append(PropertyObjectAnimation.fromRecord(record, target))
+	
+	# apply to blender
+	for i, animation in enumerate(camAnimations):
+		print(f"Importing {i+1}/{len(camAnimations)}")
+		animation.applyToBlender()
+	for i, animation in enumerate(targetAnimations):
+		print(f"Importing {i+1}/{len(targetAnimations)}")
+		animation.applyToBlender()
+
+	# updated frame range
+	bpy.context.scene.frame_start = 0
+	bpy.context.scene.frame_end = header.frameCount - 1
+	bpy.context.scene.render.fps = 60
+
+	print(f"Imported {header.animationName}")
