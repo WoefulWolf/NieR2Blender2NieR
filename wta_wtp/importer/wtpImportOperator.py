@@ -102,10 +102,8 @@ class ExtractNierWtaWtp(bpy.types.Operator, ImportHelper):
         return {'FINISHED'}
 
 def extractFromWta(wtaPath, wtpPath, extractDir) -> int:
-    with (
-        open(wtaPath, "rb") as wtaFile,
-        open(wtpPath, "rb") as wtpFile
-    ):
-        wta = WTAData(wtaFile, wtpFile)
+    with open(wtaPath, "rb") as wtaFile:
+        with open(wtpPath, "rb") as wtpFile:
+            wta = WTAData(wtaFile, wtpFile)
     extractedCount = wta.extract_textures(extractDir)
     return extractedCount

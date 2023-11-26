@@ -420,14 +420,15 @@ def construct_materials(texture_dir, material):
 			multiply_shader.operation = "MULTIPLY"
 			curvature_mul_nodes.append(multiply_shader)
 	# Curvature Links
+	subsurface_name = "Subsurface" if bpy.app.version < (4, 0) else "Subsurface Weight"
 	if len(curvature_nodes) > 0:
 		curvature_link = links.new(curvature_nodes[0].outputs['Color'], curvature_sepRGB_nodes[0].inputs['Image'])
 		r_link = links.new(curvature_sepRGB_nodes[0].outputs['R'], curvature_mul_nodes[0].inputs[0])
 		g_link = links.new(curvature_sepRGB_nodes[0].outputs['G'], curvature_mul_nodes[0].inputs[1])
-		mul_link = links.new(curvature_mul_nodes[0].outputs['Value'], principled.inputs['Subsurface'])
-		principled.inputs[2].default_value[0] = 0.6
-		principled.inputs[2].default_value[1] = 0.2
-		principled.inputs[2].default_value[2] = 0.2
+		mul_link = links.new(curvature_mul_nodes[0].outputs['Value'], principled.inputs[subsurface_name])
+		principled.inputs["Subsurface Radius"].default_value[0] = 0.6
+		principled.inputs["Subsurface Radius"].default_value[1] = 0.2
+		principled.inputs["Subsurface Radius"].default_value[2] = 0.2
 
 	return material
 
