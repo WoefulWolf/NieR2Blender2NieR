@@ -138,8 +138,10 @@ class MotRecord:
 			return "rotation_euler"
 		elif self.propertyIndex in {7, 8, 9}:
 			return "scale"
+		elif self.propertyIndex in {15}:
+			return "data.lens"
 		else:
-			raise Exception(f"Unknown property index: {self.propertyIndex}")
+			return f"unknown_{self.propertyIndex}"
 	
 	def getPropertyIndex(self) -> int:
 		if self.propertyIndex in {0, 3, 7}:
@@ -149,7 +151,7 @@ class MotRecord:
 		elif self.propertyIndex in {2, 5, 9}:
 			return 2
 		else:
-			raise Exception(f"Unknown property index: {self.propertyIndex}")
+			return 0
 
 class MotInterpolation:
 	record: MotRecord

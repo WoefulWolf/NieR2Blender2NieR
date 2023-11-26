@@ -10,11 +10,20 @@ def importMot(file: str, printProgress: bool = True) -> None:
 	mot = MotFile()
 	with open(file, "rb") as f:
 		mot.fromFile(f)
+	header = mot.header
+	records = mot.records
 	
-	if mot.header.animationName.startswith("camera"):
-		importCameraMot(mot, printProgress)
-	else:
+	if hasArmatureAnimation(records):
 		importArmatureMot(mot, printProgress)
+	if hasCameraAnimation(records):
+		importCameraMot(mot, printProgress)
+	
+	# updated frame range
+	bpy.context.scene.frame_start = 0
+	bpy.context.scene.frame_end = header.frameCount - 1
+	bpy.context.scene.render.fps = 60
+	
+	print(f"Imported {header.animationName}")
 
 def importArmatureMot(mot: MotFile, printProgress: bool = True) -> None:
 	# import mot file
@@ -60,13 +69,6 @@ def importArmatureMot(mot: MotFile, printProgress: bool = True) -> None:
 		if printProgress and i % 10 == 0:
 			print(f"Importing {i+1}/{len(animations)}")
 		animation.applyToBlender()
-	
-	# updated frame range
-	bpy.context.scene.frame_start = 0
-	bpy.context.scene.frame_end = header.frameCount - 1
-	bpy.context.scene.render.fps = 60
-	
-	print(f"Imported {header.animationName}")
 
 def importCameraMot(mot: MotFile, printProgress: bool = True):
 	# Steps:
@@ -112,9 +114,6 @@ def importCameraMot(mot: MotFile, printProgress: bool = True):
 		if record.boneIndex not in { cameraId, camTargetId }:
 			print(f"WARNING: ID {record.boneIndex} doesn't match camera or target")
 			continue
-		if record.propertyIndex > 9:
-			print(f"WARNING: Property index {record.propertyIndex} is out of range")
-			continue
 		motRecords.append(record)
 
 	camAnimations: List[PropertyObjectAnimation] = []
@@ -133,9 +132,14 @@ def importCameraMot(mot: MotFile, printProgress: bool = True):
 		print(f"Importing {i+1}/{len(targetAnimations)}")
 		animation.applyToBlender()
 
-	# updated frame range
-	bpy.context.scene.frame_start = 0
-	bpy.context.scene.frame_end = header.frameCount - 1
-	bpy.context.scene.render.fps = 60
+def hasArmatureAnimation(records: list[MotRecord]) -> bool:
+	for record in records:
+		if record.boneIndex not in { cameraId, camTargetId }:
+			return True
+	return False
 
-	print(f"Imported {header.animationName}")
+def hasCameraAnimation(records: list[MotRecord]) -> bool:
+	for record in records:
+		if record.boneIndex in { cameraId, camTargetId }:
+			return True
+	return False
