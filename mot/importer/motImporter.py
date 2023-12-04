@@ -83,14 +83,14 @@ def importCameraMot(mot: MotFile, printProgress: bool = True):
 	records = mot.records
 
 	# set up camera and target
-	target = getCameraTarget()
-	cam = getCameraObject()
+	target = getCameraTarget(True)
+	cam = getCameraObject(True)
 	objRotationWrapper(cam)
 	objRotationWrapper(target)
 
 	# new animation actions
-	camAnimationName = f"{header.animationName} Camera"
-	targetAnimationName = f"{header.animationName} Target"
+	camAnimationName = f"{header.animationName} - Camera"
+	targetAnimationName = f"{header.animationName} - Target"
 	if camAnimationName in bpy.data.actions:
 		bpy.data.actions.remove(bpy.data.actions[camAnimationName])
 	if targetAnimationName in bpy.data.actions:

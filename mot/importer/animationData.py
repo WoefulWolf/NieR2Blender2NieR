@@ -2,7 +2,7 @@ from __future__ import annotations
 from math import degrees, tan
 from typing import List
 import bpy
-from ..common.motUtils import KeyFrame, KeyFrameCombo, getArmatureObject, getBoneFCurve, getObjFCurve
+from ..common.motUtils import KeyFrame, KeyFrameCombo, fovToFocalLength, getArmatureObject, getBoneFCurve, getObjFCurve
 from ..common.mot import MotRecord
 
 class PropertyAnimation:
@@ -114,8 +114,8 @@ class PropertyObjectAnimation:
 				animProp[c] = value
 				self.object.keyframe_insert(data_path=self.propertyName, index=c, frame=motKeyFrame.frame)
 			else:
-				fovRad = value * 16 / 9
-				focalLength = self.fovToFocalLength(fovRad)
+				fovRad = value
+				focalLength = fovToFocalLength(self.object.data, fovRad)
 				self.object.data.lens = focalLength
 				self.object.data.keyframe_insert(data_path="lens", frame=motKeyFrame.frame)
 
@@ -127,8 +127,3 @@ class PropertyObjectAnimation:
 			if i > 0:
 				prevKf = KeyFrameCombo(self.keyFrames[i-1], fCurve.keyframe_points[i-1])
 			curKf.mot.applyInterpolation(prevKf, curKf)
-
-	def fovToFocalLength(self, fovRad: float) -> float:
-		camData = self.object.data
-		sensorSize = max(camData.sensor_width, camData.sensor_height)
-		return sensorSize / (2 * tan(fovRad / 2))

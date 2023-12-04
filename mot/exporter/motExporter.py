@@ -2,8 +2,8 @@ import bpy
 from mathutils import Vector
 import re
 import os
-from typing import List
-from ..common.motUtils import KeyFrame, Spline, getArmatureObject
+from typing import Callable, List
+from ..common.motUtils import KeyFrame, Spline, focalLengthToFov, getArmatureObject, getCameraObject, getCameraTarget, cameraId, camTargetId
 from ..common.mot import MotFile, MotHeader, MotRecord, MotInterpolValues, MotInterpolSplines
 
 class AnimationObject:
@@ -15,8 +15,10 @@ class AnimationObject:
 	keyFrames: List[KeyFrame]
 	valueOffset: float
 
-def getAllAnimationObjects(arm: bpy.types.Object) -> List[AnimationObject]:
-	curves = arm.animation_data.action.fcurves
+def getAllAnimationObjects(obj: bpy.types.Object) -> List[AnimationObject]:
+	curves = list(obj.animation_data.action.fcurves)
+	if obj.type == "CAMERA":
+		curves.extend(obj.data.animation_data.action.fcurves)
 	animObjs: List[AnimationObject] = []
 	for curve in curves:
 		animObj = AnimationObject()
@@ -24,12 +26,12 @@ def getAllAnimationObjects(arm: bpy.types.Object) -> List[AnimationObject]:
 		dataPath = curve.data_path
 		if dataPath.startswith("pose.bones["):
 			boneName = re.search(r"pose\.bones\[\"(.*)\"\]", dataPath).group(1)
-			bone = arm.pose.bones[boneName]
+			bone = obj.pose.bones[boneName]
 			animObj.bone = bone
 			animObj.object = None
 		else:
 			animObj.bone = None
-			animObj.object = arm
+			animObj.object = obj
 		animObj.channel = curve.array_index
 		if "location" in dataPath:
 			animObj.property = "location"
@@ -37,6 +39,12 @@ def getAllAnimationObjects(arm: bpy.types.Object) -> List[AnimationObject]:
 			animObj.property = "rotation"
 		elif "scale" in dataPath:
 			animObj.property = "scale"
+		elif "lens" in dataPath:
+			animObj.property = "lens"
+		elif "[\"unknown_14\"]" == dataPath:
+			animObj.property = "unknown_14"
+		elif "rotation_quaternion" in dataPath:
+			raise Exception("Quaternion rotation not supported. Use euler rotation instead and delete the quaternion rotation fcurves")
 		else:
 			raise Exception("Unknown property: " + dataPath)
 		if animObj.property == "location" and animObj.bone is not None:
@@ -76,31 +84,32 @@ def getInterpolationType(curve: bpy.types.FCurve) -> int:
 			"3. Bezier interpolation"
 		)
 
-def makeConstInterpolation(animObj: AnimationObject, record: MotRecord):
+def makeConstInterpolation(animObj: AnimationObject, record: MotRecord, transformValue: Callable[[float], float]):
 	value = animObj.curve.keyframe_points[0].co[1]
 	value += animObj.valueOffset
-	record.value = value
+	record.value = transformValue(value)
 	record.interpolation = None
 	record.interpolationsCount = 0
 
-def makeBakedInterpolation(animObj: AnimationObject, record: MotRecord):
+def makeBakedInterpolation(animObj: AnimationObject, record: MotRecord, transformValue: Callable[[float], float]):
 	values = [
 		keyFrame.co[1] + animObj.valueOffset
 		for keyFrame in animObj.curve.keyframe_points
 	]
+	values = list(map(transformValue, values))
 	interpolation = MotInterpolValues()
 	interpolation.values = values
 	record.interpolation = interpolation
 	record.interpolationsCount = len(values)
 
-def makeBezierInterpolation(animObj: AnimationObject, record: MotRecord):
+def makeBezierInterpolation(animObj: AnimationObject, record: MotRecord, transformValue: Callable[[float], float]):
 	interpolation = MotInterpolSplines()
 	interpolation.splines = []
 	for i in range(len(animObj.curve.keyframe_points)):
 		keyFrame = animObj.curve.keyframe_points[i]
 		spline = Spline()
 		spline.frame = round(keyFrame.co[0])
-		spline.value = keyFrame.co[1] + animObj.valueOffset
+		spline.value = transformValue(keyFrame.co[1] + animObj.valueOffset)
 		# in hermit slope
 		if i == 0:
 			spline.m0 = 0
@@ -139,27 +148,39 @@ def makeBezierInterpolation(animObj: AnimationObject, record: MotRecord):
 	record.interpolation = interpolation
 	record.interpolationsCount = len(interpolation.splines)
 
-def makeRecords(animObjs: List[AnimationObject]) -> List[MotRecord]:
+def makeRecords(
+	animObjs: List[AnimationObject],
+	specialBoneIndex: int|None,
+) -> List[MotRecord]:
 	records: List[MotRecord] = []
 	for animObj in animObjs:
 		record = MotRecord()
-		record.boneIndex = animObj.bone.bone["ID"] if animObj.bone else -1
+		transformValue = lambda value: value
+		if specialBoneIndex is None:
+			record.boneIndex = animObj.bone.bone["ID"] if animObj.bone else -1
+		else:
+			record.boneIndex = specialBoneIndex
 		if animObj.property == "location":
 			record.propertyIndex = animObj.channel
 		elif animObj.property == "rotation":
 			record.propertyIndex = animObj.channel + 3
 		elif animObj.property == "scale":
 			record.propertyIndex = animObj.channel + 7
+		elif animObj.property == "lens":
+			record.propertyIndex = 15
+			transformValue = lambda value: focalLengthToFov(animObj.object.data, value)
+		elif animObj.property == "unknown_14":
+			record.propertyIndex = 14
 		else:
 			raise Exception("Unknown property: " + animObj.property)
 		record.unknown = 0
 		record.interpolationType = getInterpolationType(animObj.curve)
 		if record.interpolationType == 0:
-			makeConstInterpolation(animObj, record)
+			makeConstInterpolation(animObj, record, transformValue)
 		elif record.interpolationType == 1:
-			makeBakedInterpolation(animObj, record)
+			makeBakedInterpolation(animObj, record, transformValue)
 		elif record.interpolationType == 4:
-			makeBezierInterpolation(animObj, record)
+			makeBezierInterpolation(animObj, record, transformValue)
 		else:
 			raise Exception("Unknown interpolation type: " + str(record.interpolationType))
 		
@@ -196,49 +217,66 @@ def addAdditionPatchRecords(path: str, currentRecords: List[MotRecord]):
 
 def exportMot(path: str, patchExisting: bool):
 	arm = getArmatureObject()
-	if arm is None:
-		raise Exception("No armature found")
+	cam = getCameraObject(False)
+	target = getCameraTarget(False)
+	if arm is None and cam is None and target is None:
+		raise Exception("No armature or camera found")
 	
-	# get animation data
-	animObjs = getAllAnimationObjects(arm)
-	records = makeRecords(animObjs)
+	mot = MotFile()
+	mot.header = MotHeader()
+	mot.records = []
+	mot.header.fillDefaults()
+	mot.header.frameCount = bpy.context.scene.frame_end + 1
+	mot.header.recordsOffset = 44
 
 	# if patching, inject records of missing bones
 	if patchExisting:
-		addAdditionPatchRecords(path, records)
+		addAdditionPatchRecords(path, mot.records)
+
+	if arm is not None:
+		appendObjAnimations(path, arm, mot)
+	if cam is not None:
+		appendObjAnimations(path, cam, mot, cameraId)
+	if target is not None:
+		appendObjAnimations(path, target, mot, camTargetId)
 	
-	# make header
-	header = MotHeader()
-	header.fillDefaults()
-	action = arm.animation_data.action
+	# determine interpolation offsets relative to record position
+	offset = mot.header.recordsOffset + (len(mot.records) + 1) * 12
+	for i, record in enumerate(mot.records):
+		if record.interpolation is None:
+			continue
+		curRecordOffset = mot.header.recordsOffset + i * 12
+		record.interpolationsOffset = offset - curRecordOffset 
+		offset += record.interpolation.size()
+	
+	with open(path, "wb") as f:
+		mot.writeToFile(f)
+
+	print("Done ;)")
+
+def appendObjAnimations(
+	path: str,
+	obj: bpy.types.Object,
+	mot: MotFile,
+	specialBoneIndex: int|None = None,
+):
+	# get animation data
+	animObjs = getAllAnimationObjects(obj)
+	records = makeRecords(animObjs, specialBoneIndex)
+	mot.records.extend(records)
+	
+	# update header
+	header = mot.header
+	action = obj.animation_data.action
 	if "headerFlag" in action:
 		header.flag = action["headerFlag"]
 	if "headerUnknown" in action:
 		header.unknown = action["headerUnknown"]
-	header.frameCount = bpy.context.scene.frame_end + 1
-	animationName = action.name
-	fileName = os.path.basename(os.path.splitext(path)[0])
-	if animationName != fileName:
-		print(f"Warning: Animation name '{animationName}' does not match file name '{fileName}'")
-		print(f"Using animation name '{animationName}'")
-	header.animationName = animationName
-	header.recordsCount = len(records)
-	header.recordsOffset = 44
-
-	# determine interpolation offsets relative to record position
-	offset = 44 + (len(records) + 1) * 12
-	for i, record in enumerate(records):
-		if record.interpolation is None:
-			continue
-		curRecordOffset = 44 + i * 12
-		record.interpolationsOffset = offset - curRecordOffset 
-		offset += record.interpolation.size()
-	
-	# write file
-	file = MotFile()
-	file.header = header
-	file.records = records
-	with open(path, "wb") as f:
-		file.writeToFile(f)
-
-	print("Done ;)")
+	if not header.animationName:
+		animationName = action.name.split(" - ")[0]
+		fileName = os.path.basename(os.path.splitext(path)[0])
+		if animationName != fileName:
+			print(f"Warning: Animation name '{animationName}' does not match file name '{fileName}'")
+			print(f"Using animation name '{animationName}'")
+		header.animationName = animationName
+	header.recordsCount += len(records)

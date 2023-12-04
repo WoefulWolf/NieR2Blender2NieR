@@ -3,7 +3,7 @@ from typing import List
 import bpy
 from .motUtils import *
 from ...utils.ioUtils import *
-from io import BufferedReader
+from io import BufferedReader, BufferedWriter
 
 class MotFile:
 	header: MotHeader
@@ -12,12 +12,13 @@ class MotFile:
 	def fromFile(self, file: BufferedReader):
 		self.header = MotHeader()
 		self.header.fromFile(file)
+		file.seek(self.header.recordsOffset)
 		self.records = [
 			MotRecord().fromFile(file)
 			for _ in range(self.header.recordsCount)
 		]
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		self.header.writeToFile(file)
 		for record in self.records:
 			record.writeToFile(file)
@@ -47,7 +48,7 @@ class MotHeader:
 		self.recordsOffset = read_uint32(file)
 		self.recordsCount = read_uint32(file)
 		self.unknown = read_uint32(file)
-		self.animationName = file.read(20).decode("utf-8").rstrip("\0")
+		self.animationName = file.read(20).decode("utf-8", errors="replace").rstrip("\0")
 	
 	def fillDefaults(self):
 		self.magic = 0x746F6D
@@ -59,7 +60,7 @@ class MotHeader:
 		self.unknown = 0
 		self.animationName = ""
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_uInt32(file, self.magic)
 		write_uInt32(file, self.hash)
 		write_uInt16(file, self.flag)
@@ -79,7 +80,7 @@ class MotRecord:
 	unknown: int
 	value: float
 	interpolationsOffset: int
-	interpolation: MotInterpolation
+	interpolation: MotInterpolation|None
 
 	def fromFile(self, file: BufferedReader) -> MotRecord:
 		self.boneIndex = read_int16(file)
@@ -106,7 +107,7 @@ class MotRecord:
 		self.interpolationsOffset = 0
 		self.interpolation = None
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_Int16(file, self.boneIndex)
 		write_Int8(file, self.propertyIndex)
 		write_Int8(file, self.interpolationType)
@@ -165,7 +166,7 @@ class MotInterpolation:
 	def getKeyframeIndices(self) -> List[int]:
 		raise NotImplementedError()
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		raise NotImplementedError()
 	
 	def size(self) -> int:
@@ -211,7 +212,7 @@ class MotInterpolConst(MotInterpolation):
 	def fromFile(self, file: BufferedReader):
 		self.value = self.record.value
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		pass
 
 	def size(self) -> int:
@@ -245,7 +246,7 @@ class MotInterpolValues(MotInterpolation):
 		
 		file.seek(pos)
 
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		for value in self.values:
 			write_float(file, value)
 
@@ -292,7 +293,7 @@ class MotInterpol2(MotInterpolValues):
 
 		file.seek(pos)
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_float(file, self.p)
 		write_float(file, self.dp)
 		for quantized in self.valuesQuantized:
@@ -328,7 +329,7 @@ class MotInterpol3(MotInterpolValues):
 
 		file.seek(pos)
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_PgHalf(file, self.p)
 		write_PgHalf(file, self.dp)
 		for quantized in self.valuesQuantized:
@@ -361,7 +362,7 @@ class MotInterpolSplines(MotInterpolation):
 
 		file.seek(pos)
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		for spline in self.splines:
 			write_uInt16(file, spline.frame)
 			write_uInt16(file, 0)
@@ -449,7 +450,7 @@ class MotInterpol5(MotInterpolSplines):
 
 		file.seek(pos)
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_float(file, self.p)
 		write_float(file, self.dp)
 		write_float(file, self.m0)
@@ -500,7 +501,7 @@ class MotInterpol6(MotInterpolSplines):
 		
 		file.seek(pos)
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_PgHalf(file, self.p)
 		write_PgHalf(file, self.dp)
 		write_PgHalf(file, self.m0)
@@ -560,7 +561,7 @@ class MotInterpol8(MotInterpolSplines):
 
 		file.seek(pos)
 	
-	def writeToFile(self, file: BufferedReader):
+	def writeToFile(self, file: BufferedWriter):
 		write_PgHalf(file, self.p)
 		write_PgHalf(file, self.dp)
 		write_PgHalf(file, self.m0)
