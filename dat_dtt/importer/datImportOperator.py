@@ -21,11 +21,16 @@ def importDtt(only_extract, filepath):
     else:
         print('DAT not found. Only extracting DTT. (No materials, collisions or layouts will automatically be imported)')
 
-    extracted_files = dat_unpacker.main(filepath, os.path.join(extract_dir, tailless_tail + '.dtt'), filepath)       # dtt
+    dtt_files = dat_unpacker.main(filepath, os.path.join(extract_dir, tailless_tail + '.dtt'), filepath)       # dtt
 
     wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dtt', tailless_tail + '.wmb')
     if not os.path.exists(wmb_filepath):
         wmb_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wmb')                     # if not in dtt, then must be in dat
+    if not os.path.exists(wmb_filepath):
+        # find wmb in extracted dtt files
+        wmb_filepath = next((os.path.join(extract_dir, tailless_tail + '.dtt', f) for f in dtt_files if f.endswith(".wmb")), None)
+    if not wmb_filepath or not os.path.exists(wmb_filepath):
+        print("Warning: No WMB found!")
 
     # WTA/WTP
     wtaPath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.wta')

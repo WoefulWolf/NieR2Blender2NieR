@@ -1,6 +1,7 @@
 #encoding = utf-8
 import os
 import sys
+from typing import List
 
 from ...utils.util import saveDatInfo
 from ...utils.ioUtils import read_int32, read_uint32, read_uint16
@@ -130,14 +131,14 @@ def extract_hashes(fp, extract_dir, FileCount, hashMapOffset, fileNamesOffset, f
 	for i in range(FileCount):
 		fileIndices.append(read_uint16(fp))
 
-def main(filename, extract_dir, ROOT_DIR):
+def main(filename, extract_dir, ROOT_DIR) -> List[str]:
 	with open(filename,"rb") as fp:
+		extractedFiles = []
 		headers = read_header(fp)
 		if headers:
 			FileCount, FileTableOffset, ExtensionTableOffset,NameTableOffset,SizeTableOffset,hashMapOffset = headers
 
 			extractedFilesCount = 0
-			extractedFiles = []
 			for i in range(FileCount):
 				extract_dir_sub = ''
 				index,Filename,FileOffset,Size,Extension = get_fileinfo(fp, i, FileTableOffset,ExtensionTableOffset, NameTableOffset,SizeTableOffset)
@@ -149,9 +150,9 @@ def main(filename, extract_dir, ROOT_DIR):
 			
 			extract_hashes(fp, extract_dir, FileCount, hashMapOffset, NameTableOffset, os.path.basename(filename))
 			print(f"[+] {extractedFilesCount} files extracted from {filename}")
-	if (FileCount):
-		return extractedFiles
-	return False
+			if FileCount:
+				return extractedFiles
+	return []
 
 
 if __name__ == '__main__':

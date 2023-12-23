@@ -119,11 +119,11 @@ class c_material(object):
 
         self.offsetTechniqueName = self.offsetShaderName + len(self.b_material['Shader_Name']) + 1
 
-        self.unknown1 = 1                           # This probably also the same mostly
-
         self.offsetTextures = self.offsetTechniqueName + len(self.b_material['Technique_Name']) + 1
 
         self.textures = get_textures(self, self.b_material, self.offsetTextures)
+
+        self.unknown1 = 1 if len(self.textures) > 0 else 0
 
         self.numTextures = len(self.textures)
 

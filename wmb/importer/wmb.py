@@ -46,7 +46,7 @@ class WMB_Header(object):
 			self.numMeshMaterials = read_uint32(wmb_fp)						# numMeshMaterials
 			self.unknownWorldDataArrayOffset = read_uint32(wmb_fp)			# offsetUnknown0				World Model Stuff
 			self.unknownWorldDataArrayCount = read_uint32(wmb_fp)			# numUnknown0					World Model Stuff
-			self.unknown8C = read_uint32(wmb_fp)
+			# self.unknown8C = read_uint32(wmb_fp)
 
 class wmb3_vertexHeader(object):
 	"""docstring for wmb3_vertexHeader"""

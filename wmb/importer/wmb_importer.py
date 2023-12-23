@@ -13,9 +13,7 @@ from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeW
 def reset_blend():
 	#bpy.ops.object.mode_set(mode='OBJECT')
 	for collection in bpy.data.collections:
-		for obj in collection.objects:
-			collection.objects.unlink(obj)
-		bpy.data.collections.remove(collection)
+		bpy.data.collections.remove(collection, do_unlink=True)
 	for bpy_data_iter in (bpy.data.objects, bpy.data.meshes, bpy.data.lights, bpy.data.cameras, bpy.data.libraries):
 		for id_data in bpy_data_iter:
 			bpy_data_iter.remove(id_data)
