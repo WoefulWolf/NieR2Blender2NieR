@@ -143,7 +143,7 @@ def makeRecords(animObjs: List[AnimationObject]) -> List[MotRecord]:
 	records: List[MotRecord] = []
 	for animObj in animObjs:
 		record = MotRecord()
-		record.boneIndex = animObj.bone.bone["ID"] if animObj.bone else -1
+		record.boneIndex = int(animObj.bone.bone.name[-3:], 16) if animObj.bone else -1
 		if animObj.property == "location":
 			record.propertyIndex = animObj.channel
 		elif animObj.property == "rotation":
@@ -174,7 +174,7 @@ def addAdditionPatchRecords(path: str, currentRecords: List[MotRecord]):
 	
 	arm = getArmatureObject()
 	allCurrentBoneIds = set([
-		bone.bone["ID"]
+		int(bone.bone.name[-3:], 16)
 		for bone in arm.pose.bones
 	])
 	for record in currentRecords:
