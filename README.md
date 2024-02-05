@@ -1,3 +1,7 @@
+A fork of NieR2Blender2NieR for Granblue Fantasy Relink's shared formats.
+
+# ORIGINAL README
+
 ![NieR2Blender2NieR](https://i.imgur.com/vdkqt8S.png) <br>
 (Amazing banner created by [@IntonerAlice](https://twitter.com/IntonerAlice))
 ## VERY IMPORTANT
