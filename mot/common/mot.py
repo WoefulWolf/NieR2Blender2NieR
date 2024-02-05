@@ -124,7 +124,7 @@ class MotRecord:
 			return None
 		else:
 			for bone in rig.data.bones:
-				if bone["ID"] == self.boneIndex:
+				if int(bone.name[-3:], 16) == self.boneIndex:
 					boneName = bone.name
 					break
 		if not boneName:
