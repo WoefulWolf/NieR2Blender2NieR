@@ -50,7 +50,7 @@ def main(colFilePath):
                 obj.collisionType = "-1"
                 obj["UNKNOWN_collisionType"] = mesh.collisionType
 
-            obj.slidable = bool(mesh.slidable)
+            obj.colModifier = str(mesh.modifier)
             obj["unknownByte"] = mesh.unknownByte
 
             try:

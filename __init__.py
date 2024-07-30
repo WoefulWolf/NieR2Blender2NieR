@@ -137,7 +137,7 @@ def register():
 
     bpy.types.Object.collisionType = bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType)
     bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
-    bpy.types.Object.slidable = bpy.props.BoolProperty(name="Slidable/Modifier")
+    bpy.types.Object.colModifier = bpy.props.EnumProperty(name="Modifier", items=colModifierTypes)
     bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
 
     bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
@@ -287,6 +287,15 @@ surfaceTypes = [
     ("22", "Concrete 4", ""),
     ("23", "Car", ""),
     ("24", "Flowers", "")
+]
+
+colModifierTypes = [
+    ("0", "", ""),
+    ("1", "Slidable", ""),
+    ("2", "Transparent wall", ""),
+    ("8", "Unknown (8)", ""),
+    ("32", "Unknown (32)", ""),
+    ("129", "Unknown (129)", ""),
 ]
 
 if __name__ == '__main__':
