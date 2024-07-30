@@ -72,7 +72,7 @@ def getInterpolationType(curve: bpy.types.FCurve) -> int:
 			f"Unsupported interpolation type for curve {curve.data_path} {curve.array_index}\n" +
 			"There are 3 supported interpolation types:\n" +
 			"1. Single constant keyframe\n" +
-			"2. Baked animation; all keyframe 1 frame apart (linear interpolation)\n" +
+			"2. Baked animation; all keyframes 1 frame apart (linear interpolation)\n" +
 			"3. Bezier interpolation"
 		)
 
