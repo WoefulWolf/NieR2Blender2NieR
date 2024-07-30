@@ -15,7 +15,7 @@ class Mesh:
         self.collisionType = int(meshBlenderObject.collisionType)
         if self.collisionType == -1:
             self.collisionType = meshBlenderObject["UNKNOWN_collisionType"]
-        self.slidable = int(meshBlenderObject.slidable == True)
+        self.modifier = int(meshBlenderObject.colModifier)
         self.unknownByte = meshBlenderObject["unknownByte"]
         self.surfaceType = int(meshBlenderObject.surfaceType)
         if self.surfaceType == -1:
@@ -84,7 +84,7 @@ def write_col_meshes(col_file: BufferedWriter, data):
 
     for mesh in data.meshes.meshes:
         write_byte(col_file, mesh.collisionType)
-        write_byte(col_file, mesh.slidable)
+        write_byte(col_file, mesh.modifier)
         write_byte(col_file, mesh.unknownByte)
         write_byte(col_file, mesh.surfaceType)
 

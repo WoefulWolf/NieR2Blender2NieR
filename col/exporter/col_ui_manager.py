@@ -35,8 +35,8 @@ class B2NCollisionToolsPanel(bpy.types.Panel):
             row.label(text="Surface Type")
             row.prop(context.object, "surfaceType", text="")
             row = layout.row()
-            row.label(text="Slidable/Modifier")
-            row.prop(context.object, "slidable", text="")
+            row.label(text="Modifier")
+            row.prop(context.object, "colModifier", text="")
 
             if len(bpy.context.selected_objects) > 1:
                 row = layout.row()
@@ -68,7 +68,7 @@ class B2NApplyCollisionToAllSelected(bpy.types.Operator):
                 continue
             obj.collisionType = context.object.collisionType
             obj.UNKNOWN_collisionType = context.object.UNKNOWN_collisionType
-            obj.slidable = context.object.slidable
+            obj.colModifier = context.object.colModifier
             obj.surfaceType = context.object.surfaceType
             if "unknownByte" in context.object:
                 obj["unknownByte"] = context.object["unknownByte"]
@@ -86,7 +86,7 @@ class B2NJoinCollisionObjects(bpy.types.Operator):
                 'name': re.sub(r'^\d+-', '', obj.name),
                 'collisionType': obj.collisionType,
                 'surfaceType': obj.surfaceType,
-                'slidable': obj.slidable,
+                'modifier': obj.colModifier,
                 "unknownByte": obj["unknownByte"],
             })
 

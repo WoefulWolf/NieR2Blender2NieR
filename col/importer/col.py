@@ -115,7 +115,7 @@ class Batch:
 class Mesh:
     def __init__(self, colFile):
         self.collisionType = read_uint8(colFile)
-        self.slidable = read_uint8(colFile)
+        self.modifier = read_uint8(colFile)
         self.unknownByte = read_uint8(colFile)
         self.surfaceType = read_uint8(colFile)
         
