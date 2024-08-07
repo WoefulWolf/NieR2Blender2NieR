@@ -223,6 +223,26 @@ def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
 
+def getBoneFromID(bone_id):
+    armatureObj = None
+    for obj in bpy.data.collections['WMB'].all_objects:
+        if obj.type == 'ARMATURE':
+            armatureObj = obj
+            break
+
+    for bone in armatureObj.data.bones:
+        if bone.name.split("_")[0].replace("bone", "").isdigit():
+            if bone.name.split("_")[0].replace("bone", "") == str(bone_id):
+                return bone
+
+    return None
+
+def boneHasID(bone):
+    return bone.name.split("_")[0].replace("bone", "").isdigit()
+
+def getBoneID(bone):
+    return int(bone.name.split("_")[0].replace("bone", ""))
+
 startTime = -1
 timings: Dict[str, Dict|float] = {}
 

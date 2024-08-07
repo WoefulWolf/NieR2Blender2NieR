@@ -1,6 +1,8 @@
 import bpy, bmesh, math, mathutils
 
 import xml.etree.ElementTree as ET
+
+from ...utils.util import boneHasID, getBoneFromID, getBoneID
 from ..common.bxm import bxmToXml, xmlToBxm
 
 class ClothSearchOptions(bpy.types.PropertyGroup):
@@ -53,8 +55,9 @@ def update_clp_bone_items():
     if armatureObj is None:
         return
     for bone in armatureObj.data.bones:
-        if 'ID' in bone:
-            bone_items.append((str(bone['ID']), bone.name + " (" + str(bone['ID']) + ")", ""))
+        if boneHasID(bone):
+            bone_id = str(getBoneID(bone))
+            bone_items.append((bone_id, bone.name + " (" + bone_id + ")", ""))
 
 class ClothWK(bpy.types.PropertyGroup):
     no : bpy.props.EnumProperty(items=clp_bone_items, default=0)
@@ -118,6 +121,7 @@ def importCLP(filepath):
         cloth_wk_item.m_original_rate = float(xml_cloth_wk.find("m_OriginalRate").text)
 
 def exportCLP(filepath):
+    print("Exporting CLP...")
     # Create XML from blender data
     xml = ET.Element("CLOTH")
     xml_clothheader = ET.SubElement(xml, "CLOTH_HEADER")
@@ -167,6 +171,7 @@ def exportCLP(filepath):
 
     # Write BXM to file
     xmlToBxm(xml, filepath)
+    print("Exported CLP to", filepath)
 
 def drawCLPHeader(layout):
     layout.label(text="CLOTH_HEADER")
@@ -215,9 +220,9 @@ class AddClothWK(bpy.types.Operator):
         
         if selected_bones:
             for bone in selected_bones:
-                if 'ID' in bone:
+                if boneHasID(bone):
                     cloth_wk_item = cloth_wk.add()
-                    cloth_wk_item.no = str(bone['ID'])
+                    cloth_wk_item.no = str(getBoneID(bone))
         else:
             return {'CANCELLED'}
 
@@ -251,8 +256,8 @@ def drawCLPWKList(layout):
     selected_bone_ids = []
     if selected_bones:
         for bone in selected_bones:
-            if 'ID' in bone:
-                selected_bone_ids.append(str(bone['ID']))
+            if boneHasID(bone):
+                selected_bone_ids.append(str(getBoneID(bone)))
 
     cloth_wk = bpy.context.scene.clp_clothwk
     for index, item in enumerate(cloth_wk):
@@ -284,19 +289,6 @@ def drawCLPWKList(layout):
         row.prop(item, "rot_limit")
         row.prop(item, "m_original_rate")
 
-def get_bone_from_id(bone_id):
-    armatureObj = None
-    for obj in bpy.data.collections['WMB'].all_objects:
-        if obj.type == 'ARMATURE':
-            armatureObj = obj
-            break
-
-    for bone in armatureObj.data.bones:
-        if 'ID' in bone:
-            if str(bone['ID']) == bone_id:
-                return bone
-
-    return None
 
 class UpdateCLPVisualizer(bpy.types.Operator):
     bl_idname = "clp.update_clp_visualizer"
@@ -323,8 +315,8 @@ class UpdateCLPVisualizer(bpy.types.Operator):
         gp_frame = gp_layer.frames.new(0)
 
         for clothwk in bpy.context.scene.clp_clothwk:
-            bone = get_bone_from_id(clothwk.no)
-            bone_down = get_bone_from_id(clothwk.no_down)
+            bone = getBoneFromID(clothwk.no)
+            bone_down = getBoneFromID(clothwk.no_down)
             if bone and bone_down and clothwk.no_down != "4095":
                 gp_stroke = gp_frame.strokes.new()
                 gp_stroke.line_width = 4
@@ -366,7 +358,7 @@ class UpdateCLPVisualizer(bpy.types.Operator):
                     obj.display_type = 'WIRE'
 
             if clothwk.no_side != "4095":
-                bone_side = get_bone_from_id(clothwk.no_side)
+                bone_side = getBoneFromID(clothwk.no_side)
                 if bone and bone_side:
                     gp_stroke = gp_frame.strokes.new()
                     gp_stroke.line_width = 4
@@ -375,7 +367,7 @@ class UpdateCLPVisualizer(bpy.types.Operator):
                     gp_stroke.points[1].co = bone_side.head_local
 
             if clothwk.no_down != "4095" and clothwk.no_poly != "4095":
-                bone_poly = get_bone_from_id(clothwk.no_poly)
+                bone_poly = getBoneFromID(clothwk.no_poly)
                 if bone_down and bone_poly:
                     gp_stroke = gp_frame.strokes.new()
                     gp_stroke.line_width = 4

@@ -33,7 +33,7 @@ class c_bones(object):
 
             if numBones > 1:
                 for bone in getAllBonesInOrder("WMB"):
-                    ID = bone['ID']
+                    ID = int(bone.name.split("_")[0].replace("bone", ""))
 
                     if bone.parent:
                         parentIndex = getAllBonesInOrder("WMB").index(bone.parent)                                                     

@@ -27,7 +27,7 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
+def construct_armature(name, bone_data_array: list[wmb3_bone], firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
 	print('[+] importing armature')
 	amt = bpy.data.armatures.new(name +'Amt')
 	#amt.pose_position = 'REST'
@@ -56,22 +56,22 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	amt['boneSetArray'] = boneSetArray
 
 	for bone_data in bone_data_array:
-		bone = amt.edit_bones.new(bone_data[1])
-		bone.head = Vector(bone_data[10]) 
-		bone.tail = Vector(bone_data[10]) + Vector((0 , 0.1, 0))
+		bone = amt.edit_bones.new("bone" + str(bone_data.boneNumber))
+		bone.head = Vector(bone_data.world_position_tpose) 
+		bone.tail = Vector(bone_data.world_position_tpose) + Vector((0 , 0.1, 0))
 
-		bone['ID'] = bone_data[6]
+		# bone['ID'] = bone_data[6]
 		#bone['APOSE_position'] = bone_data[4]
 		#bone['TPose_localPosition'] = bone_data[7]
-		bone['localRotation'] = bone_data[8]
+		bone['localRotation'] = bone_data.local_rotation
 		#bone['worldRotation'] = bone_data[9]
 		#bone['TPOSE_worldPosition'] = bone_data[10]
 
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
-		if bone_data[2] < 0xffff:						#this value need to edit in different games
-			bone = bones[bone_data[1]]
-			bone.parent = bones[bone_data[3]]
+		if bone_data.parentIndex < 0xffff:						#this value need to edit in different games
+			bone = bones["bone" + str(bone_data.boneNumber)]
+			bone.parent = bones[bone_data.parentIndex]
 			#if bones[bone_data[3]]['ID'] != 0:
 			#if bones[bone_data[3]].head != bone.head:
 			#	bones[bone_data[3]].tail = bone.head
@@ -130,14 +130,15 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
+def construct_mesh(mesh_data, collection_name, armature):			# [meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
 			name = name + '-' + collection_name
 	vertices = mesh_data[1]
 	faces = mesh_data[2]
-	has_bone = mesh_data[3]
+	normals = mesh_data[3]
+	has_bone = mesh_data[4]
 	weight_infos = [[[],[]]]							# A real fan can recognize me even I am a 2 dimensional array
 	print("[+] importing %s" % name)
 	objmesh = bpy.data.meshes.new(name)
@@ -148,9 +149,11 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	obj.location = Vector((0,0,0))
 	bpy.data.collections.get(collection_name).objects.link(obj)
 	objmesh.from_pydata(vertices, [], faces)
+	if normals[0] != None:
+		objmesh.normals_split_custom_set_from_vertices(normals)
 	objmesh.update(calc_edges=True)
 
-	if len(mesh_data[7]) != 0:
+	if len(mesh_data[8]) != 0:
 		if objmesh.vertex_colors:
 			vcol_layer = objmesh.vertex_colors.active
 		else:
@@ -158,7 +161,7 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 
 		for loop_idx, loop in enumerate(objmesh.loops):	
 			meshColor = vcol_layer.data[loop_idx]
-			dataColor = mesh_data[7][loop.vertex_index]
+			dataColor = mesh_data[8][loop.vertex_index]
 			meshColor.color = [
 				dataColor[0]/255,
 				dataColor[1]/255,
@@ -167,28 +170,28 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 			]
 
 	if has_bone:
-		weight_infos = mesh_data[4]
-		group_names = sorted(list(set(["bone%d" % i  for weight_info in weight_infos for i in weight_info[0]])))
+		weight_infos = mesh_data[5]
+		group_names = sorted(list(set([armature.data.bones[i].name for weight_info in weight_infos for i in weight_info[0]])))
 		for group_name in group_names:
 			obj.vertex_groups.new(name=group_name)
 		for i in range(len(weight_infos)):
 			for index in range(4):
-				group_name = "bone%d"%weight_infos[i][0][index]
+				group_name = armature.data.bones[weight_infos[i][0][index]].name
+				# group_name = "bone%d"%weight_infos[i][0][index]
 				weight = weight_infos[i][1][index]
 				group = obj.vertex_groups[group_name]
 				if weight:
 					group.add([i], weight, "REPLACE")
 	obj.rotation_euler = (math.radians(90),0,0)
-	if mesh_data[5] != "None":
-		obj['boneSetIndex'] = mesh_data[5]
-	obj['meshGroupIndex'] = mesh_data[6]
-	obj['vertexGroup'] = mesh_data[13]
-	obj['LOD_Name'] = mesh_data[8]
-	obj['LOD_Level'] = mesh_data[9]
-	obj['colTreeNodeIndex'] = mesh_data[10]
-	obj['unknownWorldDataIndex'] = mesh_data[11]
+	if mesh_data[6] != "None":
+		obj['boneSetIndex'] = mesh_data[6]
+	obj['meshGroupIndex'] = mesh_data[7]
+	obj['vertexGroup'] = mesh_data[14]
+	obj['LOD_Name'] = mesh_data[9]
+	obj['LOD_Level'] = mesh_data[10]
+	obj['colTreeNodeIndex'] = mesh_data[11]
+	obj['unknownWorldDataIndex'] = mesh_data[12]
 
-	obj.data.flip_normals()
 	return obj
 
 def set_partent(parent, child):
@@ -437,8 +440,9 @@ def add_material_to_mesh(mesh, materials , uvs):
 		#print('linking material %s to mesh object %s' % (material.name, mesh.name))
 		mesh.data.materials.append(material)
 	bpy.context.view_layer.objects.active = mesh
-	bpy.ops.object.mode_set(mode="EDIT")
-	bm = bmesh.from_edit_mesh(mesh.data)
+	# bpy.ops.object.mode_set(mode="EDIT")
+	bm = bmesh.new()
+	bm.from_mesh(mesh.data)
 	uv_layer = bm.loops.layers.uv.verify()
 	#bm.faces.layers.tex.verify()
 	for face in bm.faces:
@@ -458,13 +462,13 @@ def add_material_to_mesh(mesh, materials , uvs):
 					ind = l.vert.index
 					luv.uv = Vector(uvs[i][ind])
 
-	bpy.ops.object.mode_set(mode='OBJECT')
-	mesh.select_set(True)
-	bpy.ops.object.shade_smooth()
-	#mesh.hide = True
-	mesh.select_set(False)
+	bm.to_mesh(mesh.data)
+	bm.free()
+	if bpy.app.version < (4, 1):
+		mesh.data.use_auto_smooth = True
+	# mesh.data.shade_smooth()
 	
-def format_wmb_mesh(wmb, collection_name):
+def format_wmb_mesh(wmb, collection_name, armature):
 	meshes = []
 	uvMaps = [[], [], [], [], []]
 	usedVerticeIndexArrays = []
@@ -568,6 +572,7 @@ def format_wmb_mesh(wmb, collection_name):
 						usedVerticeIndexArray = meshInfo[2]
 						boneWeightInfoArray = meshInfo[3]
 						vertex_colors = meshInfo[4]
+						normals = meshInfo[5]
 						usedVerticeIndexArrays.append(usedVerticeIndexArray)
 						flag = False
 						has_bone = wmb.hasBone
@@ -575,7 +580,7 @@ def format_wmb_mesh(wmb, collection_name):
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name)
+						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature)
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
@@ -706,13 +711,14 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	
 	texture_dir = wmb_file.replace(wmbname, 'textures')
+	armature = None
 	if wmb.hasBone:
-		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
+		# boneArray = [[bone.boneIndex, "bone%d"%bone.boneNumber, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
-		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
-	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
+		armature = construct_armature(armature_name, wmb.boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
+	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
 	bpy.context.scene.WTAMaterials.clear()

@@ -1,6 +1,8 @@
 import bpy, bmesh, math, mathutils
 
 import xml.etree.ElementTree as ET
+
+from ...utils.util import boneHasID, getBoneFromID, getBoneID
 from ..common.bxm import bxmToXml, xmlToBxm
 
 bone_items = []
@@ -21,22 +23,9 @@ def update_clh_bone_items():
     if armatureObj is None:
         return
     for bone in armatureObj.data.bones:
-        if 'ID' in bone:
-            bone_items.append((str(bone['ID']), bone.name + " (" + str(bone['ID']) + ")", ""))
-
-def get_bone_from_id(bone_id):
-    armatureObj = None
-    for obj in bpy.data.collections['WMB'].all_objects:
-        if obj.type == 'ARMATURE':
-            armatureObj = obj
-            break
-
-    for bone in armatureObj.data.bones:
-        if 'ID' in bone:
-            if str(bone['ID']) == bone_id:
-                return bone
-
-    return None
+        if boneHasID(bone):
+            bone_id = str(getBoneID(bone))
+            bone_items.append((bone_id, bone.name + " (" + bone_id + ")", ""))
 
 class UpdateBoneItems(bpy.types.Operator):
     bl_idname = "clh.update_bone_items"
@@ -79,6 +68,7 @@ def importCLH(filepath):
         cloth_at_wk_item.capsule = bool(int(xml_cloth_at_wk.find("capsule").text))
 
 def exportCLH(filepath):
+    print("Exporting CLH...")
     xml = ET.Element("CLOTH_AT")
     bpy.context.scene.clh_clothatnum = len(bpy.context.scene.clh_clothatwk)
     ET.SubElement(xml, "CLOTH_AT_NUM").text = str(bpy.context.scene.clh_clothatnum)
@@ -95,6 +85,7 @@ def exportCLH(filepath):
         ET.SubElement(xml_clothatwk, "capsule").text = str(int(cloth_at_wk_item.capsule))
 
     xmlToBxm(xml, filepath)
+    print("Exported CLH to", filepath)
 
 class MoveClothATWK(bpy.types.Operator):
     bl_idname = "clh.move_cloth_at_wk"
@@ -195,8 +186,8 @@ class UpdateCLHVisualizer(bpy.types.Operator):
         selected_objs = []
         active_selected_obj = None
         for idx, cloth_at_wk in enumerate(bpy.context.scene.clh_clothatwk):
-            p1_bone = get_bone_from_id(cloth_at_wk.p1)
-            p2_bone = get_bone_from_id(cloth_at_wk.p2)
+            p1_bone = getBoneFromID(cloth_at_wk.p1)
+            p2_bone = getBoneFromID(cloth_at_wk.p2)
 
             if p1_bone is None or p2_bone is None:
                 continue
@@ -242,8 +233,8 @@ class UpdateCLHVisualizer(bpy.types.Operator):
             if cloth_at_wk.capsule:
                 selected_objs = [obj]
                 next_cloth_at_wk = bpy.context.scene.clh_clothatwk[idx + 1]
-                next_p1_bone = get_bone_from_id(next_cloth_at_wk.p1)
-                next_p2_bone = get_bone_from_id(next_cloth_at_wk.p2)
+                next_p1_bone = getBoneFromID(next_cloth_at_wk.p1)
+                next_p2_bone = getBoneFromID(next_cloth_at_wk.p2)
 
                 if next_p1_bone is None or next_p2_bone is None:
                     continue

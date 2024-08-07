@@ -39,9 +39,9 @@ class c_boneIndexTranslateTable(object):
         
         # Populate the third level
         for i, bone in enumerate(getAllBonesInOrder("WMB")):
-            if 'ID' not in bone:
+            if not bone.name.split("_")[0].replace("bone", "").isdigit():
                 continue
-            boneID = bone['ID']         
+            boneID = int(bone.name.split("_")[0].replace("bone", ""))
             for k, domain in enumerate(thirdLevelRanges):
                 if boneID >= domain and boneID < domain + 16:
                     newThirdLevel[k * 16 + boneID - domain] = i
@@ -52,24 +52,34 @@ class c_boneIndexTranslateTable(object):
 
         # Add new bones that dont have ID
         for i, bone in enumerate(getAllBonesInOrder("WMB")):
-            if 'ID' not in bone:
+            if not bone.name.split("_")[0].replace("bone", "").isdigit():
                 for k in range(len(newThirdLevel) - 1, 0, -1):
                     if newThirdLevel[k] == 4095:
                         newThirdLevel[k] = i
-                        bone['ID'] = thirdLevelRanges[k//16] + k%16
-                        print("Added new bone to table", bone.name, "assigning ID", bone['ID'], "at thirdLevel translateTableIndex", k)
+                        new_id = thirdLevelRanges[k//16] + k%16
+                        print("Added new bone to table", bone.name, "assigning ID", new_id, "at thirdLevel translateTableIndex", k)
+                        new_name = "bone" + str(new_id) + "_" + bone.name
+                        
+                        for obj in bpy.data.collections['WMB'].all_objects:
+                            if obj.type == 'MESH':
+                                for vgroup in obj.vertex_groups:
+                                    if vgroup.name == bone.name:
+                                        vgroup.name = new_name
+                                        break
+
+                        bone.name = new_name
                         newBones.append(bone)
                         break
 
         #Print the shit for the XML
         for bone in newBones:
-            no = bone["ID"]
+            no = int(bone.name.split("_")[0].replace("bone", ""))
             if bone.parent in newBones:
-                noUp = bone.parent['ID']
+                noUp = int(bone.parent.name.split("_")[0].replace("bone", ""))
             else:
                 noUp = 4095
             if bone.children and bone.children[0] in newBones:
-                noDown = bone.children[0]['ID']
+                noDown = int(bone.children[0].name.split("_")[0].replace("bone", ""))
             else:
                 noDown = 4095
 
