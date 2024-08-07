@@ -49,17 +49,17 @@ class Lay:
         self.header = Header(layFile)
 
         layFile.seek(self.header.modelListOffset)
-        self.modelList = []
+        self.modelList: list[ModelEntry] = []
         for i in range(self.header.modelListCount):
             self.modelList.append(ModelEntry(layFile))
 
         layFile.seek(self.header.assetsOffset)
-        self.assets = []
+        self.assets: list[Asset] = []
         for i in range(self.header.assetsCount):
             self.assets.append(Asset(layFile))
 
         layFile.seek(self.header.instancesOffset)
-        self.instances = []
+        self.instances: list[Instance] = []
         for i in range(self.header.instancesCount):
             self.instances.append(Instance(layFile))
 

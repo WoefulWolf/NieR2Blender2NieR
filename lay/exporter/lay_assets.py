@@ -1,3 +1,6 @@
+import math
+import mathutils
+
 from ...utils.ioUtils import write_float, write_string, write_uInt32, write_byte
 from ...utils.util import *
 
@@ -5,9 +8,17 @@ class Asset:
     def __init__(self, bObj):
         self.name = bObj.name
         
-        self.pos = bObj.location
-        self.rot = bObj.rotation_euler
-        self.scale = bObj.scale
+        rotator = mathutils.Euler((math.radians(-90), 0, 0), 'XYZ')
+
+        location = mathutils.Vector(bObj.location)
+        location.rotate(rotator)
+
+        rotation = mathutils.Euler(bObj.rotation_euler, 'XYZ')
+        rotation.rotate(rotator)
+
+        self.pos = location
+        self.rot = rotation
+        self.scale = [bObj.scale[0], bObj.scale[2], bObj.scale[1]]
 
         self.unknownIndex = bObj["unknownIndex"]
         self.null1 = bObj["null1"]
@@ -17,14 +28,22 @@ class Asset:
 
 class Instance:
     def __init__(self, bObj):
-        self.pos = bObj.location
-        self.rot = bObj.rotation_euler
-        self.scale = bObj.scale
+        rotator = mathutils.Euler((math.radians(-90), 0, 0), 'XYZ')
+
+        location = mathutils.Vector(bObj.location)
+        location.rotate(rotator)
+
+        rotation = mathutils.Euler(bObj.rotation_euler, 'XYZ')
+        rotation.rotate(rotator)
+
+        self.pos = location
+        self.rot = rotation
+        self.scale = [bObj.scale[0], bObj.scale[2], bObj.scale[1]]
 
 class Assets:
     def __init__(self):
         self.assets = []
-        for obj in bpy.data.objects['Root_layAsset'].children:
+        for obj in bpy.data.collections['lay_layAssets'].all_objects:
             self.assets.append(Asset(obj))
         self.structSize = len(self.assets) * 112
 
@@ -34,7 +53,7 @@ class Assets:
         
 def getInstances(assetObj):
     instances = []
-    for obj in bpy.data.objects['Root_layInstance'].children:
+    for obj in bpy.data.collections['lay_layInstances'].all_objects:
         name = obj.name.split("-")[0]
         if name == assetObj.name:
             instances.append(Instance(obj))

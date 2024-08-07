@@ -5,6 +5,7 @@ from time import time
 from ...utils.ioUtils import to_string, read_float, read_uint32
 from .lay import Lay
 from ...utils.util import *
+import mathutils
 
 
 def main(layFilePath):
@@ -31,43 +32,39 @@ def main(layFilePath):
     if not layInstancesCollection:
         layInstancesCollection = bpy.data.collections.new("lay_layInstances")
         layCollection.children.link(layInstancesCollection)
-
-    # Create layAssets and layInstances
-    assetRootNode = bpy.data.objects.new("Root_layAsset", None)
-    assetRootNode.hide_viewport = True
-    layAssetsCollection.objects.link(assetRootNode)
-    assetRootNode.rotation_euler = (math.radians(90),0,0)
-
-    instanceRootNode = bpy.data.objects.new("Root_layInstance", None)
-    instanceRootNode.hide_viewport = True
-    layInstancesCollection.objects.link(instanceRootNode)
-    instanceRootNode.rotation_euler = (math.radians(90),0,0)
     
     for asset in lay.assets:
         assetName = asset.name
         print("Placing asset", assetName)
-        assetObj = createLayObject(assetName, layAssetsCollection, assetRootNode, asset.position, asset.rotation, asset.scale)
+        assetObj = createLayObject(assetName, layAssetsCollection, asset.position, asset.rotation, asset.scale)
         assetObj["unknownIndex"] = asset.unknownIndex
         assetObj["null1"] = asset.null1
         for instance in asset.instances:
             instanceName = assetName + "-Instance"
-            createLayObject(instanceName, layInstancesCollection, instanceRootNode, instance.position, instance.rotation, instance.scale)
+            createLayObject(instanceName, layInstancesCollection, instance.position, instance.rotation, instance.scale)
 
     tD = time() - t1
     print(f"Importing finished in {tD:.1}s ;)")
     return {'FINISHED'}
 
-def createLayObject(name, collection, parent, pos, rot, scale):
+def createLayObject(name, collection, pos, rot, scale):
     obj = bpy.data.objects.new(name, None)
     collection.objects.link(obj)
-    obj.parent = parent
+    # obj.parent = parent
     obj.empty_display_type = 'SPHERE'
     obj.empty_display_size = 0.5
 
-    obj.location = pos
-    obj.rotation_euler = rot
-    obj.scale = scale
+    rotator = mathutils.Euler((math.radians(90), 0, 0), 'XYZ')
 
+    location = mathutils.Vector(pos)
+    location.rotate(rotator)
+
+    rotation = mathutils.Euler(rot, 'XYZ')
+    rotation.rotate(rotator)
+
+    obj.location = location
+    obj.rotation_euler = rotation
+    obj.scale = [scale[0], scale[2], scale[1]]
     obj.show_axis = True
 
     updateVisualizationObject(obj, name[:6], True)
@@ -192,7 +189,7 @@ def linkAssetModel(modelName, isParentRotated: bool) -> bpy.types.Collection | N
         libName = f"{modelName}.blend"
         if libName in bpy.data.libraries:
             bpy.data.libraries.remove(bpy.data.libraries[libName])
-        with bpy.data.libraries.load(filepath = filePath, link = True, relative = True) as (data_from, data_to):
+        with bpy.data.libraries.load(filepath = filePath, link = False, relative = True) as (data_from, data_to):
             data_to.collections = [modelName]
         if modelName in bpy.data.objects and bpy.data.objects[modelName].instance_type == "COLLECTION":
             bpy.data.objects.remove(bpy.data.objects[modelName], do_unlink=True)

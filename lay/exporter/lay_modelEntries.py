@@ -7,7 +7,7 @@ from ...utils.util import *
 class ModelEntries:
     def __init__(self):
         self.modelEntries = []
-        for obj in bpy.data.objects['Root_layAsset'].children:
+        for obj in bpy.data.collections['lay_layAssets'].all_objects:
             modelName = obj.name.split("_")[0]
             if modelName not in self.modelEntries:
                 self.modelEntries.append(modelName)
