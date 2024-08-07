@@ -229,22 +229,6 @@ class RipMeshByUVIslands(bpy.types.Operator):
 
         return {'FINISHED'}
 
-class ClearSelectedBoneIDs(bpy.types.Operator):
-    """Clear Selected Bone IDs"""
-    bl_idname = "b2n.clearselectedboneids"
-    bl_label = "Clear Selected Bone IDs"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context):
-        cleared_ids_count = 0
-        for bone in bpy.context.selected_bones:
-            if "ID" in bone:
-                del bone["ID"]
-                cleared_ids_count += 1
-
-        ShowMessageBox('Cleared the ID of ' + str(cleared_ids_count) + ' bones.', 'Blender2NieR: Tool Info')
-        return {'FINISHED'}
-
 class RestoreImportPose(bpy.types.Operator):
     """Restore Import Pose (If you have changed the pose since importing)"""
     bl_idname = "b2n.restoreimportpose"

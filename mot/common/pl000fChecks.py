@@ -2,6 +2,8 @@ from __future__ import annotations
 import bpy
 import re
 from typing import List, Dict
+
+from ...utils.util import getBoneID
 from .motUtils import getArmatureObject
 
 # there are some bones that should not be animated when animating pl000f
@@ -27,7 +29,7 @@ def isPl000f(path: str|None = None, animationName: str|None = None, armature: bp
 def getInvalidBoneIds(armature: bpy.types.Object):
 	boneIds = []
 	for bone in armature.pose.bones:
-		boneId = bone.bone["ID"]
+		boneId = getBoneID(bone)
 		if boneId in invalidBoneIds:
 			boneIds.append(boneId)
 	boneIds.sort()
@@ -41,7 +43,7 @@ def makeBoneIndexToIdLookup(armature: bpy.types.Object) -> Dict[int, int]:
 		if boneName is None:
 			raise Exception(f"Invalid bone name: {bone.name}! No bone index found!")
 		boneIndex = int(boneName.group(1))
-		boneId = bone.bone["ID"]
+		boneId = getBoneID(bone)
 		boneIndexToId[boneIndex] = boneId
 	return boneIndexToId
 
@@ -71,7 +73,7 @@ def hideInvalidBones(armature: bpy.types.Object, boneIds: List[int], operator: b
 	hiddenBones = 0
 	bone: bpy.types.PoseBone
 	for bone in armature.pose.bones:
-		boneId = bone.bone["ID"]
+		boneId = getBoneID(bone)
 		if boneId not in boneIds:
 			continue
 		bone.bone.hide = True

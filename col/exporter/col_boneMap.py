@@ -3,6 +3,8 @@ from typing import List, Dict
 
 import bpy
 
+from ...utils.util import getBoneID
+
 from ...utils.ioUtils import write_uInt32
 
 class BoneMap:
@@ -27,7 +29,7 @@ class BoneMap:
                     allBones.append(bone)
 
         self.map = [
-            bone.bone["ID"] for bone in allBones
+            getBoneID(bone) for bone in allBones
         ]
         self.boneToMapIndex = {
             bone.name: i for i, bone in enumerate(allBones)

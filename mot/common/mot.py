@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import List
 import bpy
+
+from ...utils.util import getBoneID
 from .motUtils import *
 from ...utils.ioUtils import *
 from io import BufferedReader
@@ -124,7 +126,7 @@ class MotRecord:
 			return None
 		else:
 			for bone in rig.data.bones:
-				if bone["ID"] == self.boneIndex:
+				if getBoneID(bone) == self.boneIndex:
 					boneName = bone.name
 					break
 		if not boneName:

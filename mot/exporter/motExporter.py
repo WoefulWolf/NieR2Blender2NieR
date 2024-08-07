@@ -3,6 +3,8 @@ from mathutils import Vector
 import re
 import os
 from typing import List
+
+from ...utils.util import getBoneID
 from ..common.motUtils import KeyFrame, Spline, getArmatureObject
 from ..common.mot import MotFile, MotHeader, MotRecord, MotInterpolValues, MotInterpolSplines
 
@@ -143,7 +145,7 @@ def makeRecords(animObjs: List[AnimationObject]) -> List[MotRecord]:
 	records: List[MotRecord] = []
 	for animObj in animObjs:
 		record = MotRecord()
-		record.boneIndex = animObj.bone.bone["ID"] if animObj.bone else -1
+		record.boneIndex = getBoneID(animObj.bone) if animObj.bone else -1
 		if animObj.property == "location":
 			record.propertyIndex = animObj.channel
 		elif animObj.property == "rotation":
@@ -174,7 +176,7 @@ def addAdditionPatchRecords(path: str, currentRecords: List[MotRecord]):
 	
 	arm = getArmatureObject()
 	allCurrentBoneIds = set([
-		bone.bone["ID"]
+		getBoneID(bone.bone)
 		for bone in arm.pose.bones
 	])
 	for record in currentRecords:

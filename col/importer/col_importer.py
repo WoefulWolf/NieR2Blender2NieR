@@ -4,7 +4,7 @@ from typing import List, Dict
 import bpy
 
 from .col import Col, Batch
-from ...utils.util import centre_origins, setViewportColorTypeToObject
+from ...utils.util import centre_origins, getBoneID, setViewportColorTypeToObject
 from mathutils import Matrix
 
 
@@ -31,7 +31,7 @@ def main(colFilePath):
 
         # Create batches
         for batchIdx, batch in enumerate(mesh.batches):
-            objName = str(meshIdx) + "-" + meshName + "-" + str(batchIdx)
+            objName = str(meshIdx) + "-" + meshName# + "-" + str(batchIdx)
             objMesh = bpy.data.meshes.new(objName)
             obj = bpy.data.objects.new(objName, objMesh)
             colCollection.objects.link(obj)
@@ -114,7 +114,7 @@ def bindBones(obj: bpy.types.Object, batchType: int, batch: Batch, boneMap: List
             raise "Unknown batchType"
 
         for bone in armature.data.bones:
-            if int(bone["ID"]) == boneIndex:
+            if int(getBoneID(bone)) == boneIndex:
                 return int(bone.name[4:])
         raise "Bone not found"
 
