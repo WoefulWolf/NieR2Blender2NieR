@@ -1,6 +1,6 @@
 import bpy
 import numpy as np
-from ....utils.util import Vector3, getAllBonesInOrder
+from ....utils.util import Vector3, getAllBonesInOrder, getBoneID
 import mathutils as mu
 
 def get_bone_tPosition(bone):
@@ -33,7 +33,7 @@ class c_bones(object):
 
             if numBones > 1:
                 for bone in getAllBonesInOrder("WMB"):
-                    ID = int(bone.name.split("_")[0].replace("bone", ""))
+                    ID = getBoneID(bone)
 
                     if bone.parent:
                         parentIndex = getAllBonesInOrder("WMB").index(bone.parent)                                                     
@@ -91,7 +91,7 @@ class c_bones(object):
                 
             elif numBones == 1:
                 for bone in getAllBonesInOrder("WMB"):
-                    ID = bone['ID']
+                    ID = getBoneID(bone)
                     parentIndex = -1                                                         
                     #localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
                     localPosition = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])

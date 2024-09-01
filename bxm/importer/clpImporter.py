@@ -44,7 +44,7 @@ def clp_bone_items(self, context):
 def update_clp_bone_items():
     global bone_items
     bone_items = []
-    bone_items.append((str(4095), "None (4095)", ""))
+    bone_items.append((str(4095), "None", ""))
 
     armatureObj = None
     for obj in bpy.data.collections['WMB'].all_objects:
@@ -57,7 +57,7 @@ def update_clp_bone_items():
     for bone in armatureObj.data.bones:
         if boneHasID(bone):
             bone_id = str(getBoneID(bone))
-            bone_items.append((bone_id, bone.name + " (" + bone_id + ")", ""))
+            bone_items.append((bone_id, bone.name, ""))
 
 class ClothWK(bpy.types.PropertyGroup):
     no : bpy.props.EnumProperty(items=clp_bone_items, default=0)
