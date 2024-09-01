@@ -5,7 +5,9 @@ import math
 from typing import List, Tuple
 from mathutils import Vector, Matrix
 
-from ...utils.util import ShowMessageBox, getPreferences, printTimings
+from .shader_PBS10_XXXXX import pbs10_xxxxx
+
+from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -212,13 +214,13 @@ def addWtaExportMaterial(texture_dir, material):
 	]
 	makeWtaMaterial(material_name, wtaTextures)
 
-def construct_materials(texture_dir, material):
-	material_name = material[0]
-	textures = material[1]
-	uniforms = material[2]
-	shader_name = material[3]
-	technique_name = material[4]
-	parameterGroups = material[5]
+def construct_materials(texture_dir, material_array):
+	material_name = material_array[0]
+	textures = material_array[1]
+	uniforms = material_array[2]
+	shader_name = material_array[3]
+	technique_name = material_array[4]
+	parameterGroups = material_array[5]
 	print('[+] importing material %s' % material_name)
 	material = bpy.data.materials.new( '%s' % (material_name))
 	material['Shader_Name'] = shader_name
@@ -228,29 +230,12 @@ def construct_materials(texture_dir, material):
 	# Clear Nodes and Links
 	material.node_tree.links.clear()
 	material.node_tree.nodes.clear()
-	# Recreate Nodes and Links with references
-	nodes = material.node_tree.nodes
-	links = material.node_tree.links
-	# PrincipledBSDF and Ouput Shader
-	output = nodes.new(type='ShaderNodeOutputMaterial')
-	output.location = 1200,0
-	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
-	principled.location = 900,0
-	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
-	# Normal Map Amount Counter
-	normal_map_count = 0
-	# Mask Map Count
-	mask_map_count = 0
-	# Alpha Channel
+
 	material.blend_method = 'CLIP'
 
-	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
 	# Shader Parameters
 	for key in uniforms.keys():
 		material[key] = uniforms.get(key)
-		#print(key, material[key])
-		if key.lower().find("g_glossiness") > -1:
-			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
 
 	# Custom Shader Parameters
 	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/shader_params.json", "r")
@@ -271,8 +256,8 @@ def construct_materials(texture_dir, material):
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower()
 		material[texturesType] = textures.get(texturesType)
-		texture_file = "%s/%s.dds" % (texture_dir, textures[texturesType])
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textures[texturesType])
+		if texture_file != None:
 			if textures_type.find('albedo') > -1:
 				albedo_maps[textures_type] = textures.get(texturesType)
 			elif textures_type.find('normal') > -1:
@@ -282,12 +267,32 @@ def construct_materials(texture_dir, material):
 			elif textures_type.find('curvature') > -1:
 				curvature_maps[textures_type] = textures.get(texturesType)	
 
+	if shader_name == "PBS10_XXXXX":
+		pbs10_xxxxx(material, material_array, texture_dir)
+		return material
+
+	# Recreate Nodes and Links with references
+	nodes = material.node_tree.nodes
+	links = material.node_tree.links
+
+	# PrincipledBSDF and Ouput Shader
+	output = nodes.new(type='ShaderNodeOutputMaterial')
+	output.location = 1200,0
+	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
+	principled.location = 900,0
+	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
+
+	# Normal Map Amount Counter
+	normal_map_count = 0
+	# Mask Map Count
+	mask_map_count = 0
+
 	# Albedo Nodes
 	albedo_nodes = []
 	albedo_mixRGB_nodes = []
 	for i, textureID in enumerate(albedo_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			albedo_image = nodes.new(type='ShaderNodeTexImage')
 			albedo_nodes.append(albedo_image)
 			albedo_image.location = 0,i*-60
@@ -323,8 +328,8 @@ def construct_materials(texture_dir, material):
 	mask_sepRGB_nodes = []
 	mask_invert_nodes = []
 	for i, textureID in enumerate(mask_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			mask_image = nodes.new(type='ShaderNodeTexImage')
 			mask_nodes.append(mask_image)
 			mask_image.location = 0, ((len(albedo_maps)+1)*-60)-i*60
@@ -360,8 +365,8 @@ def construct_materials(texture_dir, material):
 	normal_nodes = []
 	normal_mixRGB_nodes = []
 	for i, textureID in enumerate(normal_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			normal_image = nodes.new(type='ShaderNodeTexImage')
 			normal_nodes.append(normal_image)
 			normal_image.location = 0, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
@@ -400,8 +405,8 @@ def construct_materials(texture_dir, material):
 	curvature_sepRGB_nodes = []
 	curvature_mul_nodes = []
 	for i, textureID in enumerate(curvature_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			curvature_image = nodes.new(type='ShaderNodeTexImage')
 			curvature_nodes.append(curvature_image)
 			curvature_image.location = -600, ((len(albedo_maps)+1)*-60)-i*60+50
@@ -464,6 +469,7 @@ def add_material_to_mesh(mesh, materials , uvs):
 
 	bm.to_mesh(mesh.data)
 	bm.free()
+	mesh.data.uv_layers[0].name = "UVMap1"
 	if bpy.app.version < (4, 1):
 		mesh.data.use_auto_smooth = True
 	# mesh.data.shade_smooth()

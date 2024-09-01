@@ -23,7 +23,10 @@ class RecalculateObjectIndices(bpy.types.Operator):
 
         for idx, obj in reversed(list(enumerate(objects_list))):
             split_name = obj.name.split("-")
-            obj.name = str(idx) + "-" + split_name[1] + "-" + split_name[2]
+            if collectionName == "COL":
+                obj.name = str(idx) + "-" + split_name[1]
+            else:
+                obj.name = str(idx) + "-" + split_name[1] + "-" + split_name[2]
 
         for obj in bpy.data.collections[collectionName].all_objects:
             if obj.type == "MESH":

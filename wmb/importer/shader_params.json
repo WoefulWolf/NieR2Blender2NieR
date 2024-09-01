@@ -118,7 +118,7 @@
     "PBS10_XXXXX": {
         "Parameters": [
             "g_UseNormalMap",
-            "Unknown",
+            "g_bAlbedoOverWrite",
             "g_bGlossinessOverWrite",
             "g_bMetalicOverWrite",
             "Unknown",

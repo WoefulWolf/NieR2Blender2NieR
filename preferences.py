@@ -24,6 +24,8 @@ class SelectDirectory(bpy.types.Operator, ImportHelper):
             newDir = getPreferences().assetDirs.add()
         elif self.settingsType == 1:
             newDir = getPreferences().assetBlendDirs.add()
+        elif self.settingsType == 2:
+            newDir = getPreferences().textureDirs.add()
         else:
             print("Invalid settingsType")
             return {'CANCELLED'}
@@ -44,6 +46,8 @@ class RemoveDirectory(bpy.types.Operator):
             getPreferences().assetDirs.remove(self.index)
         elif self.settingsType == 1:
             getPreferences().assetBlendDirs.remove(self.index)
+        elif self.settingsType == 2:
+            getPreferences().textureDirs.remove(self.index)
         else:
             print("Invalid settingsType")
             return {'CANCELLED'}
@@ -62,6 +66,7 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
     bl_idname = ADDON_NAME
     assetDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
     assetBlendDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
+    textureDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
     armatureDefaultDisplayType: bpy.props.EnumProperty(name="Armature Display Type", items=ArmatureDisplayTypeEnum, default="DEFAULT")
     armatureDefaultInFront: bpy.props.BoolProperty(name="Armature Default In Front", default=False)
 
@@ -100,6 +105,18 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
             remOp.settingsType = 1
         addOp = box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
         addOp.settingsType = 1
+
+        # asset dirs selection
+        box = layout.box()
+        drawMultilineLabel(context, "Assign extracted texture directories below for applying textures not included locally in DTT/DAT files", box)
+        for i, textureDir in enumerate(self.textureDirs):
+            row = box.row(align=True)
+            row.prop(self.textureDirs[i], "directory", text="")
+            remOp = row.operator(RemoveDirectory.bl_idname, text="", icon="X")
+            remOp.index = i
+            remOp.settingsType = 2
+        addOp = box.operator(SelectDirectory.bl_idname, text="Add Directory", icon="FILE_FOLDER")
+        addOp.settingsType = 2
 
 
 def register():

@@ -10,6 +10,7 @@ import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
+import glob
 
 from .ioUtils import read_uint32
 from ..consts import ADDON_NAME, DAT_EXTENSIONS
@@ -222,6 +223,24 @@ def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
 
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
+
+def getTexture(texture_dir, texture_name):
+    def either(c):
+        return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
+
+    # First check if the texture is in the texture directory
+    texture_search = os.path.join(texture_dir, ''.join(either(char) for char in texture_name) + ".*")
+    texture_files = glob.glob(texture_search, recursive=True)
+    if len(texture_files) > 0:
+        return texture_files[0]
+    
+    # If not, check the preferences texture directories
+    for dir in getPreferences().textureDirs:
+        texture_search = os.path.join(dir.directory, ''.join(either(char) for char in texture_name) + ".*")
+        texture_files = glob.glob(texture_search, recursive=True)
+        if len(texture_files) > 0:
+            return texture_files[0]
+    return None
 
 def getBoneFromID(bone_id):
     armatureObj = None
