@@ -20,8 +20,16 @@ class Asset:
         self.rot = rotation
         self.scale = [bObj.scale[0], bObj.scale[2], bObj.scale[1]]
 
-        self.unknownIndex = bObj["unknownIndex"]
-        self.null1 = bObj["null1"]
+        if "unknownIndex" in bObj:
+            self.unknownIndex = bObj["unknownIndex"]
+        else:
+            self.unknownIndex = 0
+
+        if "null1" in bObj:
+            self.null1 = bObj["null1"]
+        else:
+            self.null1 = [0] * 32
+        
 
         self.instances = getInstances(bObj)
         self.instanceCount = len(self.instances)
@@ -44,6 +52,9 @@ class Assets:
     def __init__(self):
         self.assets = []
         for obj in bpy.data.collections['lay_layAssets'].all_objects:
+            if len(obj.name) > 32:
+                print("[!] Asset name too long (must be at most 32 characters):", obj.name)
+                continue
             self.assets.append(Asset(obj))
         self.structSize = len(self.assets) * 112
 

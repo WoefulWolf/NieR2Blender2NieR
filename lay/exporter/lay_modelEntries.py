@@ -8,6 +8,9 @@ class ModelEntries:
     def __init__(self):
         self.modelEntries = []
         for obj in bpy.data.collections['lay_layAssets'].all_objects:
+            if len(obj.name) > 32:
+                print("[!] Asset name too long (must be at most 32 characters):", obj.name)
+                continue
             modelName = obj.name.split("_")[0]
             if modelName not in self.modelEntries:
                 self.modelEntries.append(modelName)
