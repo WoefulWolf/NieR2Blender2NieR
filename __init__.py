@@ -15,7 +15,7 @@ from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionT
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
-    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, ClearSelectedBoneIDs, RestoreImportPose
+    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, RestoreImportPose
 from .utils.visibilitySwitcher import enableVisibilitySelector, disableVisibilitySelector
 from .utils import visibilitySwitcher
 from .wta_wtp.exporter import wta_wtp_ui_manager
@@ -65,7 +65,7 @@ class NierArmatureMenu(bpy.types.Menu):
     bl_idname = 'ARMATURE_MT_n2b2n'
     bl_label = 'NieR Tools'
     def draw(self, context):
-        self.layout.operator(ClearSelectedBoneIDs.bl_idname, icon='BONE_DATA')
+        return
 
 class CreateLayVisualization(bpy.types.Operator):
     """Create Layout Object Visualization"""
@@ -143,7 +143,6 @@ classes = (
     DeleteLooseGeometrySelected,
     DeleteLooseGeometryAll,
     RipMeshByUVIslands,
-    ClearSelectedBoneIDs,
     RestoreImportPose,
     HidePl000fIrrelevantBones,
     RemovePl000fIrrelevantAnimations
