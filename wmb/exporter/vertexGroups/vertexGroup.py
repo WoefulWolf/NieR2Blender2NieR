@@ -2,6 +2,7 @@ import math
 from time import time
 
 import bpy
+from ....utils.util import getBoneIndexByName
 
 class c_vertexGroup(object):
     def __init__(self, vertexGroupIndex, vertexesStart):
@@ -187,7 +188,7 @@ class c_vertexGroup(object):
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:
                                 boneGroupName = bvertex_obj_obj.vertex_groups[groupRef.group].name
-                                boneID = int(boneGroupName.replace("bone", ""))
+                                boneID = getBoneIndexByName("WMB", boneGroupName)
 
                                 boneMapIndx = self.boneMap.index(boneID)
                                 boneSetIndx = boneSet.index(boneMapIndx)

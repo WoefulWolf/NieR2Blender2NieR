@@ -186,6 +186,12 @@ def makeCircleMesh(name: str, radius: float, parent: bpy.types.Object, color: Li
     prepareObject(circleObj, name, parent, color)
     return circleObj
 
+def makeSphereMesh(name: str, radius: float, parent: bpy.types.Object, color: List[float]) -> bpy.types.Object:
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
+    sphereObj = bpy.context.active_object
+    prepareObject(sphereObj, name, parent, color)
+    return sphereObj
+
 # importing - misc
 
 seedOffsets: Dict[str, int] = {}
@@ -222,6 +228,10 @@ def xmlVecToVec2(vecStr: str) -> List[float]:
 def xmlVecToVec3(vecStr: str) -> List[float]:
     vals = [strToFloat(s) for s in vecStr.split(" ")]
     return [vals[0], -vals[2], vals[1]]
+
+def xmlVecToVec3Scale(vecStr: str) -> List[float]:
+    vals = [strToFloat(s) for s in vecStr.split(" ")]
+    return [vals[0], vals[2], vals[1]]
 
 
 def xmlVecToVec4(vecStr: str) -> List[float]:
@@ -277,6 +287,9 @@ def vecToXmlVec2(vec: Tuple[float, float, float]) -> str:
 
 def vecToXmlVec3(vec: Tuple[float, float, float]) -> str:
     return f"{floatToStr(vec[0])} {floatToStr(vec[2])} {floatToStr(-vec[1])}"
+
+def vecToXmlVec3Scale(vec: Tuple[float, float, float]) -> str:
+    return f"{floatToStr(vec[0])} {floatToStr(vec[2])} {floatToStr(vec[1])}"
 
 
 def vecToXmlVec4(vec: Tuple[float, float, float, float]) -> str:

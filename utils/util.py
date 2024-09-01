@@ -3,12 +3,14 @@ from functools import wraps
 import json
 import os
 import textwrap
+from threading import Timer
 from time import time
-from typing import Dict, List
+from typing import Callable, Dict, List
 import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
+import glob
 
 from .ioUtils import read_uint32
 from ..consts import ADDON_NAME, DAT_EXTENSIONS
@@ -20,6 +22,12 @@ class Vector3(object):
         self.y = y
         self.z = z
         self.xyz = [x, y, z]
+
+    def __add__(self, other):
+        return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __sub__(self, other):
+        return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 
 def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
     def draw(self, context):
@@ -87,6 +95,16 @@ def allObjectsInCollectionInOrder(collectionName):
 
 def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
     return sorted(obj.children, key=getObjKey)
+
+def getAllBonesInOrder(collectionName):
+    for obj in bpy.data.collections[collectionName].all_objects:
+        if obj.type == 'ARMATURE':
+            return list(obj.data.bones)
+
+def getBoneIndexByName(collectionName, name):
+    for i, bone in enumerate(getAllBonesInOrder(collectionName)):
+        if bone.name == name:
+            return i
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):
@@ -197,12 +215,52 @@ def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
             return
     
     if os.path.exists(datExtractedDir):
+        bpy.context.scene.DatContents.clear()
         importContentsFileFromFolder(datExtractedDir, bpy.context.scene.DatContents)
     if os.path.exists(dttExtraDir):
+        bpy.context.scene.DttContents.clear()
         importContentsFileFromFolder(dttExtraDir, bpy.context.scene.DttContents)
 
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
+
+def getTexture(texture_dir, texture_name):
+    def either(c):
+        return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
+
+    # First check if the texture is in the texture directory
+    texture_search = os.path.join(texture_dir, ''.join(either(char) for char in texture_name) + ".*")
+    texture_files = glob.glob(texture_search, recursive=True)
+    if len(texture_files) > 0:
+        return texture_files[0]
+    
+    # If not, check the preferences texture directories
+    for dir in getPreferences().textureDirs:
+        texture_search = os.path.join(dir.directory, ''.join(either(char) for char in texture_name) + ".*")
+        texture_files = glob.glob(texture_search, recursive=True)
+        if len(texture_files) > 0:
+            return texture_files[0]
+    return None
+
+def getBoneFromID(bone_id):
+    armatureObj = None
+    for obj in bpy.data.collections['WMB'].all_objects:
+        if obj.type == 'ARMATURE':
+            armatureObj = obj
+            break
+
+    for bone in armatureObj.data.bones:
+        if bone.name.split("_")[0].replace("bone", "").isdigit():
+            if bone.name.split("_")[0].replace("bone", "") == str(bone_id):
+                return bone
+
+    return None
+
+def boneHasID(bone):
+    return bone.name.split("_")[0].replace("bone", "").isdigit()
+
+def getBoneID(bone):
+    return int(bone.name.split("_")[0].replace("bone", ""))
 
 startTime = -1
 timings: Dict[str, Dict|float] = {}
@@ -345,3 +403,69 @@ def saveDatInfo(filepath: str, files: List[str], filename: str):
             "ext": ext[1:]
         }
         json.dump(jsonFiles, f, indent=4)
+
+class throttle(object):
+    leading: bool
+    trailing: bool
+
+    timeout: Timer
+    milliseconds: float
+    previous: float
+    function: Callable|None
+    args: List
+    kwargs: Dict
+
+    def __init__(self, milliseconds: float, leading=False, trailing=True):
+        self.leading = leading
+        self.trailing = trailing
+        self.milliseconds = milliseconds
+        self.timeout = None
+        self.previous = 0
+        self.function = None
+    
+    def later(self):
+        self.previous = time() if self.leading else 0
+        self.timeout = None
+        self.function(*self.args, **self.kwargs)
+    
+    def __call__(self, fn):
+        self.function = fn
+        def wrapper(*args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            now = time() * 1000
+            if self.previous != 0 and not self.leading:
+                self.previous = now
+            remaining = self.milliseconds - (now - self.previous)
+            if remaining <= 0 or remaining > self.milliseconds:
+                if self.timeout:
+                    self.timeout.cancel()
+                    self.timeout = None
+                self.previous = now
+                fn(*args, **kwargs)
+            elif not self.timeout and self.trailing:
+                self.timeout = Timer(remaining / 1000, self.later)
+                self.timeout.start()
+        return wrapper
+
+def clamp(value: float, min: float, max: float) -> float:
+    return min if value < min else max if value > max else value
+
+def newGeometryNodesModifier(obj: bpy.types.Object) -> bpy.types.NodesModifier:
+    modifier: bpy.types.NodesModifier = obj.modifiers.new("Geometry Nodes", "NODES")
+    nodeTree = modifier.node_group
+    if nodeTree is None:
+        nodeTree = bpy.data.node_groups.new("Geometry Nodes", "GeometryNodeTree")
+        modifier.node_group = nodeTree
+
+        inputNode = nodeTree.nodes.new("NodeGroupInput")
+        inputNode.location = (-200, 0)
+        inputNode.outputs.new("NodeSocketGeometry", "Geometry")
+
+        outputNode = nodeTree.nodes.new("NodeGroupOutput")
+        outputNode.location = (200, 0)
+        outputNode.inputs.new("NodeSocketGeometry", "Geometry")
+
+        nodeTree.links.new(inputNode.outputs["Geometry"], outputNode.inputs["Geometry"])
+    return modifier
+

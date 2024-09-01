@@ -3,9 +3,11 @@ import bpy
 import bmesh
 import math
 from typing import List, Tuple
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
-from ...utils.util import ShowMessageBox, getPreferences, printTimings
+from .shader_PBS10_XXXXX import pbs10_xxxxx
+
+from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -27,9 +29,10 @@ def reset_blend():
 		bpy.data.objects.remove(obj)
 		obj.user_clear()
 
-def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
+def construct_armature(name, bone_data_array: list[wmb3_bone], firstLevel, secondLevel, thirdLevel, boneMap, boneSetArray, collection_name):			# bone_data =[boneIndex, boneName, parentIndex, parentName, bone_pos, optional, boneNumber, localPos, local_rotation, world_rotation, world_position_tpose]
 	print('[+] importing armature')
 	amt = bpy.data.armatures.new(name +'Amt')
+	#amt.pose_position = 'REST'
 	ob = bpy.data.objects.new(name, amt)
 	#ob = bpy.context.active_object
 	if getPreferences().armatureDefaultDisplayType != "DEFAULT":
@@ -45,29 +48,51 @@ def construct_armature(name, bone_data_array, firstLevel, secondLevel, thirdLeve
 	amt['secondLevel'] = secondLevel
 	amt['thirdLevel'] = thirdLevel
 
+	#print(firstLevel)
+	#print(secondLevel)
+	#print(thirdLevel)
+
 	amt['boneMap'] = boneMap
+	#print(boneMap)
 
 	amt['boneSetArray'] = boneSetArray
 
 	for bone_data in bone_data_array:
-		bone = amt.edit_bones.new(bone_data[1])
-		bone.head = Vector(bone_data[4]) 
-		bone.tail = Vector(bone_data[4]) + Vector((0 , 0.01, 0))				
-		bone['ID'] = bone_data[6]
+		bone = amt.edit_bones.new("bone" + str(bone_data.boneNumber))
+		bone.head = Vector(bone_data.world_position_tpose) 
+		bone.tail = Vector(bone_data.world_position_tpose) + Vector((0 , 0.1, 0))
 
-		bone['localPosition'] = bone_data[7]
-		bone['localRotation'] = bone_data[8]
-		bone['worldRotation'] = bone_data[9]
-		bone['TPOSE_worldPosition'] = bone_data[10]
+		# bone['ID'] = bone_data[6]
+		#bone['APOSE_position'] = bone_data[4]
+		#bone['TPose_localPosition'] = bone_data[7]
+		bone['localRotation'] = bone_data.local_rotation
+		#bone['worldRotation'] = bone_data[9]
+		#bone['TPOSE_worldPosition'] = bone_data[10]
 
 	bones = amt.edit_bones
 	for bone_data in bone_data_array:
-		if bone_data[2] < 0xffff:						#this value need to edit in different games
-			bone = bones[bone_data[1]]
-			bone.parent = bones[bone_data[3]]
+		if bone_data.parentIndex < 0xffff:						#this value need to edit in different games
+			bone = bones["bone" + str(bone_data.boneNumber)]
+			bone.parent = bones[bone_data.parentIndex]
 			#if bones[bone_data[3]]['ID'] != 0:
-			if bones[bone_data[3]].head != bone.head:
-				bones[bone_data[3]].tail = bone.head
+			#if bones[bone_data[3]].head != bone.head:
+			#	bones[bone_data[3]].tail = bone.head
+
+	bpy.ops.object.mode_set(mode='POSE')
+
+	for pose_bone in ob.pose.bones:
+		rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+
+		pose_bone.matrix_basis = rot_mat @ pose_bone.matrix_basis
+		bpy.context.view_layer.update()
+
+	bpy.ops.pose.armature_apply()
+
+	for pose_bone in ob.pose.bones:
+		rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+
+		pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
+		bpy.context.view_layer.update()
 
 	bpy.ops.object.mode_set(mode='OBJECT')
 	ob.rotation_euler = (math.radians(90),0,0)
@@ -107,14 +132,15 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
+def construct_mesh(mesh_data, collection_name, armature):			# [meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
 			name = name + '-' + collection_name
 	vertices = mesh_data[1]
 	faces = mesh_data[2]
-	has_bone = mesh_data[3]
+	normals = mesh_data[3]
+	has_bone = mesh_data[4]
 	weight_infos = [[[],[]]]							# A real fan can recognize me even I am a 2 dimensional array
 	print("[+] importing %s" % name)
 	objmesh = bpy.data.meshes.new(name)
@@ -125,9 +151,11 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 	obj.location = Vector((0,0,0))
 	bpy.data.collections.get(collection_name).objects.link(obj)
 	objmesh.from_pydata(vertices, [], faces)
+	if normals[0] != None:
+		objmesh.normals_split_custom_set_from_vertices(normals)
 	objmesh.update(calc_edges=True)
 
-	if len(mesh_data[7]) != 0:
+	if len(mesh_data[8]) != 0:
 		if objmesh.vertex_colors:
 			vcol_layer = objmesh.vertex_colors.active
 		else:
@@ -135,7 +163,7 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 
 		for loop_idx, loop in enumerate(objmesh.loops):	
 			meshColor = vcol_layer.data[loop_idx]
-			dataColor = mesh_data[7][loop.vertex_index]
+			dataColor = mesh_data[8][loop.vertex_index]
 			meshColor.color = [
 				dataColor[0]/255,
 				dataColor[1]/255,
@@ -144,28 +172,28 @@ def construct_mesh(mesh_data, collection_name):			# [meshName, vertices, faces, 
 			]
 
 	if has_bone:
-		weight_infos = mesh_data[4]
-		group_names = sorted(list(set(["bone%d" % i  for weight_info in weight_infos for i in weight_info[0]])))
+		weight_infos = mesh_data[5]
+		group_names = sorted(list(set([armature.data.bones[i].name for weight_info in weight_infos for i in weight_info[0]])))
 		for group_name in group_names:
 			obj.vertex_groups.new(name=group_name)
 		for i in range(len(weight_infos)):
 			for index in range(4):
-				group_name = "bone%d"%weight_infos[i][0][index]
+				group_name = armature.data.bones[weight_infos[i][0][index]].name
+				# group_name = "bone%d"%weight_infos[i][0][index]
 				weight = weight_infos[i][1][index]
 				group = obj.vertex_groups[group_name]
 				if weight:
 					group.add([i], weight, "REPLACE")
 	obj.rotation_euler = (math.radians(90),0,0)
-	if mesh_data[5] != "None":
-		obj['boneSetIndex'] = mesh_data[5]
-	obj['meshGroupIndex'] = mesh_data[6]
-	obj['vertexGroup'] = mesh_data[13]
-	obj['LOD_Name'] = mesh_data[8]
-	obj['LOD_Level'] = mesh_data[9]
-	obj['colTreeNodeIndex'] = mesh_data[10]
-	obj['unknownWorldDataIndex'] = mesh_data[11]
+	if mesh_data[6] != "None":
+		obj['boneSetIndex'] = mesh_data[6]
+	obj['meshGroupIndex'] = mesh_data[7]
+	obj['vertexGroup'] = mesh_data[14]
+	obj['LOD_Name'] = mesh_data[9]
+	obj['LOD_Level'] = mesh_data[10]
+	obj['colTreeNodeIndex'] = mesh_data[11]
+	obj['unknownWorldDataIndex'] = mesh_data[12]
 
-	obj.data.flip_normals()
 	return obj
 
 def set_partent(parent, child):
@@ -186,13 +214,13 @@ def addWtaExportMaterial(texture_dir, material):
 	]
 	makeWtaMaterial(material_name, wtaTextures)
 
-def construct_materials(texture_dir, material):
-	material_name = material[0]
-	textures = material[1]
-	uniforms = material[2]
-	shader_name = material[3]
-	technique_name = material[4]
-	parameterGroups = material[5]
+def construct_materials(texture_dir, material_array):
+	material_name = material_array[0]
+	textures = material_array[1]
+	uniforms = material_array[2]
+	shader_name = material_array[3]
+	technique_name = material_array[4]
+	parameterGroups = material_array[5]
 	print('[+] importing material %s' % material_name)
 	material = bpy.data.materials.new( '%s' % (material_name))
 	material['Shader_Name'] = shader_name
@@ -202,29 +230,12 @@ def construct_materials(texture_dir, material):
 	# Clear Nodes and Links
 	material.node_tree.links.clear()
 	material.node_tree.nodes.clear()
-	# Recreate Nodes and Links with references
-	nodes = material.node_tree.nodes
-	links = material.node_tree.links
-	# PrincipledBSDF and Ouput Shader
-	output = nodes.new(type='ShaderNodeOutputMaterial')
-	output.location = 1200,0
-	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
-	principled.location = 900,0
-	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
-	# Normal Map Amount Counter
-	normal_map_count = 0
-	# Mask Map Count
-	mask_map_count = 0
-	# Alpha Channel
+
 	material.blend_method = 'CLIP'
 
-	#print("\n".join(["%s:%f" %(key, uniforms[key]) for key in sorted(uniforms.keys())]))
 	# Shader Parameters
 	for key in uniforms.keys():
 		material[key] = uniforms.get(key)
-		#print(key, material[key])
-		if key.lower().find("g_glossiness") > -1:
-			principled.inputs['Roughness'].default_value = 1 - uniforms[key]
 
 	# Custom Shader Parameters
 	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/shader_params.json", "r")
@@ -245,8 +256,8 @@ def construct_materials(texture_dir, material):
 	for texturesType in textures.keys():
 		textures_type = texturesType.lower()
 		material[texturesType] = textures.get(texturesType)
-		texture_file = "%s/%s.dds" % (texture_dir, textures[texturesType])
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textures[texturesType])
+		if texture_file != None:
 			if textures_type.find('albedo') > -1:
 				albedo_maps[textures_type] = textures.get(texturesType)
 			elif textures_type.find('normal') > -1:
@@ -256,12 +267,32 @@ def construct_materials(texture_dir, material):
 			elif textures_type.find('curvature') > -1:
 				curvature_maps[textures_type] = textures.get(texturesType)	
 
+	if shader_name == "PBS10_XXXXX":
+		pbs10_xxxxx(material, material_array, texture_dir)
+		return material
+
+	# Recreate Nodes and Links with references
+	nodes = material.node_tree.nodes
+	links = material.node_tree.links
+
+	# PrincipledBSDF and Ouput Shader
+	output = nodes.new(type='ShaderNodeOutputMaterial')
+	output.location = 1200,0
+	principled = nodes.new(type='ShaderNodeBsdfPrincipled')
+	principled.location = 900,0
+	output_link = links.new( principled.outputs['BSDF'], output.inputs['Surface'] )
+
+	# Normal Map Amount Counter
+	normal_map_count = 0
+	# Mask Map Count
+	mask_map_count = 0
+
 	# Albedo Nodes
 	albedo_nodes = []
 	albedo_mixRGB_nodes = []
 	for i, textureID in enumerate(albedo_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			albedo_image = nodes.new(type='ShaderNodeTexImage')
 			albedo_nodes.append(albedo_image)
 			albedo_image.location = 0,i*-60
@@ -297,8 +328,8 @@ def construct_materials(texture_dir, material):
 	mask_sepRGB_nodes = []
 	mask_invert_nodes = []
 	for i, textureID in enumerate(mask_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			mask_image = nodes.new(type='ShaderNodeTexImage')
 			mask_nodes.append(mask_image)
 			mask_image.location = 0, ((len(albedo_maps)+1)*-60)-i*60
@@ -334,8 +365,8 @@ def construct_materials(texture_dir, material):
 	normal_nodes = []
 	normal_mixRGB_nodes = []
 	for i, textureID in enumerate(normal_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			normal_image = nodes.new(type='ShaderNodeTexImage')
 			normal_nodes.append(normal_image)
 			normal_image.location = 0, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
@@ -374,8 +405,8 @@ def construct_materials(texture_dir, material):
 	curvature_sepRGB_nodes = []
 	curvature_mul_nodes = []
 	for i, textureID in enumerate(curvature_maps.values()):
-		texture_file = "%s/%s.dds" % (texture_dir, textureID)
-		if os.path.exists(texture_file):
+		texture_file = getTexture(texture_dir, textureID)
+		if texture_file != None:
 			curvature_image = nodes.new(type='ShaderNodeTexImage')
 			curvature_nodes.append(curvature_image)
 			curvature_image.location = -600, ((len(albedo_maps)+1)*-60)-i*60+50
@@ -414,8 +445,9 @@ def add_material_to_mesh(mesh, materials , uvs):
 		#print('linking material %s to mesh object %s' % (material.name, mesh.name))
 		mesh.data.materials.append(material)
 	bpy.context.view_layer.objects.active = mesh
-	bpy.ops.object.mode_set(mode="EDIT")
-	bm = bmesh.from_edit_mesh(mesh.data)
+	# bpy.ops.object.mode_set(mode="EDIT")
+	bm = bmesh.new()
+	bm.from_mesh(mesh.data)
 	uv_layer = bm.loops.layers.uv.verify()
 	#bm.faces.layers.tex.verify()
 	for face in bm.faces:
@@ -435,13 +467,14 @@ def add_material_to_mesh(mesh, materials , uvs):
 					ind = l.vert.index
 					luv.uv = Vector(uvs[i][ind])
 
-	bpy.ops.object.mode_set(mode='OBJECT')
-	mesh.select_set(True)
-	bpy.ops.object.shade_smooth()
-	#mesh.hide = True
-	mesh.select_set(False)
+	bm.to_mesh(mesh.data)
+	bm.free()
+	mesh.data.uv_layers[0].name = "UVMap1"
+	if bpy.app.version < (4, 1):
+		mesh.data.use_auto_smooth = True
+	# mesh.data.shade_smooth()
 	
-def format_wmb_mesh(wmb, collection_name):
+def format_wmb_mesh(wmb, collection_name, armature):
 	meshes = []
 	uvMaps = [[], [], [], [], []]
 	usedVerticeIndexArrays = []
@@ -545,6 +578,7 @@ def format_wmb_mesh(wmb, collection_name):
 						usedVerticeIndexArray = meshInfo[2]
 						boneWeightInfoArray = meshInfo[3]
 						vertex_colors = meshInfo[4]
+						normals = meshInfo[5]
 						usedVerticeIndexArrays.append(usedVerticeIndexArray)
 						flag = False
 						has_bone = wmb.hasBone
@@ -552,7 +586,7 @@ def format_wmb_mesh(wmb, collection_name):
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name)
+						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature)
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
@@ -580,15 +614,15 @@ def get_wmb_material(wmb, texture_dir):
 								print('[+] could not find DDS texture, trying to find it in WTA; %s.dds'% identifier)
 								texture_fp.write(texture_stream)
 								texture_fp.close()
-							else:
-								print('[+] Found %s.dds'% identifier)
+							#else:
+							#	print('[+] Found %s.dds'% identifier)
 					except:
 						continue
 				materials.append([material_name,textures,uniforms,shader_name,technique_name,parameterGroups])
 		else:
 			texture_dir = texture_dir.replace('.dat','.dtt')
 			for textureIndex in range(wmb.wta.textureCount):
-				print(textureIndex)
+				#print(textureIndex)
 				identifier = wmb.wta.wtaTextureIdentifier[textureIndex]
 				texture_stream = wmb.wta.getTextureByIdentifier(identifier,wmb.wtp_fp)
 				if texture_stream:
@@ -683,13 +717,19 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	
 	texture_dir = wmb_file.replace(wmbname, 'textures')
+	if not hasattr(wmb, 'wmb3_header'):
+		print('Error: Could not open .wmb file, is it missing?')
+		ShowMessageBox("Error: Could not open .wmb file, is it missing?", 'Could Not Open .wmb File', 'ERROR')
+		return {'FINISHED'}
+	
+	armature = None
 	if wmb.hasBone:
-		boneArray = [[bone.boneIndex, "bone%d"%bone.boneIndex, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
+		# boneArray = [[bone.boneIndex, "bone%d"%bone.boneNumber, bone.parentIndex,"bone%d"%bone.parentIndex, bone.world_position, bone.world_rotation, bone.boneNumber, bone.local_position, bone.local_rotation, bone.world_rotation, bone.world_position_tpose] for bone in wmb.boneArray]
 		armature_no_wmb = wmbname.replace('.wmb','')
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
-		construct_armature(armature_name, boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
-	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name)
+		armature = construct_armature(armature_name, wmb.boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
+	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
 	bpy.context.scene.WTAMaterials.clear()

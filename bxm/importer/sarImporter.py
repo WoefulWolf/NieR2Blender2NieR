@@ -5,7 +5,7 @@ from ..common.bxm import *
 from ...utils.xmlIntegrationUtils import xmlVecToVec3, makeSphereObj, strToFloat, setObjPosFromXmlPos, makeCurve, \
 	xmlVecToVec4, makeMeshObj, makeCube, makeCircle, setXmlAttributesOnObj, tryAddEmpty, randomRgb, tryAddCollection, \
 	setCurrentCollection
-from ...utils.util import setViewportColorTypeToObject
+from ...utils.util import newGeometryNodesModifier, setViewportColorTypeToObject
 from ..common.approxMapOffsets import approxMapOffsets
 
 class HandleShapeParams:
@@ -277,7 +277,7 @@ def handleLoftedVolume(params: HandleShapeParams) -> None:
 		pointObj.show_wire = True
 		
 		# with geometry nodes extrude to height
-		geometryNodesMod: bpy.types.NodesModifier = pointObj.modifiers.new("GeometryNodes", "NODES")
+		geometryNodesMod: bpy.types.NodesModifier = newGeometryNodesModifier(pointObj)
 		nodeTree = geometryNodesMod.node_group
 
 		inputNode = nodeTree.nodes["Group Input"]

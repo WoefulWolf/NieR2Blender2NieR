@@ -1,7 +1,23 @@
 import bpy
+import numpy as np
+from ....utils.util import Vector3, getAllBonesInOrder, getBoneID
+import mathutils as mu
 
-from ....utils.util import Vector3
+def get_bone_tPosition(bone):
+    if 'TPOSE_worldPosition' in bone:
+        return Vector3(bone['TPOSE_worldPosition'][0], bone['TPOSE_worldPosition'][1], bone['TPOSE_worldPosition'][2])
+    else:
+        return Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
 
+def get_bone_localPosition(bone):
+    if bone.parent:
+        if 'TPOSE_worldPosition' in bone.parent:
+            parentTPosition = Vector3(bone.parent['TPOSE_worldPosition'][0], bone.parent['TPOSE_worldPosition'][1], bone.parent['TPOSE_worldPosition'][2])
+            return get_bone_tPosition(bone) - parentTPosition
+        else:
+            return get_bone_tPosition(bone) - bone.parent.head_local
+    else:
+        return Vector3(0, 0, 0)
 
 class c_bones(object):
     def __init__(self):
@@ -12,55 +28,86 @@ class c_bones(object):
             for obj in bpy.data.collections['WMB'].all_objects:
                 if obj.type == 'ARMATURE':
                     numBones = len(obj.data.bones)
+                    break
                     first_bone = obj.data.bones[0]
 
             if numBones > 1:
-                for obj in bpy.data.collections['WMB'].all_objects:
-                    if obj.type == 'ARMATURE':
-                        for bone in obj.data.bones:
-                            ID = bone['ID']
+                for bone in getAllBonesInOrder("WMB"):
+                    ID = getBoneID(bone)
 
-                            if bone.parent:
-                                parent_name = bone.parent.name.replace('bone', '')
-                                parentIndex = int(parent_name)                                                      
-                            else:
-                                parentIndex = -1
+                    if bone.parent:
+                        parentIndex = getAllBonesInOrder("WMB").index(bone.parent)                                                     
+                    else:
+                        parentIndex = -1
 
-                            localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
+                    # APOSE_position
+                    position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                
+                    localRotation = [0, 0, 0]
+                    rotation = [0, 0, 0]
+                    
+                    tPosition = [0, 0, 0]
+                    localPosition = [0, 0, 0]
+                    for obj in bpy.data.collections["WMB"].all_objects:
+                        if obj.type == 'ARMATURE':
+                            for pBone in obj.pose.bones:
+                                if pBone.name == bone.name:
+                                    #localRotation
+                                    mat = pBone.matrix_basis.inverted().to_euler()
+                                    localRotation[0] = mat.x
+                                    localRotation[1] = mat.y
+                                    localRotation[2] = mat.z
 
-                            localRotation = Vector3(bone['localRotation'][0], bone['localRotation'][1], bone['localRotation'][2])
-                            localScale = Vector3(1, 1, 1)                                                                       # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
+                                    #rotation
+                                    full_rot_mat = pBone.matrix_basis.inverted().copy()
+                                    for parent_pb in pBone.parent_recursive:
+                                        full_rot_mat = parent_pb.matrix_basis.inverted() @ full_rot_mat
+                                    euler = full_rot_mat.to_euler()
+                                    rotation[0] = euler.x
+                                    rotation[1] = euler.y
+                                    rotation[2] = euler.z
+                                    
+                                    #TPOSE_worldPosition
+                                    full_trans = pBone.head
+                                    tPosition[0] = full_trans.x
+                                    tPosition[1] = full_trans.y
+                                    tPosition[2] = full_trans.z
 
-                            position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
-                            rotation = Vector3(bone['worldRotation'][0], bone['worldRotation'][1], bone['worldRotation'][2])
-                            scale = localScale
+                                    #TPOSE_localPosition
+                                    trans = pBone.head - (pBone.parent.head if pBone.parent else mu.Vector([0, 0, 0]))
+                                    localPosition[0] = trans[0]
+                                    localPosition[1] = trans[1]
+                                    localPosition[2] = trans[2]
+                                    break
+                            break
 
-                            tPosition = Vector3(bone['TPOSE_worldPosition'][0], bone['TPOSE_worldPosition'][1], bone['TPOSE_worldPosition'][2])
+                    localScale = Vector3(1, 1, 1)                           
+                    scale = localScale
 
-                            blenderName = bone.name
-
-                            bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
-                            _bones.append(bone)
+                    blenderName = bone.name
+                    
+                    bone = [ID, parentIndex, localPosition, localRotation, localScale.xyz, position.xyz, rotation, scale.xyz, tPosition, blenderName]
+                    _bones.append(bone)
                 
             elif numBones == 1:
-                for obj in bpy.data.collections['WMB'].all_objects:
-                    if obj.type == 'ARMATURE':
-                        for bone in obj.data.bones:
-                            ID = bone['ID']
-                            parentIndex = -1                                                         
-                            localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
-                            localRotation = Vector3(0, 0, 0)                                                                    # I haven't seen anything here besides 0, 0, 0.
-                            localScale = Vector3(1, 1, 1)                                                                       # Same here but 1, 1, 1. Makes sense. Bones don't "really" have scale.
+                for bone in getAllBonesInOrder("WMB"):
+                    ID = getBoneID(bone)
+                    parentIndex = -1                                                         
+                    #localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
+                    localPosition = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                    localRotation = Vector3(0, 0, 0)
+                    localScale = Vector3(1, 1, 1)
 
-                            position = localPosition
-                            rotation = localRotation
-                            scale = localScale
+                    position = localPosition
+                    rotation = localRotation
+                    scale = localScale
 
-                            tPosition = localPosition
+                    tPosition = localPosition
 
-                            blenderName = bone.name
-                            bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
-                            _bones.append(bone)
+                    blenderName = bone.name
+                    bone = [ID, parentIndex, localPosition.xyz, localRotation.xyz, localScale.xyz, position.xyz, rotation.xyz, scale.xyz, tPosition.xyz, blenderName]
+                    _bones.append(bone)
+                    break
 
             return _bones
                         
