@@ -187,7 +187,7 @@ def construct_mesh(mesh_data, collection_name, armature):			# [meshName, vertice
 	obj.rotation_euler = (math.radians(90),0,0)
 	if mesh_data[6] != "None":
 		obj['boneSetIndex'] = mesh_data[6]
-	obj['meshGroupIndex'] = mesh_data[7]
+	# obj['meshGroupIndex'] = mesh_data[7]
 	obj['vertexGroup'] = mesh_data[14]
 	obj['LOD_Name'] = mesh_data[9]
 	obj['LOD_Level'] = mesh_data[10]

@@ -105,6 +105,14 @@ def getBoneIndexByName(collectionName, name):
     for i, bone in enumerate(getAllBonesInOrder(collectionName)):
         if bone.name == name:
             return i
+        
+def getAllMeshesInOrder(collectionName):
+    meshes = []
+    for obj in (x for x in allObjectsInCollectionInOrder(collectionName) if x.type == "MESH"):
+        obj_name = obj.name.split('-')[1]
+        meshes.append(obj_name)
+
+    return list(set(meshes))
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):

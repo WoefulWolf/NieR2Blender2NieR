@@ -1,4 +1,4 @@
-from ....utils.util import getUsedMaterials
+from ....utils.util import getUsedMaterials, getAllMeshesInOrder
 
 class c_lod(object):
     def __init__(self, lodsStart, batches, lod_level):
@@ -10,10 +10,14 @@ class c_lod(object):
             return lodBatches
 
         def get_batchInfos(self, batches):
+            meshes = getAllMeshesInOrder('WMB')
+
             batchesInfos = []
             for batch in batches:                                     
                 vertexGroupIndex = batch.vertexGroupIndex
-                meshIndex = batch.blenderObj['meshGroupIndex']
+
+                mesh_name = batch.blenderObj.name.split('-')[1]
+                meshIndex = meshes.index(mesh_name)
 
                 for slot in batch.blenderObj.material_slots:
                     material = slot.material
