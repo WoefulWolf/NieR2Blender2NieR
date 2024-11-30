@@ -181,7 +181,7 @@ class GetNewMaterialsOperator(bpy.types.Operator):
         
         newMaterialsAdded = 0
         autoTextureWarnings = []
-        for mat in bpy.data.materials:
+        for mat in getUsedMaterials():
             if doesWtaMaterialExist(mat, context):
                 continue
 
