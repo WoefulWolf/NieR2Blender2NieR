@@ -43,7 +43,7 @@ def create_wmb_vertexGroups(wmb_file, data):
                 # for val in vertex[3][1]:                            # UVMap 2
                 #     write_float16(wmb_file, val)
                 writeUV.write(wmb_file, vertex[3][1])
-            if vertexGroup.vertexFlags in {7, 10, 11}:
+            if vertexGroup.vertexFlags in {7, 8, 10, 11}:
                 for val in vertex[4]:                               
                     write_byte(wmb_file, val)                       # Bone Indices
                 for val in vertex[5]:                                   
@@ -73,6 +73,16 @@ def create_wmb_vertexGroups(wmb_file, data):
                 # for val in vertexExData[0]:                         # normal
                 #     write_float16(wmb_file, val)
                 writeNormal.write(wmb_file, vertexExData[0])
+            elif vertexGroup.vertexFlags == 8:                      # [8]
+                # for val in vertexExData[1][0]:                      # UVMap 1
+                #     write_float16(wmb_file, val)
+                writeUV.write(wmb_file, vertexExData[1][0])
+                # for val in vertexExData[0]:                         # normal
+                #     write_float16(wmb_file, val)
+                writeNormal.write(wmb_file, vertexExData[0])
+                # for val in vertexExData[1][1]:                      # UVMap 2
+                #     write_float16(wmb_file, val)
+                writeUV.write(wmb_file, vertexExData[1][1])
             elif vertexGroup.vertexFlags == 10:                     # [10]
                 # for val in vertexExData[1][0]:                      # UVMap 1
                 #     write_float16(wmb_file, val)
