@@ -289,6 +289,20 @@ def drawCLPWKList(layout):
         row.prop(item, "rot_limit")
         row.prop(item, "m_original_rate")
 
+def draw_stroke(frame, pos1, pos2):
+    if bpy.app.version < (4, 3):
+        gp_stroke = frame.strokes.new()
+        gp_stroke.line_width = 4
+        gp_stroke.points.add(2)
+        gp_stroke.points[0].co = pos1
+        gp_stroke.points[1].co = pos2
+    else:
+        frame.drawing.add_strokes([2])
+        gp_stroke = frame.drawing.strokes[-1]
+        gp_stroke.points[0].radius = 0.002
+        gp_stroke.points[1].radius = 0.002
+        gp_stroke.points[0].position = pos1
+        gp_stroke.points[1].position = pos2
 
 class UpdateCLPVisualizer(bpy.types.Operator):
     bl_idname = "clp.update_clp_visualizer"
@@ -306,7 +320,7 @@ class UpdateCLPVisualizer(bpy.types.Operator):
         for obj in clpCollection.objects:
             bpy.data.objects.remove(obj)
 
-        gpencil_data = bpy.data.grease_pencils.new("CLP")
+        gpencil_data = bpy.data.grease_pencils.new("CLP") if bpy.app.version < (4, 3) else bpy.data.grease_pencils_v3.new("CLP")
         gpencil = bpy.data.objects.new("CLP", gpencil_data)
         gpencil.rotation_euler = mathutils.Euler((math.radians(90), 0, 0), 'XYZ')
         clpCollection.objects.link(gpencil)
@@ -318,11 +332,7 @@ class UpdateCLPVisualizer(bpy.types.Operator):
             bone = getBoneFromID(clothwk.no)
             bone_down = getBoneFromID(clothwk.no_down)
             if bone and bone_down and clothwk.no_down != "4095":
-                gp_stroke = gp_frame.strokes.new()
-                gp_stroke.line_width = 4
-                gp_stroke.points.add(2)
-                gp_stroke.points[0].co = bone.head_local
-                gp_stroke.points[1].co = bone_down.head_local
+                draw_stroke(gp_frame, bone.head_local, bone_down.head_local)
 
                 if bpy.context.scene.clp_visualization_options.show_rot_limit:
                     mesh = bpy.data.meshes.new(clothwk.no + " rot_limit")
@@ -360,20 +370,12 @@ class UpdateCLPVisualizer(bpy.types.Operator):
             if clothwk.no_side != "4095":
                 bone_side = getBoneFromID(clothwk.no_side)
                 if bone and bone_side:
-                    gp_stroke = gp_frame.strokes.new()
-                    gp_stroke.line_width = 4
-                    gp_stroke.points.add(2)
-                    gp_stroke.points[0].co = bone.head_local
-                    gp_stroke.points[1].co = bone_side.head_local
+                    draw_stroke(gp_frame, bone.head_local, bone_side.head_local)
 
             if clothwk.no_down != "4095" and clothwk.no_poly != "4095":
                 bone_poly = getBoneFromID(clothwk.no_poly)
                 if bone_down and bone_poly:
-                    gp_stroke = gp_frame.strokes.new()
-                    gp_stroke.line_width = 4
-                    gp_stroke.points.add(2)
-                    gp_stroke.points[0].co = bone_down.head_local
-                    gp_stroke.points[1].co = bone_poly.head_local
+                    draw_stroke(gp_frame, bone_down.head_local, bone_poly.head_local)
 
         return {'FINISHED'}
     
