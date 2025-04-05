@@ -67,7 +67,7 @@ class ClothWK(bpy.types.PropertyGroup):
     no_poly : bpy.props.EnumProperty(items=clp_bone_items, default=0)
     no_fix : bpy.props.EnumProperty(items=clp_bone_items, default=0)
 
-    rot_limit : bpy.props.FloatProperty(default=0.35)
+    rot_limit : bpy.props.FloatProperty(default=0.785)
     offset : bpy.props.FloatVectorProperty(default=(0, -0.1, 0))
     m_original_rate : bpy.props.FloatProperty(default=0)
 
@@ -228,6 +228,55 @@ class AddClothWK(bpy.types.Operator):
 
         return {'FINISHED'}
     
+class GenerateSelectedClothWK(bpy.types.Operator):
+    bl_idname = "clp.auto_generate_clothwk_selected"
+    bl_label = "Auto-generate ClothWK for Selected"
+    bl_description = "A best effort to generate ClothWK for selected bones"
+
+    def execute(self, context):
+        cloth_wk = bpy.context.scene.clp_clothwk
+        selected_bones = bpy.context.selected_bones
+        
+        if selected_bones:
+            new_cloth_wks = []
+            for bone in selected_bones:
+                if not boneHasID(bone):
+                    continue
+                # Check if not already in list
+                if any([x.no == str(getBoneID(bone)) for x in cloth_wk]):
+                    continue
+                cloth_wk_item = cloth_wk.add()
+                cloth_wk_item.no = str(getBoneID(bone))
+                new_cloth_wks.append(cloth_wk_item)
+
+            for bone in selected_bones:
+                if not boneHasID(bone):
+                    continue
+                matching_cloth_wk_item = [x for x in new_cloth_wks if x.no == str(getBoneID(bone))]
+                if len(matching_cloth_wk_item) == 0:
+                    continue
+                cloth_wk_item = matching_cloth_wk_item[0]
+
+                # Parent
+                parent = bone.parent
+                if parent:
+                    if boneHasID(parent):
+                        if any([x.no == str(getBoneID(parent)) for x in cloth_wk]):
+                            cloth_wk_item.no_up = str(getBoneID(parent))
+
+                # Children
+                if len(bone.children) > 0:
+                    child = bone.children[0]
+                    if child:
+                        if boneHasID(child):
+                            if any([x.no == str(getBoneID(child)) for x in cloth_wk]):
+                                cloth_wk_item.no_down = str(getBoneID(child))
+
+        else:
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
+    
 class RemoveClothWK(bpy.types.Operator):
     bl_idname = "clp.remove_clothwk"
     bl_label = "Remove ClothWK"
@@ -245,6 +294,8 @@ class RemoveClothWK(bpy.types.Operator):
 def drawCLPWKList(layout):
     row = layout.row()
     row.operator("clp.add_clothwk")
+    row = layout.row()
+    row.operator("clp.auto_generate_clothwk_selected")
 
     search_options = bpy.context.scene.clp_search_options
     row = layout.row()
@@ -414,6 +465,7 @@ def register():
     bpy.utils.register_class(ClothVisualizationOptions)
     bpy.utils.register_class(UpdateBoneItems)
     bpy.utils.register_class(AddClothWK)
+    bpy.utils.register_class(GenerateSelectedClothWK)
     bpy.utils.register_class(RemoveClothWK)
     bpy.utils.register_class(UpdateCLPVisualizer)
     bpy.utils.register_class(ClearCLPVisualizer)
@@ -435,6 +487,7 @@ def unregister():
     bpy.utils.unregister_class(ClothVisualizationOptions)
     bpy.utils.unregister_class(UpdateBoneItems)
     bpy.utils.unregister_class(AddClothWK)
+    bpy.utils.unregister_class(GenerateSelectedClothWK)
     bpy.utils.unregister_class(RemoveClothWK)
     bpy.utils.unregister_class(UpdateCLPVisualizer)
     bpy.utils.unregister_class(ClearCLPVisualizer)
