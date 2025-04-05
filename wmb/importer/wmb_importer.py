@@ -511,6 +511,7 @@ def format_wmb_mesh(wmb, collection_name, armature):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
+
 		if vertex_flags in {7, 10}:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
@@ -520,7 +521,7 @@ def format_wmb_mesh(wmb, collection_name, armature):
 			uvMaps[3].append(None)
 			uvMaps[4].append(None)
 
-		if vertex_flags == 11:
+		if vertex_flags in {8, 11}:
 			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
 			uvMaps[0].append(uv)
 			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
