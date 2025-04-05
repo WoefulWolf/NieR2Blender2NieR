@@ -1,5 +1,5 @@
 ![NieR2Blender2NieR](https://i.imgur.com/vdkqt8S.png) <br>
-(Amazing banner created by [@IntonerAlice](https://x.com/AliceBijiou))
+(Amazing banner created by [@AliceBijiou](https://x.com/AliceBijiou))
 ## VERY IMPORTANT
 This is the full combination tools of NieR2Blender and Blender2NieR, from now on known as NieR2Blender2NieR. <br>
 THIS IS ALSO STILL IN DEVELOPMENT BUT IS AS STABLE AS IT CURRENTLY CAN BE. If any updates break something that worked in the past, please let me know immediately. Every update is intended to be fully functional, the next just better than the prior. <br>
