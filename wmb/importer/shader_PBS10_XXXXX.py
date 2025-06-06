@@ -150,6 +150,14 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
         else:
             print('g_NormalMap1 texture not found: %s' % material['g_NormalMap1'])
     links.new(uv_1_mad.outputs[0], normal_1.inputs[0])
+    normal_1_sep_col = nodes.new(type="ShaderNodeSeparateColor")
+    links.new(normal_1.outputs['Color'], normal_1_sep_col.inputs['Color'])
+    normal_1_invert_g = nodes.new(type="ShaderNodeInvert")
+    links.new(normal_1_sep_col.outputs['Green'], normal_1_invert_g.inputs['Color'])
+    normal_1_com_col = nodes.new(type="ShaderNodeCombineColor")
+    links.new(normal_1_sep_col.outputs['Red'], normal_1_com_col.inputs['Red'])
+    links.new(normal_1_invert_g.outputs['Color'], normal_1_com_col.inputs['Green'])
+    links.new(normal_1_sep_col.outputs['Blue'], normal_1_com_col.inputs['Blue'])
 
     normal_2: bpy.types.ShaderNodeTexImage = nodes.new('ShaderNodeTexImage')
     normal_2.label = 'g_NormalMap2'
@@ -161,6 +169,14 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
         else:
             print('g_NormalMap2 texture not found: %s' % material['g_NormalMap2'])
     links.new(uv_2_mad.outputs[0], normal_2.inputs[0])
+    normal_2_sep_col = nodes.new(type="ShaderNodeSeparateColor")
+    links.new(normal_2.outputs['Color'], normal_2_sep_col.inputs['Color'])
+    normal_2_invert_g = nodes.new(type="ShaderNodeInvert")
+    links.new(normal_2_sep_col.outputs['Green'], normal_2_invert_g.inputs['Color'])
+    normal_2_com_col = nodes.new(type="ShaderNodeCombineColor")
+    links.new(normal_2_sep_col.outputs['Red'], normal_2_com_col.inputs['Red'])
+    links.new(normal_2_invert_g.outputs['Color'], normal_2_com_col.inputs['Green'])
+    links.new(normal_2_sep_col.outputs['Blue'], normal_2_com_col.inputs['Blue'])
 
     normal_3: bpy.types.ShaderNodeTexImage = nodes.new('ShaderNodeTexImage')
     normal_3.label = 'g_NormalMap3'
@@ -172,17 +188,25 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
         else:
             print('g_NormalMap3 texture not found: %s' % material['g_NormalMap3'])
     links.new(uv_2_mad.outputs[0], normal_3.inputs[0])
+    normal_3_sep_col = nodes.new(type="ShaderNodeSeparateColor")
+    links.new(normal_3.outputs['Color'], normal_3_sep_col.inputs['Color'])
+    normal_3_invert_g = nodes.new(type="ShaderNodeInvert")
+    links.new(normal_3_sep_col.outputs['Green'], normal_3_invert_g.inputs['Color'])
+    normal_3_com_col = nodes.new(type="ShaderNodeCombineColor")
+    links.new(normal_3_sep_col.outputs['Red'], normal_3_com_col.inputs['Red'])
+    links.new(normal_3_invert_g.outputs['Color'], normal_3_com_col.inputs['Green'])
+    links.new(normal_3_sep_col.outputs['Blue'], normal_3_com_col.inputs['Blue'])
 
     # Create Normal Map Mix Nodes
     normal_mix_1: bpy.types.ShaderNodeMixRGB = nodes.new('ShaderNodeMixRGB')
     links.new(mask_1_div.outputs[0], normal_mix_1.inputs[0])           # Connect mask 1 divide to mix 1 factor
-    links.new(normal_1.outputs[0], normal_mix_1.inputs[1])             # Connect normal 1 color to mix 1 color 1
-    links.new(normal_2.outputs[0], normal_mix_1.inputs[2])             # Connect normal 2 color to mix 1 color 2
+    links.new(normal_1_com_col.outputs[0], normal_mix_1.inputs[1])             # Connect normal 1 color to mix 1 color 1
+    links.new(normal_2_com_col.outputs[0], normal_mix_1.inputs[2])             # Connect normal 2 color to mix 1 color 2
 
     normal_mix_2: bpy.types.ShaderNodeMixRGB = nodes.new('ShaderNodeMixRGB')
     links.new(mask_2_div.outputs[0], normal_mix_2.inputs[0])           # Connect mask 2 divide to mix 2 factor
     links.new(normal_mix_1.outputs[0], normal_mix_2.inputs[1])         # Connect mix 1 color to mix 2 color 1
-    links.new(normal_3.outputs[0], normal_mix_2.inputs[2])             # Connect normal 3 color to mix 2 color 2
+    links.new(normal_3_com_col.outputs[0], normal_mix_2.inputs[2])             # Connect normal 3 color to mix 2 color 2
 
     # Create Normal Map Multiply Node
     normal_mul: bpy.types.ShaderNodeVectorMath = nodes.new('ShaderNodeVectorMath')

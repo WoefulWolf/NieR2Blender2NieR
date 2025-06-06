@@ -368,7 +368,6 @@ def construct_materials(texture_dir, material_array):
 		texture_file = getTexture(texture_dir, textureID)
 		if texture_file != None:
 			normal_image = nodes.new(type='ShaderNodeTexImage')
-			normal_nodes.append(normal_image)
 			normal_image.location = 0, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
 			normal_image.image = bpy.data.images.load(texture_file)
 			normal_image.image.colorspace_settings.name = 'Non-Color'
@@ -377,6 +376,27 @@ def construct_materials(texture_dir, material_array):
 				normal_image.label = "g_NormalMap" + str(i-1)
 			else:
 				normal_image.label = "g_NormalMap"
+
+			sepCol_shader = nodes.new(type="ShaderNodeSeparateColor")
+			sepCol_shader.location = 250, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
+			sepCol_shader.hide = True
+			links.new(normal_image.outputs['Color'], sepCol_shader.inputs['Color'])
+
+			# Invert G
+			invert_shader = nodes.new(type="ShaderNodeInvert")
+			invert_shader.location = 250, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60 - 30
+			invert_shader.hide = True
+			links.new(sepCol_shader.outputs['Green'], invert_shader.inputs['Color'])
+
+			# Combine again
+			comCol_shader = nodes.new(type="ShaderNodeCombineColor")
+			comCol_shader.location = 400, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
+			comCol_shader.hide = True
+			links.new(sepCol_shader.outputs['Red'], comCol_shader.inputs['Red'])
+			links.new(invert_shader.outputs['Color'], comCol_shader.inputs['Green'])
+			links.new(sepCol_shader.outputs['Blue'], comCol_shader.inputs['Blue'])
+			normal_nodes.append(comCol_shader)
+
 
 			if i > 0:
 				n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
