@@ -6,6 +6,7 @@ from typing import List, Tuple
 from mathutils import Vector, Matrix
 
 from .shader_PBS10_XXXXX import pbs10_xxxxx
+from .shader_PBS00_XXXXX import pbs00_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
 from ...utils.nodes import invert_channel
@@ -270,6 +271,9 @@ def construct_materials(texture_dir, material_array):
 
 	if shader_name == "PBS10_XXXXX":
 		pbs10_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "PBS00_XXXXX":
+		pbs00_xxxxx(material, material_array, texture_dir)
 		return material
 
 	# Recreate Nodes and Links with references

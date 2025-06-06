@@ -33,11 +33,13 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     # UV Map nodes
     uv_1: bpy.types.ShaderNodeUVMap = nodes.new('ShaderNodeUVMap')
     uv_1.uv_map = 'UVMap1'
+    uv_1.label = 'UV1'
     uv_1.location = grid_location(0, 0)
     uv_1.hide = True
 
     uv_2: bpy.types.ShaderNodeUVMap = nodes.new('ShaderNodeUVMap')
     uv_2.uv_map = 'UVMap2'
+    uv_2.label = 'UV2'
     uv_2.location = grid_location(0, 1)
     uv_2.hide = True
 
