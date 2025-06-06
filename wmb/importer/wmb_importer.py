@@ -8,6 +8,7 @@ from mathutils import Vector, Matrix
 from .shader_PBS10_XXXXX import pbs10_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
+from ...utils.nodes import invert_channel
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -342,22 +343,28 @@ def construct_materials(texture_dir, material_array):
 				mask_image.label = "g_MaskMap"
 
 			if 'Hair' not in material['Shader_Name']:
-				sepRGB_shader = nodes.new(type="ShaderNodeSeparateRGB")
+				invert_g_node = nodes.new('ShaderNodeGroup')
+				invert_g_node.node_tree = invert_channel("Green")
+				invert_g_node.location = 300, ((len(albedo_maps)+1)*-60)-i*60
+				invert_g_node.hide = True
+				links.new(mask_image.outputs['Color'], invert_g_node.inputs['Color'])
+
+				sepRGB_shader = nodes.new(type='ShaderNodeSeparateColor')
 				mask_sepRGB_nodes.append(sepRGB_shader)
-				sepRGB_shader.location = 300, ((len(albedo_maps)+1)*-60)-i*60
+				sepRGB_shader.location = 600, ((len(albedo_maps)+1)*-60)-i*60
 				sepRGB_shader.hide = True
+
+				links.new(invert_g_node.outputs['Color'], sepRGB_shader.inputs['Color'])
 				
-				invert_shader = nodes.new(type="ShaderNodeInvert")
-				mask_invert_nodes.append(invert_shader)
-				invert_shader.location = 600, ((len(albedo_maps)+1)*-60)-i*60
-				invert_shader.hide = True
+				# invert_shader = nodes.new(type="ShaderNodeInvert")
+				# mask_invert_nodes.append(invert_shader)
+				# invert_shader.location = 600, ((len(albedo_maps)+1)*-60)-i*60
+				# invert_shader.hide = True
 	#Mask Links
 	if len(mask_nodes) > 0:
 		if 'Hair' not in material['Shader_Name']:
-			mask_link = links.new(mask_nodes[0].outputs['Color'], mask_sepRGB_nodes[0].inputs['Image'])
-			r_link = links.new(mask_sepRGB_nodes[0].outputs['R'], principled.inputs['Metallic'])
-			g_link = links.new(mask_sepRGB_nodes[0].outputs['G'], mask_invert_nodes[0].inputs['Color'])
-			invert_link = links.new(mask_invert_nodes[0].outputs['Color'], principled.inputs['Roughness'])
+			r_link = links.new(mask_sepRGB_nodes[0].outputs['Red'], principled.inputs['Metallic'])
+			g_link = links.new(mask_sepRGB_nodes[0].outputs['Green'], principled.inputs['Roughness'])
 		else:
 			mask_link = links.new(mask_nodes[0].outputs['Color'], principled.inputs['Metallic'])
 
@@ -377,26 +384,12 @@ def construct_materials(texture_dir, material_array):
 			else:
 				normal_image.label = "g_NormalMap"
 
-			sepCol_shader = nodes.new(type="ShaderNodeSeparateColor")
-			sepCol_shader.location = 250, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
-			sepCol_shader.hide = True
-			links.new(normal_image.outputs['Color'], sepCol_shader.inputs['Color'])
-
-			# Invert G
-			invert_shader = nodes.new(type="ShaderNodeInvert")
-			invert_shader.location = 250, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60 - 30
-			invert_shader.hide = True
-			links.new(sepCol_shader.outputs['Green'], invert_shader.inputs['Color'])
-
-			# Combine again
-			comCol_shader = nodes.new(type="ShaderNodeCombineColor")
-			comCol_shader.location = 400, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
-			comCol_shader.hide = True
-			links.new(sepCol_shader.outputs['Red'], comCol_shader.inputs['Red'])
-			links.new(invert_shader.outputs['Color'], comCol_shader.inputs['Green'])
-			links.new(sepCol_shader.outputs['Blue'], comCol_shader.inputs['Blue'])
-			normal_nodes.append(comCol_shader)
-
+			invert_g_node = nodes.new('ShaderNodeGroup')
+			invert_g_node.node_tree = invert_channel("Green")
+			invert_g_node.location = 300, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-i*60
+			invert_g_node.hide = True
+			links.new(normal_image.outputs['Color'], invert_g_node.inputs['Color'])
+			normal_nodes.append(invert_g_node)
 
 			if i > 0:
 				n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
@@ -436,7 +429,7 @@ def construct_materials(texture_dir, material_array):
 				curvature_image.label = "g_CurvatureMap" + str(i-1)
 			else:
 				curvature_image.label = "g_CurvatureMap"
-			sepRGB_shader = nodes.new(type="ShaderNodeSeparateRGB")
+			sepRGB_shader = nodes.new(type="ShaderNodeSeparateColor")
 			curvature_sepRGB_nodes.append(sepRGB_shader)
 			sepRGB_shader.location = -350, ((len(albedo_maps)+1)*-60)-i*60+50
 			sepRGB_shader.hide = True
@@ -450,9 +443,9 @@ def construct_materials(texture_dir, material_array):
 	# Curvature Links
 	subsurface_name = "Subsurface" if bpy.app.version < (4, 0) else "Subsurface Weight"
 	if len(curvature_nodes) > 0:
-		curvature_link = links.new(curvature_nodes[0].outputs['Color'], curvature_sepRGB_nodes[0].inputs['Image'])
-		r_link = links.new(curvature_sepRGB_nodes[0].outputs['R'], curvature_mul_nodes[0].inputs[0])
-		g_link = links.new(curvature_sepRGB_nodes[0].outputs['G'], curvature_mul_nodes[0].inputs[1])
+		curvature_link = links.new(curvature_nodes[0].outputs['Color'], curvature_sepRGB_nodes[0].inputs['Color'])
+		r_link = links.new(curvature_sepRGB_nodes[0].outputs['Red'], curvature_mul_nodes[0].inputs[0])
+		g_link = links.new(curvature_sepRGB_nodes[0].outputs['Green'], curvature_mul_nodes[0].inputs[1])
 		mul_link = links.new(curvature_mul_nodes[0].outputs['Value'], principled.inputs[subsurface_name])
 		principled.inputs["Subsurface Radius"].default_value[0] = 0.6
 		principled.inputs["Subsurface Radius"].default_value[1] = 0.2
