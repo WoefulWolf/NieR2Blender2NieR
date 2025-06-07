@@ -160,7 +160,7 @@ def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     ao_multiply.location = grid_location(5, 0)
     ao_multiply.hide = True
     ao_multiply.blend_type = 'MULTIPLY'
-    ao_multiply.inputs[0].default_value = 1.0
+    ao_multiply.inputs[0].default_value = 1.0 if mask.image != None else 0.0
     links.new(albedo.outputs[0], ao_multiply.inputs[1])
     links.new(mask_sep.outputs['Blue'], ao_multiply.inputs[2])
     links.new(ao_multiply.outputs['Color'], principled.inputs['Base Color'])
