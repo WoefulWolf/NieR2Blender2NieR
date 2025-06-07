@@ -123,7 +123,7 @@ def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     # Create principled shader node
     principled: bpy.types.ShaderNodeBsdfPrincipled = nodes.new('ShaderNodeBsdfPrincipled')
     principled.location = grid_location(6, 0)
-    links.new(albedo.outputs[0], principled.inputs[0])
+    # links.new(albedo.outputs[0], principled.inputs[0])
     links.new(bitmask.outputs['Value'], principled.inputs["Alpha"])
 
     # Create Material Output Node
@@ -131,7 +131,7 @@ def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     material_output.location = grid_location(7, 0)
     links.new(principled.outputs[0], material_output.inputs[0])
 
-    # Create MaskMap (Metallic + Roughness) Texture Nodes
+    # Create MaskMap (Metallic, Roughness, AO) Texture Nodes
     mask: bpy.types.ShaderNodeTexImage = nodes.new('ShaderNodeTexImage')
     mask.label = 'g_MaskMap'
     mask.location = grid_location(3, 1)
@@ -154,6 +154,16 @@ def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     links.new(mask_invert_g.outputs['Color'], mask_sep.inputs[0])
     links.new(mask_sep.outputs['Red'], principled.inputs['Metallic'])
     links.new(mask_sep.outputs['Green'], principled.inputs['Roughness'])
+
+    # Ambient Occlusiion
+    ao_multiply: bpy.types.ShaderNodeMixRGB = nodes.new('ShaderNodeMixRGB')
+    ao_multiply.location = grid_location(5, 0)
+    ao_multiply.hide = True
+    ao_multiply.blend_type = 'MULTIPLY'
+    ao_multiply.inputs[0].default_value = 1.0
+    links.new(albedo.outputs[0], ao_multiply.inputs[1])
+    links.new(mask_sep.outputs['Blue'], ao_multiply.inputs[2])
+    links.new(ao_multiply.outputs['Color'], principled.inputs['Base Color'])
 
     # Normal
     normal: bpy.types.ShaderNodeTexImage = nodes.new('ShaderNodeTexImage')
