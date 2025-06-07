@@ -48,20 +48,18 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     uv_1_mad.operation = 'MULTIPLY_ADD'
     uv_1_mad.location = grid_location(1, 0)
     uv_1_mad.hide = True
-    if '0_20_g_MaterialTile1_X' in material and '0_21_g_MaterialTile1_Y' in material:
-        uv_1_mad.inputs[1].default_value = (material['0_20_g_MaterialTile1_X'], material['0_21_g_MaterialTile1_Y'], 0)
-    else:
-        uv_1_mad.inputs[1].default_value = (1.0, 1.0, 0)
+    uv_1_mad.inputs[1].default_value = (1.0, 1.0, 0)
+    uv_1_mad.inputs[1].default_value[0] = material['0_20_g_MaterialTile1_X'] if '0_20_g_MaterialTile1_X' in material else 1.0
+    uv_1_mad.inputs[1].default_value[1] = material['0_21_g_MaterialTile1_Y'] if '0_21_g_MaterialTile1_Y' in material else 1.0
     links.new(uv_1.outputs[0], uv_1_mad.inputs[0])
 
     uv_2_mad: bpy.types.ShaderNodeVectorMath = nodes.new('ShaderNodeVectorMath')
     uv_2_mad.operation = 'MULTIPLY_ADD'
     uv_2_mad.location = grid_location(1, 1)
     uv_2_mad.hide = True
-    if '0_22_g_MaterialTile2_X' in material and '0_23_g_MaterialTile2_Y' in material:
-        uv_2_mad.inputs[1].default_value = (material['0_22_g_MaterialTile2_X'], material['0_23_g_MaterialTile2_Y'], 0)
-    else:
-        uv_2_mad.inputs[1].default_value = (1.0, 1.0, 0)
+    uv_2_mad.inputs[1].default_value = (1.0, 1.0, 0)
+    uv_2_mad.inputs[1].default_value[0] = material['0_22_g_MaterialTile2_X'] if '0_22_g_MaterialTile2_X' in material else 1.0
+    uv_2_mad.inputs[1].default_value[1] = material['0_23_g_MaterialTile2_Y'] if '0_23_g_MaterialTile2_Y' in material else 1.0
     links.new(uv_2.outputs[0], uv_2_mad.inputs[0])
 
     # Create Albedo Texture Nodes
@@ -136,8 +134,7 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     mask_1_div.operation = 'DIVIDE'
     mask_1_div.location = grid_location(4, 0)
     mask_1_div.hide = True
-    if 'g_InterpolationRate' in material:
-        mask_1_div.inputs[1].default_value = material['g_InterpolationRate']
+    mask_1_div.inputs[1].default_value = material['g_InterpolationRate']/10 if 'g_InterpolationRate' in material else 0.001
     links.new(mask_1_mad.outputs[0], mask_1_div.inputs[0])
 
     # Divide Mask 2 by g_InterPolationRate
@@ -145,8 +142,7 @@ def pbs10_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     mask_2_div.operation = 'DIVIDE'
     mask_2_div.location = grid_location(4, 1)
     mask_2_div.hide = True
-    if 'g_InterpolationRate' in material:
-        mask_2_div.inputs[1].default_value = material['g_InterpolationRate']
+    mask_2_div.inputs[1].default_value = material['g_InterpolationRate']/10 if 'g_InterpolationRate' in material else 0.001
     links.new(mask_2_mad.outputs[0], mask_2_div.inputs[0])
 
     # Create Albedo Mix Nodes
