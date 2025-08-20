@@ -297,6 +297,16 @@ def setTiming(path: List[str], time: float, inner: Dict|None = None):
             inner[path[0]] = {}
         setTiming(path[1:], time, inner[path[0]])
 
+def getVersionString():
+    from .. import __init__ as addon_main
+    version = addon_main.bl_info["version"]
+    version_string = ".".join(map(str, version))
+    return version_string
+
+def getFullVersionText():
+    version_string = getVersionString()
+    return f'WMB created with Blender2NieR v{version_string} by Woeful_Wolf'
+
 def resetTimings():
     global timings, startTime
     timings = {}

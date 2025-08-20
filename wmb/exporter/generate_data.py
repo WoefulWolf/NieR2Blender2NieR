@@ -10,7 +10,7 @@ from .meshes.create_meshes import *
 from .meshes.meshMaterials import *
 from .unknownWorldData.unknownWorldData import *
 from .vertexGroups.create_vertexGroups import *
-
+from ...utils.util import getFullVersionText
 
 class c_generate_data(object):
     def __init__(self):
@@ -91,7 +91,8 @@ class c_generate_data(object):
         currentOffset += self.batches_Size
         print('batches_Size: ', self.batches_Size)
 
-        currentOffset += 52
+        # Version string insert
+        currentOffset += len(getFullVersionText()) + 1
 
         # Generate custom colTreeNodes in time for LOD data
         if hasColTreeNodes:

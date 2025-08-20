@@ -213,8 +213,11 @@ def create_wmb(filepath):
 
 
 def close_wmb(wmb_file, generated_data):
-    wmb_file.seek(generated_data.lods_Offset-52)
-    write_string(wmb_file, 'WMB created with Blender2NieR v0.3.1 by Woeful_Wolf')
+    from .util import getFullVersionText
+    version_text = getFullVersionText()
+    string_len = len(version_text) + 1
+    wmb_file.seek(generated_data.lods_Offset-string_len)
+    write_string(wmb_file, version_text)
     wmb_file.flush()
     wmb_file.close()
 
