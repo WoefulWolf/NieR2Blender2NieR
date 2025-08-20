@@ -54,6 +54,12 @@ def getUsedMaterials():
                 materials.append(material)
     return materials
 
+def getNodeWithLabel(nodes, label):
+    for node in nodes:
+        if node.label == label:
+            return node
+    return None
+
 def getObjectCenter(obj):
     obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
     #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
@@ -93,6 +99,9 @@ def objectsInCollectionInOrder(collectionName):
 def allObjectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey) if collectionName in bpy.data.collections else []
 
+def getAllObjectsWithMaterial(collectionName, materialName):
+    return [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH" and obj.material_slots[0].material.name == materialName]
+
 def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
     return sorted(obj.children, key=getObjKey)
 
@@ -113,6 +122,7 @@ def getAllMeshesInOrder(collectionName):
         meshes.append(obj_name)
 
     return list(set(meshes))
+
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):

@@ -65,29 +65,29 @@ class c_vertexGroup(object):
             return [uv_coords.x, 1-uv_coords.y]
 
         # Has bones = 7, 8, 10, 11
-        # 1 UV  = 0
+        # 1 UV  = 0, 3
         # 2 UVs = 1, 4, 7, 10
         # 3 UVs = 5, 8, 11
         # 4 UVs = 14
         # 5 UVs = 12
-        # Has Color = 4, 5, 10, 11, 12, 14
+        # Has Color = 3, 4, 5, 10, 11, 12, 14
 
-        if len(self.blenderObjects[0].data.uv_layers) == 1:         # 0
-            self.vertexFlags = 0
+        if len(self.blenderObjects[0].data.uv_layers) == 1:         # 0, 3
+            if self.blenderObjects[0].data.vertex_colors:
+                self.vertexFlags = 3
+            else:
+                self.vertexFlags = 0
         elif len(self.blenderObjects[0].data.uv_layers) == 2:       # 1, 4, 7, 10
             if self.blenderObjects[0]['boneSetIndex'] != -1:        # > 7, 10
                 if self.blenderObjects[0].data.vertex_colors:       # >> 10
                     self.vertexFlags = 10
                 else:                                               # >> 7
                     self.vertexFlags = 7
-
             else:                                                   # > 1, 4
                 if self.blenderObjects[0].data.vertex_colors:       # >> 4
                     self.vertexFlags = 4
                 else:                                               # >> 1
                     self.vertexFlags = 1
-
-
         elif len(self.blenderObjects[0].data.uv_layers) == 3:       # 5, 8, 11
             if self.blenderObjects[0]['boneSetIndex'] != -1:
                 if self.blenderObjects[0].data.vertex_colors:       # >> 11
@@ -106,7 +106,7 @@ class c_vertexGroup(object):
 
         if self.vertexFlags == 0:
             self.vertexExDataSize = 0
-        if self.vertexFlags == 4:                                         
+        if self.vertexFlags in {1, 3, 4}:
             self.vertexExDataSize = 8       
         elif self.vertexFlags in {5, 7}:                                          
             self.vertexExDataSize = 12                                    
@@ -115,6 +115,8 @@ class c_vertexGroup(object):
         elif self.vertexFlags in {11, 12}:
             self.vertexExDataSize = 20
 
+        if not hasattr(self, "vertexFlags") or not hasattr(self, "vertexExDataSize"):
+            print(" - Vertex Group Error: Could not determine flags or ExData size!")
 
         def get_boneMap(self):
             boneMap = []
@@ -145,7 +147,7 @@ class c_vertexGroup(object):
                 loops = get_blenderLoops(self, bvertex_obj_obj)
                 sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
 
-                if self.vertexFlags not in {0, 1, 4, 5, 12, 14}:
+                if self.vertexFlags not in {0, 1, 3, 4, 5, 12, 14}:
                     boneSet = get_boneSet(self, bvertex_obj_obj["boneSetIndex"])
                 
                 previousIndex = -1
@@ -238,7 +240,7 @@ class c_vertexGroup(object):
                             print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
 
                     color = []
-                    if self.vertexFlags in {4, 5, 12, 14}:
+                    if self.vertexFlags in {3, 4, 5, 12, 14}:
                         if len (bvertex_obj_obj.data.vertex_colors) == 0:
                             print("Object had no vertex colour layer when one was expected - creating one.")
                             new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
@@ -259,7 +261,7 @@ class c_vertexGroup(object):
                             print("Object had no vertex colour layer when one was expected - creating one.")
                             new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
 
-                    if self.vertexFlags in {1, 4, 5, 7, 8, 10, 11, 12, 14}:
+                    if self.vertexFlags in {1, 3, 4, 5, 7, 8, 10, 11, 12, 14}:
                         normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
                     
                     if self.vertexFlags == 5:

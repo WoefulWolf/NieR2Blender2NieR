@@ -7,7 +7,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from ...utils.util import getUsedMaterials
+from ...utils.util import getUsedMaterials, getNodeWithLabel, getAllObjectsWithMaterial
 
 
 def generateID(context):
@@ -324,6 +324,21 @@ class SyncBlenderMaterials(bpy.types.Operator):
             for mat in getUsedMaterials():
                 if mat.name == item.parent_mat:
                     nodes = mat.node_tree.nodes
+
+                    # Rename used uv maps
+                    uv_nodes_count = 0
+                    while True:
+                        if getNodeWithLabel(nodes, "UV" + str(uv_nodes_count + 1)):
+                            uv_nodes_count += 1
+                        else:
+                            break
+
+                    for uv_index in range(uv_nodes_count):
+                        objs = getAllObjectsWithMaterial("WMB", mat.name)
+                        for obj in objs:
+                            if len(obj.data.uv_layers) > uv_index:
+                                obj.data.uv_layers[uv_index].name = "UVMap" + str(uv_index + 1)
+
                     hasFoundNode = False
                     for node in nodes:
                         if node.label == item.texture_map_type:
