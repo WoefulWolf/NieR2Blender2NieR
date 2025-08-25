@@ -134,7 +134,7 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name, armature):			# [meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
+def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = False):			# [meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
 	name = mesh_data[0]
 	for obj in bpy.data.objects:
 		if obj.name == name:
@@ -189,14 +189,21 @@ def construct_mesh(mesh_data, collection_name, armature):			# [meshName, vertice
 	obj.rotation_euler = (math.radians(90),0,0)
 	if mesh_data[6] != "None":
 		obj['boneSetIndex'] = mesh_data[6]
-	# obj['meshGroupIndex'] = mesh_data[7]
-	obj['vertexGroup'] = mesh_data[14]
-	obj['LOD_Name'] = mesh_data[9]
-	obj['LOD_Level'] = mesh_data[10]
+	if import_mesh_indices:
+		obj.mesh_group_props.override_index = True
+		obj.mesh_group_props.index = mesh_data[7]
+		# obj['meshGroupIndex'] = mesh_data[7]
+	# obj['vertexGroup'] = mesh_data[14]
+	# obj['LOD_Name'] = mesh_data[9]
+	obj.mesh_group_props.lod_name = mesh_data[9]
+	# obj['LOD_Level'] = mesh_data[10]
+	obj.mesh_group_props.lod_level = mesh_data[10]
 	obj['colTreeNodeIndex'] = mesh_data[11]
 	obj['unknownWorldDataIndex'] = mesh_data[12]
 
 	return obj
+
+
 
 def set_partent(parent, child):
 	bpy.context.view_layer.objects.active = parent
@@ -491,7 +498,7 @@ def add_material_to_mesh(mesh, materials , uvs):
 		mesh.data.use_auto_smooth = True
 	# mesh.data.shade_smooth()
 	
-def format_wmb_mesh(wmb, collection_name, armature):
+def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False):
 	meshes = []
 	uvMaps = [[], [], [], [], []]
 	usedVerticeIndexArrays = []
@@ -604,7 +611,7 @@ def format_wmb_mesh(wmb, collection_name, armature):
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature)
+						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature, import_mesh_indices)
 						meshes.append(obj)
 	return meshes, uvMaps, usedVerticeIndexArrays
 
@@ -712,8 +719,7 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
-def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb')):
-	#reset_blend()
+def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb'), import_mesh_indices = False):
 	wmb = WMB3(wmb_file, only_extract)
 	wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
 
@@ -747,7 +753,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
 		armature = construct_armature(armature_name, wmb.boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
-	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature)
+	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
 	bpy.context.scene.WTAMaterials.clear()

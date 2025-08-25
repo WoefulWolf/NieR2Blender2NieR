@@ -15,6 +15,7 @@ class ImportNierWmb(bpy.types.Operator, ImportHelper):
     filter_glob: StringProperty(default="*.wmb", options={'HIDDEN'})
 
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
+    import_mesh_indices: bpy.props.BoolProperty(name="Import Mesh Group Indices (Bayonetta 3)", default=False)
 
     def execute(self, context):
         from . import wmb_importer
@@ -24,4 +25,4 @@ class ImportNierWmb(bpy.types.Operator, ImportHelper):
         setExportFieldsFromImportFile(self.filepath, False)
         enableVisibilitySelector()
 
-        return wmb_importer.main(False, self.filepath)
+        return wmb_importer.main(False, self.filepath, self.import_mesh_indices)

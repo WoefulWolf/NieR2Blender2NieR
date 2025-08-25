@@ -102,6 +102,9 @@ def allObjectsInCollectionInOrder(collectionName):
 def getAllObjectsWithMaterial(collectionName, materialName):
     return [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH" and obj.material_slots[0].material.name == materialName]
 
+def getAllMeshObjectsInOrder(collectionName):
+     return [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH"]
+
 def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
     return sorted(obj.children, key=getObjKey)
 
@@ -115,13 +118,18 @@ def getBoneIndexByName(collectionName, name):
         if bone.name == name:
             return i
         
-def getAllMeshesInOrder(collectionName):
+def getAllMeshNamesInOrder(collectionName):
     meshes = []
     for obj in (x for x in allObjectsInCollectionInOrder(collectionName) if x.type == "MESH"):
         obj_name = obj.name.split('-')[1]
-        meshes.append(obj_name)
+        mesh_group_index = obj.mesh_group_props.index if obj.mesh_group_props.override_index else None
+        meshes.append((obj_name, mesh_group_index))
 
-    return list(set(meshes))
+    meshes = list(set(meshes))
+    sorted_meshes = sorted(meshes, key=lambda x: (x[1] is None, x[1]))
+    mesh_names = [x[0] for x in sorted_meshes]
+
+    return mesh_names
 
 
 def create_dir(dirpath):

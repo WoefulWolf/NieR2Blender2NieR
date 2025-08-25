@@ -1,5 +1,5 @@
 from .mesh import *
-from ....utils.util import allObjectsInCollectionInOrder, getAllMeshesInOrder
+from ....utils.util import allObjectsInCollectionInOrder, getAllMeshNamesInOrder
 
 class c_meshes(object):
     def __init__(self, offsetMeshes):
@@ -7,7 +7,7 @@ class c_meshes(object):
         def get_meshes(self, offsetMeshes):
             meshes = []
 
-            meshNames = getAllMeshesInOrder('WMB')
+            meshNames = getAllMeshNamesInOrder('WMB')
             print("Meshes to generate:", meshNames)
             numMeshes = len(meshNames)
 

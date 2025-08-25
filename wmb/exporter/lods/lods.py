@@ -1,16 +1,16 @@
-from ....utils.util import getUsedMaterials, getAllMeshesInOrder
+from ....utils.util import getUsedMaterials, getAllMeshNamesInOrder
 
 class c_lod(object):
     def __init__(self, lodsStart, batches, lod_level):
         def get_lodBatches(self, batches, lod_level):
             lodBatches = []
             for batch in batches.batches:
-                if batch.blenderObj['LOD_Level'] == lod_level:
+                if batch.blenderObj.mesh_group_props.lod_level == lod_level:
                     lodBatches.append(batch)
             return lodBatches
 
         def get_batchInfos(self, batches):
-            meshes = getAllMeshesInOrder('WMB')
+            meshes = getAllMeshNamesInOrder('WMB')
 
             batchesInfos = []
             for batch in batches:                                     
@@ -38,7 +38,7 @@ class c_lod(object):
         self.offsetName = lodsStart + self.numBatchInfos * 24
         self.lodLevel = lod_level
         self.batchStart = batches.batches.index(self.lodBatches[0])
-        self.name = self.lodBatches[0].blenderObj['LOD_Name']
+        self.name = self.lodBatches[0].blenderObj.mesh_group_props.lod_name
         self.offsetBatchInfos = self.offsetName - 24 * self.numBatchInfos
         self.batchInfos = get_batchInfos(self, self.lodBatches)
         self.lod_StructSize = len(self.name) + 1 + len(self.batchInfos) * 24

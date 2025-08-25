@@ -5,7 +5,7 @@ class c_lods(object):
         def get_lod_levels(batches):
             lod_levels = []
             for batch in batches.batches:
-                level = batch.blenderObj['LOD_Level']
+                level = batch.blenderObj.mesh_group_props.lod_level
                 if level not in lod_levels:
                     lod_levels.append(level)
             return lod_levels

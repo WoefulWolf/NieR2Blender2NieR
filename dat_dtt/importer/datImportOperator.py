@@ -9,7 +9,7 @@ from ...col.exporter.col_ui_manager import enableCollisionTools
 from ...utils.visibilitySwitcher import enableVisibilitySelector
 from ...utils.util import setExportFieldsFromImportFile
 
-def importDtt(only_extract, filepath):
+def importDtt(only_extract, filepath, import_mesh_indices = False):
     head = os.path.split(filepath)[0]
     tail = os.path.split(filepath)[1]
     tailless_tail = tail[:-4]
@@ -43,7 +43,7 @@ def importDtt(only_extract, filepath):
 
     # WMB
     from ...wmb.importer import wmb_importer
-    wmb_importer.main(only_extract, wmb_filepath)
+    wmb_importer.main(only_extract, wmb_filepath, import_mesh_indices)
 
     # COL
     col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
@@ -71,6 +71,7 @@ class ImportNierDtt(bpy.types.Operator, ImportHelper):
     reset_blend: bpy.props.BoolProperty(name="Reset Blender Scene on Import", default=True)
     bulk_import: bpy.props.BoolProperty(name="Bulk Import All DTT/DATs In Folder (Experimental)", default=False)
     only_extract: bpy.props.BoolProperty(name="Only Extract DTT/DAT Contents. (Experimental)", default=False)
+    import_mesh_indices: bpy.props.BoolProperty(name="Import Mesh Group Indices (Bayonetta 3)", default=False)
 
     def execute(self, context):
         from ...wmb.importer import wmb_importer
@@ -82,13 +83,13 @@ class ImportNierDtt(bpy.types.Operator, ImportHelper):
                 if filename[-4:] == '.dtt':
                     try:
                         filepath = os.path.join(folder, filename)
-                        importDtt(self.only_extract, filepath)
+                        importDtt(self.only_extract, filepath, self.import_mesh_indices)
                     except:
                         print('ERROR: FAILED TO IMPORT', filename)
             return {'FINISHED'}
 
         else:
-            return importDtt(self.only_extract, self.filepath)
+            return importDtt(self.only_extract, self.filepath, self.import_mesh_indices)
 
 class ImportNierDat(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DAT File.'''
