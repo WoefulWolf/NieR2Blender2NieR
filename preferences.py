@@ -62,6 +62,11 @@ ArmatureDisplayTypeEnum = [
     ("WIRE", "Wire", "")
 ]
 
+ShaderParamsFileEnum = [
+    ("shader_params.json", "NieR:Automata", ""),
+    ("shader_params_bayo3.json", "Bayonetta 3", ""),
+]
+
 class N2B2NPreferences(bpy.types.AddonPreferences):
     bl_idname = ADDON_NAME
     assetDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
@@ -69,9 +74,15 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
     textureDirs: bpy.props.CollectionProperty(type=DirectoryProperty)
     armatureDefaultDisplayType: bpy.props.EnumProperty(name="Armature Display Type", items=ArmatureDisplayTypeEnum, default="DEFAULT")
     armatureDefaultInFront: bpy.props.BoolProperty(name="Armature Default In Front", default=False)
+    shaderParamsFile: bpy.props.EnumProperty(name="Shader Parameter Name Source", items=ShaderParamsFileEnum, default="shader_params.json")
 
     def draw(self, context):
         layout: bpy.types.UILayout = self.layout
+
+        box = layout.box()
+        row = box.row()
+        row.label(text="Shader Parameter Name Source")
+        row.prop(self, "shaderParamsFile", text="")
 
         box = layout.box()
         box.label(text="Default Armature Viewport Display Options:")

@@ -247,12 +247,13 @@ def construct_materials(texture_dir, material_array):
 		material[key] = uniforms.get(key)
 
 	# Custom Shader Parameters
-	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/shader_params.json", "r")
+
+	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/" + getPreferences().shaderParamsFile, "r")
 	shaders = json.load(shaderFile)
 
 	for gindx, parameterGroup in enumerate(parameterGroups):
 		for pindx, parameter in enumerate(parameterGroup):
-			if (gindx == 0) and (shader_name in shaders):
+			if (gindx == 0) and (shader_name in shaders) and (pindx < len(shaders[shader_name]["Parameters"])):
 				material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
 			else:
 				material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
