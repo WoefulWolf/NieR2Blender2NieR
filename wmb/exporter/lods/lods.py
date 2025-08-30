@@ -1,4 +1,4 @@
-from ....utils.util import getUsedMaterials, getAllMeshNamesInOrder
+from ....utils.util import getUsedMaterials, getAllMeshNamesInOrder, getMeshName
 
 class c_lod(object):
     def __init__(self, lodsStart, batches, lod_level):
@@ -16,7 +16,7 @@ class c_lod(object):
             for batch in batches:                                     
                 vertexGroupIndex = batch.vertexGroupIndex
 
-                mesh_name = batch.blenderObj.name.split('-')[1]
+                mesh_name = getMeshName(batch.blenderObj)
                 meshIndex = meshes.index(mesh_name)
 
                 for slot in batch.blenderObj.material_slots:
@@ -26,9 +26,9 @@ class c_lod(object):
                         materialIndex = mat_index
                         break
                 
-                colTreeNodeIndex = batch.blenderObj['colTreeNodeIndex']
+                colTreeNodeIndex = batch.blenderObj['colTreeNodeIndex'] if 'colTreeNodeIndex' in batch.blenderObj else -1
                 meshMatPairIndex = meshIndex
-                unknownWorldDataIndex = batch.blenderObj['unknownWorldDataIndex']
+                unknownWorldDataIndex = batch.blenderObj['unknownWorldDataIndex'] if 'unknownWorldDataIndex' in batch.blenderObj else -1
                 batchInfo = [vertexGroupIndex, meshIndex, materialIndex, colTreeNodeIndex, meshMatPairIndex, unknownWorldDataIndex]
                 batchesInfos.append(batchInfo)
             return batchesInfos

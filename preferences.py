@@ -75,14 +75,21 @@ class N2B2NPreferences(bpy.types.AddonPreferences):
     armatureDefaultDisplayType: bpy.props.EnumProperty(name="Armature Display Type", items=ArmatureDisplayTypeEnum, default="DEFAULT")
     armatureDefaultInFront: bpy.props.BoolProperty(name="Armature Default In Front", default=False)
     shaderParamsFile: bpy.props.EnumProperty(name="Shader Parameter Name Source", items=ShaderParamsFileEnum, default="shader_params.json")
+    maximizeShaderCompatibility: bpy.props.BoolProperty(name="Maximize Shader Compatibility", default=True, description="Enabling this automatically maximizes shader compatibility by ensuring each mesh has at least 2 UV channels and a color channel.")
 
     def draw(self, context):
         layout: bpy.types.UILayout = self.layout
 
         box = layout.box()
         row = box.row()
-        row.label(text="Shader Parameter Name Source")
+        row.label(text="Shader Parameter Name Source:")
         row.prop(self, "shaderParamsFile", text="")
+
+        box = layout.box()
+        row = box.row()
+        row.label(text="Maximize Shader Compatibility:")
+        row.prop(self, "maximizeShaderCompatibility", text="")
+        drawMultilineLabel(context, self.bl_rna.properties['maximizeShaderCompatibility'].description, box)
 
         box = layout.box()
         box.label(text="Default Armature Viewport Display Options:")

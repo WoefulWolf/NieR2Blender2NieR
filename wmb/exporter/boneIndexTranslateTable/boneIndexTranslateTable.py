@@ -1,5 +1,5 @@
 import bpy
-from ....utils.util import boneHasID, getAllBonesInOrder, getBoneID
+from ....utils.util import boneHasID, getAllBonesInOrder, getBoneID, getAllMeshObjectsInOrder
 
 class c_boneIndexTranslateTable(object):
     def __init__(self):
@@ -28,12 +28,11 @@ class c_boneIndexTranslateTable(object):
                     print("Added new bone to table:", bone.name, "assigning ID", new_id)
                     new_name = "bone" + str(new_id) + "_" + bone.name
                     
-                    for obj in bpy.data.collections['WMB'].all_objects:
-                        if obj.type == 'MESH':
-                            for vgroup in obj.vertex_groups:
-                                if vgroup.name == bone.name:
-                                    vgroup.name = new_name
-                                    break
+                    for obj in getAllMeshObjectsInOrder('WMB'):
+                        for vgroup in obj.vertex_groups:
+                            if vgroup.name == bone.name:
+                                vgroup.name = new_name
+                                break
 
                     bone.name = new_name
                     newBones.append(bone)

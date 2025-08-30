@@ -1,5 +1,5 @@
 from .mesh import *
-from ....utils.util import allObjectsInCollectionInOrder, getAllMeshNamesInOrder
+from ....utils.util import allObjectsInCollectionInOrder, getAllMeshNamesInOrder, getMeshName, getAllMeshObjectsInOrder
 
 class c_meshes(object):
     def __init__(self, offsetMeshes):
@@ -13,8 +13,8 @@ class c_meshes(object):
 
             meshes_added = []
             for meshName in meshNames:
-                for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                    obj_name = obj.name.split('-')[1]
+                for obj in getAllMeshObjectsInOrder('WMB'):
+                    obj_name = getMeshName(obj)
                     if obj_name == meshName:
                         if obj_name not in meshes_added:
                             print('[+] Generating Mesh', meshName)

@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from ...utils.util import boneHasID, getBoneFromID, getBoneID
 from ..common.bxm import bxmToXml, xmlToBxm
 
-class ClothSearchOptions(bpy.types.PropertyGroup):
+class CLPSearchOptions(bpy.types.PropertyGroup):
     filter_by_selected : bpy.props.BoolProperty(default=True)
 
 class ClothVisualizationOptions(bpy.types.PropertyGroup):
@@ -58,6 +58,8 @@ def update_clp_bone_items():
         if boneHasID(bone):
             bone_id = str(getBoneID(bone))
             bone_items.append((bone_id, bone.name, ""))
+
+    bone_items.sort(key=lambda x: int(x[0]))
 
 class ClothWK(bpy.types.PropertyGroup):
     no : bpy.props.EnumProperty(items=clp_bone_items, default=0)
@@ -373,7 +375,7 @@ class UpdateCLPVisualizer(bpy.types.Operator):
 
         gpencil_data = bpy.data.grease_pencils.new("CLP") if bpy.app.version < (4, 3) else bpy.data.grease_pencils_v3.new("CLP")
         gpencil = bpy.data.objects.new("CLP", gpencil_data)
-        gpencil.rotation_euler = mathutils.Euler((math.radians(90), 0, 0), 'XYZ')
+        # gpencil.rotation_euler = mathutils.Euler((math.radians(90), 0, 0), 'XYZ')
         clpCollection.objects.link(gpencil)
 
         gp_layer = gpencil_data.layers.new("CLP_Lines")
@@ -405,10 +407,10 @@ class UpdateCLPVisualizer(bpy.types.Operator):
                     bm.free()
 
                     # Rotate direction 90 degrees around X axis
-                    direction.rotate(mathutils.Euler((math.radians(90), 0, 0), 'XYZ'))
+                    # direction.rotate(mathutils.Euler((math.radians(90), 0, 0), 'XYZ'))
 
                     loc = bone.head_local.copy()
-                    loc.rotate(mathutils.Euler((math.radians(90), 0, 0), 'XYZ'))
+                    # loc.rotate(mathutils.Euler((math.radians(90), 0, 0), 'XYZ'))
                     obj.location = loc
 
                     obj.rotation_euler = direction.to_track_quat('Z', 'Y').to_euler()
@@ -461,7 +463,7 @@ def register():
     bone_items.append((str(4095), "None (4095)", ""))
     bpy.utils.register_class(ClothHeader)
     bpy.utils.register_class(ClothWK)
-    bpy.utils.register_class(ClothSearchOptions)
+    bpy.utils.register_class(CLPSearchOptions)
     bpy.utils.register_class(ClothVisualizationOptions)
     bpy.utils.register_class(UpdateBoneItems)
     bpy.utils.register_class(AddClothWK)
@@ -472,7 +474,7 @@ def register():
 
     bpy.types.Scene.clp_clothheader = bpy.props.PointerProperty(type=ClothHeader)
     bpy.types.Scene.clp_clothwk = bpy.props.CollectionProperty(type=ClothWK)
-    bpy.types.Scene.clp_search_options = bpy.props.PointerProperty(type=ClothSearchOptions)
+    bpy.types.Scene.clp_search_options = bpy.props.PointerProperty(type=CLPSearchOptions)
     bpy.types.Scene.clp_visualization_options = bpy.props.PointerProperty(type=ClothVisualizationOptions)
 
 def unregister():
@@ -483,7 +485,7 @@ def unregister():
 
     bpy.utils.unregister_class(ClothHeader)
     bpy.utils.unregister_class(ClothWK)
-    bpy.utils.unregister_class(ClothSearchOptions)
+    bpy.utils.unregister_class(CLPSearchOptions)
     bpy.utils.unregister_class(ClothVisualizationOptions)
     bpy.utils.unregister_class(UpdateBoneItems)
     bpy.utils.unregister_class(AddClothWK)

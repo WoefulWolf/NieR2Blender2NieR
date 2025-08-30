@@ -4,7 +4,7 @@ from ....utils.util import *
 
 
 def getColMeshIndex(objToFind):
-    colMeshObjs = [obj for obj in bpy.data.collections['WMB'].all_objects if obj.type == 'MESH']
+    colMeshObjs = getAllMeshObjectsInOrder('WMB')
     for i, obj in enumerate(colMeshObjs):
         if obj == objToFind:
             return i
@@ -23,16 +23,17 @@ def generate_colTreeNodes():
     if not custom_colTreeNodesCollection:
         custom_colTreeNodesCollection = bpy.data.collections.new("custom_wmb_colTreeNodes")
         colCollection.children.link(custom_colTreeNodesCollection)
+        custom_colTreeNodesCollection.hide_viewport = True
     for obj in [o for o in custom_colTreeNodesCollection.objects]:
         bpy.data.objects.remove(obj)
 
     # Create Root Node
-    rootNode = bpy.data.objects.new("custom_Root_wmb", None)
-    rootNode.hide_viewport = True
-    custom_colTreeNodesCollection.objects.link(rootNode)
-    rootNode.rotation_euler = (math.radians(90),0,0)
+    # rootNode = bpy.data.objects.new("custom_Root_wmb", None)
+    # rootNode.hide_viewport = True
+    # custom_colTreeNodesCollection.objects.link(rootNode)
+    # rootNode.rotation_euler = (math.radians(90),0,0)
 
-    unassigned_objs = [obj for obj in bpy.data.collections['WMB'].all_objects if obj.type == 'MESH']
+    unassigned_objs = getAllMeshObjectsInOrder('WMB')
 
     nodes = []
     while len(unassigned_objs) > 0:
@@ -54,7 +55,7 @@ def generate_colTreeNodes():
         colEmptyName = str(len(nodes)) + "_wmb"
         colEmpty = bpy.data.objects.new(colEmptyName, None)
         custom_colTreeNodesCollection.objects.link(colEmpty)
-        colEmpty.parent = rootNode
+        # colEmpty.parent = rootNode
         colEmpty.empty_display_type = 'CUBE'
 
         colEmpty.location = getObjectCenter(largest_obj)
@@ -104,7 +105,7 @@ def generate_colTreeNodes():
             colEmptyName = str(len(nodes)) + "_wmb"
             colEmpty = bpy.data.objects.new(colEmptyName, None)
             custom_colTreeNodesCollection.objects.link(colEmpty)
-            colEmpty.parent = rootNode
+            # colEmpty.parent = rootNode
             colEmpty.empty_display_type = 'CUBE'
             loc, scale = getVolumeSurrounding(deepest_nodes_sorted[i].position, deepest_nodes_sorted[i].scale*2, closest_node.position, closest_node.scale*2)
 
@@ -150,12 +151,11 @@ def generate_colTreeNodes():
         splitName = node.bObj.name.split(".")
         node.bObj.name = splitName[0]
 
-
     nodes = sorted(nodes, key=lambda x: x.index) 
     return nodes
 
 def updateMeshColTreeNodeIndices(colTreeNodes):
-    batchObjs = [obj for obj in bpy.data.collections['WMB'].all_objects if obj.type == 'MESH']
+    batchObjs = getAllMeshObjectsInOrder('WMB')
 
     for node in colTreeNodes:
         for meshIndex in node.meshIndices:
@@ -171,7 +171,9 @@ class c_colTreeNodes(object):
             colTreeNodes = []
             #b_colTreeNodes = bpy.context.scene['colTreeNodes']
             for node in customColTreeNodes:
-                colTreeNodes.append([node.position, node.scale, node.left, node.right])
+                position = [node.position[0], node.position[2], -node.position[1]]
+                scale = [node.scale[0], node.scale[2], node.scale[1]]
+                colTreeNodes.append([position, scale, node.left, node.right])
             """
             for key in b_colTreeNodes.keys():
                 val = b_colTreeNodes[key]

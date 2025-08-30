@@ -8,7 +8,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 from ...consts import DAT_EXTENSIONS
 from ...utils.ioUtils import read_uint32
 
-from ...utils.util import importContentsFileFromFolder, readFileOrderMetadata, readJsonDatInfo, saveDatInfo, triangulate_meshes, centre_origins, ShowMessageBox
+from ...utils.util import importContentsFileFromFolder, readFileOrderMetadata, readJsonDatInfo, saveDatInfo, triangulate_meshes, restore_import_pose, centre_origins, ShowMessageBox, allObjectsInCollectionInOrder
 
 
 class ExportAllSteps(bpy.types.PropertyGroup):
@@ -60,6 +60,10 @@ class ExportAllSteps(bpy.types.PropertyGroup):
     )
     deleteLoose: bpy.props.BoolProperty(
         name = "Delete Loose Geometry",
+        default = True
+    )
+    restoreImportPose: bpy.props.BoolProperty(
+        name = "Restore Import Pose",
         default = True
     )
 
@@ -174,6 +178,7 @@ class DAT_DTT_PT_Export(bpy.types.Panel):
         row.prop(context.scene.ExportAllSteps, "triangulateMeshes", text="Triangulate", icon="MOD_TRIANGULATE")
         row.prop(context.scene.ExportAllSteps, "centerOrigins", text="Center Origins", icon="OBJECT_ORIGIN")
         row.prop(context.scene.ExportAllSteps, "deleteLoose", text="Delete Loose", icon="SNAP_VERTEX")
+        row.prop(context.scene.ExportAllSteps, "restoreImportPose", text="Restore Import Pose", icon="OUTLINER_OB_ARMATURE")
 
         layout.separator()
 
@@ -265,9 +270,15 @@ class ExportAll(bpy.types.Operator):
         datFilePath = os.path.join(datDttExportDir, datFileName)
         dttFilePath = os.path.join(datDttExportDir, dttFileName)
 
+        if bpy.context.view_layer.objects.active is None:
+            bpy.context.view_layer.objects.active = bpy.data.objects[0]
+        bpy.ops.object.mode_set(mode='OBJECT')
+
         from ...wmb.exporter import wmb_exporter
         if exportSteps.useWmbStep:
             print("Exporting WMB")
+            if exportSteps.restoreImportPose:
+                restore_import_pose("WMB")
             if exportSteps.triangulateMeshes:
                 triangulate_meshes("WMB")
             if exportSteps.centerOrigins:
@@ -311,6 +322,9 @@ class ExportAll(bpy.types.Operator):
             from ...bxm.exporter import gaAreaExporter
             gaAreaExporter.exportGaArea(gaFilePath)
             exportedFilesCount += 1
+        if exportSteps.restoreImportPose:
+            if "NONE" in bpy.data.actions:
+                bpy.data.actions.remove(bpy.data.actions["NONE"])
         from . import export_dat
         if exportSteps.useDatStep:
             if len(context.scene.DatContents) == 0:

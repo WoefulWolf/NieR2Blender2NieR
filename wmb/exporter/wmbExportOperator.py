@@ -3,7 +3,7 @@ import traceback
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper
-
+from ...utils.util import restore_import_pose
 
 class ExportNierWmb(bpy.types.Operator, ExportHelper):
     '''Export a NieR:Automata WMB File'''
@@ -16,11 +16,16 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
     centre_origins: bpy.props.BoolProperty(name="Centre Origins", description="This automatically centres the origins of all your objects. (Recommended)", default=True)
     triangulate_meshes: bpy.props.BoolProperty(name="Triangulate Meshes", description="This automatically adds and applies the Triangulate Modifier on all your objects. Only disable if you know your meshes are triangulated and you wish to reduce export times", default=True)
     delete_loose_geometry: bpy.props.BoolProperty(name="Delete Loose Geometry", description="This automatically runs the 'Delete Loose Geometry (All)' operator before exporting. It deletes all loose vertices or edges that could result in unwanted results in-game", default=True)
+    restore_import_pose: bpy.props.BoolProperty(name="Restore Import Pose", description="This automatically runs the 'Restore Import Pose' operator before exporting.", default=True)
 
     def execute(self, context):
         from . import wmb_exporter
 
         bpy.data.collections['WMB'].all_objects[0].select_set(True)
+
+        if self.restore_import_pose:
+            print("Restoring import pose...")
+            restore_import_pose("WMB")
 
         if self.centre_origins:
             print("Centering origins...")
@@ -43,6 +48,11 @@ class ExportNierWmb(bpy.types.Operator, ExportHelper):
         try:
             print("Starting export...")
             wmb_exporter.main(self.filepath)
+
+            if self.restore_import_pose:
+                if "NONE" in bpy.data.actions:
+                    bpy.data.actions.remove(bpy.data.actions["NONE"])
+
             return wmb_exporter.restore_blend()
         except:
             print(traceback.format_exc())

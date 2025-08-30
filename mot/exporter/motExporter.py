@@ -42,8 +42,14 @@ def getAllAnimationObjects(arm: bpy.types.Object) -> List[AnimationObject]:
 		else:
 			raise Exception("Unknown property: " + dataPath)
 		if animObj.property == "location" and animObj.bone is not None:
-			parentBonePos = animObj.bone.parent.bone.head_local[animObj.channel] if animObj.bone.parent else 0
-			parentOffset = animObj.bone.bone.head_local[animObj.channel] - parentBonePos
+			offsetChannel = animObj.channel
+			if animObj.channel == 1:
+				offsetChannel = 2
+			elif animObj.channel == 2:
+				offsetChannel = 1
+
+			parentBonePos = animObj.bone.parent.bone.head_local[offsetChannel] if animObj.bone.parent else 0
+			parentOffset = animObj.bone.bone.head_local[offsetChannel] - parentBonePos
 			animObj.valueOffset = parentOffset
 		else:
 			animObj.valueOffset = 0
@@ -82,6 +88,10 @@ def makeConstInterpolation(animObj: AnimationObject, record: MotRecord):
 	value = animObj.curve.keyframe_points[0].co[1]
 	value += animObj.valueOffset
 	record.value = value
+
+	if animObj.bone is None and record.propertyIndex == 2:
+		record.value *= -1
+
 	record.interpolation = None
 	record.interpolationsCount = 0
 
@@ -90,6 +100,10 @@ def makeBakedInterpolation(animObj: AnimationObject, record: MotRecord):
 		keyFrame.co[1] + animObj.valueOffset
 		for keyFrame in animObj.curve.keyframe_points
 	]
+
+	if animObj.bone is None and record.propertyIndex == 2:
+		values = [-x for x in values]
+
 	interpolation = MotInterpolValues()
 	interpolation.values = values
 	record.interpolation = interpolation
@@ -137,6 +151,12 @@ def makeBezierInterpolation(animObj: AnimationObject, record: MotRecord):
 			leftSlope = leftVec.y / leftVec.x
 			# set slope
 			spline.m1 = leftSlope
+
+		if animObj.bone is None and record.propertyIndex == 2:
+			spline.value *= -1
+			spline.m0 *= -1
+			spline.m1 *= -1
+		
 		interpolation.splines.append(spline)
 	record.interpolation = interpolation
 	record.interpolationsCount = len(interpolation.splines)
@@ -148,6 +168,11 @@ def makeRecords(animObjs: List[AnimationObject]) -> List[MotRecord]:
 		record.boneIndex = getBoneID(animObj.bone) if animObj.bone else -1
 		if animObj.property == "location":
 			record.propertyIndex = animObj.channel
+			if animObj.bone is None:
+				if record.propertyIndex == 1:
+					record.propertyIndex = 2
+				elif record.propertyIndex == 2:
+					record.propertyIndex = 1
 		elif animObj.property == "rotation":
 			record.propertyIndex = animObj.channel + 3
 		elif animObj.property == "scale":

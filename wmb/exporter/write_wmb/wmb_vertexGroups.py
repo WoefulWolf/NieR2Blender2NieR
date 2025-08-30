@@ -48,14 +48,14 @@ def create_wmb_vertexGroups(wmb_file, data):
                     write_byte(wmb_file, val)                       # Bone Indices
                 for val in vertex[5]:                                   
                     write_byte(wmb_file, val)                       # Bone Weights
-            if vertexGroup.vertexFlags in {4, 5, 12, 14}:
+            if vertexGroup.vertexFlags in {3, 4, 5, 12, 14}:
                 # for val in vertex[6]:                                   
                 #     write_byte(wmb_file, val)                       # Color
                 writeColor.write(wmb_file, vertex[6])
 
         wmb_file.seek(vertexGroup.vertexExDataOffset)
         for vertexExData in vertexGroup.vertexesExData:             # [normal, uv_maps, color]
-            if vertexGroup.vertexFlags in {1, 4}:                   # [1, 4]
+            if vertexGroup.vertexFlags in {1, 3, 4}:                   # [1, 3, 4]
                 # for val in vertexExData[0]:                         # normal
                 #     write_float16(wmb_file, val)
                 writeNormal.write(wmb_file, vertexExData[0])

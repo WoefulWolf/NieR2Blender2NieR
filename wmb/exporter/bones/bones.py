@@ -7,7 +7,7 @@ def get_bone_tPosition(bone):
     if 'TPOSE_worldPosition' in bone:
         return Vector3(bone['TPOSE_worldPosition'][0], bone['TPOSE_worldPosition'][1], bone['TPOSE_worldPosition'][2])
     else:
-        return Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+        return Vector3(bone.head_local[0], bone.head_local[2], -bone.head_local[1])
 
 def get_bone_localPosition(bone):
     if bone.parent:
@@ -15,7 +15,7 @@ def get_bone_localPosition(bone):
             parentTPosition = Vector3(bone.parent['TPOSE_worldPosition'][0], bone.parent['TPOSE_worldPosition'][1], bone.parent['TPOSE_worldPosition'][2])
             return get_bone_tPosition(bone) - parentTPosition
         else:
-            return get_bone_tPosition(bone) - bone.parent.head_local
+            return get_bone_tPosition(bone) - Vector3(bone.parent.head_local[0], bone.parent.head_local[2], -bone.parent.head_local[1])
     else:
         return Vector3(0, 0, 0)
 
@@ -41,7 +41,7 @@ class c_bones(object):
                         parentIndex = -1
 
                     # APOSE_position
-                    position = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                    position = Vector3(bone.head_local[0], bone.head_local[2], -bone.head_local[1])
                 
                     localRotation = [0, 0, 0]
                     rotation = [0, 0, 0]
@@ -70,14 +70,14 @@ class c_bones(object):
                                     #TPOSE_worldPosition
                                     full_trans = pBone.head
                                     tPosition[0] = full_trans.x
-                                    tPosition[1] = full_trans.y
-                                    tPosition[2] = full_trans.z
+                                    tPosition[1] = full_trans.z
+                                    tPosition[2] = -full_trans.y
 
                                     #TPOSE_localPosition
                                     trans = pBone.head - (pBone.parent.head if pBone.parent else mu.Vector([0, 0, 0]))
                                     localPosition[0] = trans[0]
-                                    localPosition[1] = trans[1]
-                                    localPosition[2] = trans[2]
+                                    localPosition[1] = trans[2]
+                                    localPosition[2] = -trans[1]
                                     break
                             break
 
@@ -94,7 +94,7 @@ class c_bones(object):
                     ID = getBoneID(bone)
                     parentIndex = -1                                                         
                     #localPosition = Vector3(bone['localPosition'][0], bone['localPosition'][1], bone['localPosition'][2])
-                    localPosition = Vector3(bone.head_local[0], bone.head_local[1], bone.head_local[2])
+                    localPosition = Vector3(bone.head_local[0], bone.head_local[2], -bone.head_local[1])
                     localRotation = Vector3(0, 0, 0)
                     localScale = Vector3(1, 1, 1)
 

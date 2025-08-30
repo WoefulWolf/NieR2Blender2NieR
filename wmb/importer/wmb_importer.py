@@ -61,8 +61,8 @@ def construct_armature(name, bone_data_array: list[wmb3_bone], firstLevel, secon
 
 	for bone_data in bone_data_array:
 		bone = amt.edit_bones.new("bone" + str(bone_data.boneNumber))
-		bone.head = Vector(bone_data.world_position_tpose) 
-		bone.tail = Vector(bone_data.world_position_tpose) + Vector((0 , 0.1, 0))
+		bone.head = Vector([bone_data.world_position_tpose[0], -bone_data.world_position_tpose[2], bone_data.world_position_tpose[1]])
+		bone.tail = bone.head + Vector((0, 0, 0.1))
 
 		# bone['ID'] = bone_data[6]
 		#bone['APOSE_position'] = bone_data[4]
@@ -97,7 +97,7 @@ def construct_armature(name, bone_data_array: list[wmb3_bone], firstLevel, secon
 		bpy.context.view_layer.update()
 
 	bpy.ops.object.mode_set(mode='OBJECT')
-	ob.rotation_euler = (math.radians(90),0,0)
+	ob.rotation_euler = (0,0,0)
 	# split armature
 	return ob
 
@@ -118,7 +118,7 @@ def split_armature(name):
 		amt_new.name = '%s_%d_Amt' % (name, i)
 		copy_bone_tree(root_bones[i] ,amt_new)
 		bpy.ops.object.mode_set(mode="OBJECT")
-		ob_new.rotation_euler = (math.radians(90),0,0)
+		ob_new.rotation_euler = (0,0,0)
 	bpy.ops.object.select_all(action="DESELECT")
 	obj = bpy.data.objects[name]
 	scene = bpy.context.scene
@@ -134,24 +134,24 @@ def copy_bone_tree(source_root, target_amt):
 	for child in source_root.children:
 		copy_bone_tree(child, target_amt)
 
-def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = False):			# [meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
+def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = False):			# [meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, vertex_uvs, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name
 	name = mesh_data[0]
-	for obj in bpy.data.objects:
-		if obj.name == name:
-			name = name + '-' + collection_name
+	# for obj in bpy.data.collections.get(collection_name).objects:
+	# 	if obj.name == name:
+	# 		if '.' in obj.name:
+
+	# 		else:
+	# 			name += '.001'
 	vertices = mesh_data[1]
 	faces = mesh_data[2]
 	normals = mesh_data[3]
 	has_bone = mesh_data[4]
 	weight_infos = [[[],[]]]							# A real fan can recognize me even I am a 2 dimensional array
-	print("[+] importing %s" % name)
 	objmesh = bpy.data.meshes.new(name)
-	if not name in bpy.data.objects.keys(): 
-		obj = bpy.data.objects.new(name, objmesh)
-	else:
-		obj = bpy.data.objects[name]	
+	obj = bpy.data.objects.new(name, objmesh)
 	obj.location = Vector((0,0,0))
 	bpy.data.collections.get(collection_name).objects.link(obj)
+	print("[+] importing %s" % obj.name)
 	objmesh.from_pydata(vertices, [], faces)
 	if normals[0] != None:
 		objmesh.normals_split_custom_set_from_vertices(normals)
@@ -173,6 +173,25 @@ def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = F
 				dataColor[3]/255
 			]
 
+	# UVs
+	bm = bmesh.new()
+	bm.from_mesh(objmesh)
+	uv_layers = []
+	for m, uv_data in enumerate(mesh_data[9]):
+		if len(uv_data) != 0:
+			uv_layers.append(bm.loops.layers.uv.new("UVMap" + str(m + 1)))
+
+	if len(uv_layers) > 0:
+		for face in bm.faces:
+			face.material_index = 0
+			for l in face.loops:
+				for m, uv_layer in enumerate(uv_layers):
+					luv = l[uv_layer]
+					idx = l.vert.index
+					luv.uv = Vector(mesh_data[9][m][idx])
+	bm.to_mesh(objmesh)
+	bm.free()
+
 	if has_bone:
 		weight_infos = mesh_data[5]
 		group_names = sorted(list(set([armature.data.bones[i].name for weight_info in weight_infos for i in weight_info[0]])))
@@ -186,24 +205,25 @@ def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = F
 				group = obj.vertex_groups[group_name]
 				if weight:
 					group.add([i], weight, "REPLACE")
-	obj.rotation_euler = (math.radians(90),0,0)
+	# obj.rotation_euler = (math.radians(90),0,0)
 	if mesh_data[6] != "None":
 		obj['boneSetIndex'] = mesh_data[6]
+
+	obj.mesh_group_props.updated = True
 	if import_mesh_indices:
 		obj.mesh_group_props.override_index = True
 		obj.mesh_group_props.index = mesh_data[7]
 		# obj['meshGroupIndex'] = mesh_data[7]
-	# obj['vertexGroup'] = mesh_data[14]
+	obj['vertexGroup'] = mesh_data[15]
 	# obj['LOD_Name'] = mesh_data[9]
-	obj.mesh_group_props.lod_name = mesh_data[9]
+	obj.mesh_group_props.lod_name = mesh_data[10]
 	# obj['LOD_Level'] = mesh_data[10]
-	obj.mesh_group_props.lod_level = mesh_data[10]
-	obj['colTreeNodeIndex'] = mesh_data[11]
-	obj['unknownWorldDataIndex'] = mesh_data[12]
+	obj.mesh_group_props.lod_level = mesh_data[11]
+	obj['colTreeNodeIndex'] = mesh_data[12]
+	obj['unknownWorldDataIndex'] = mesh_data[13]
+	obj.mesh_group_props.updated = False
 
 	return obj
-
-
 
 def set_partent(parent, child):
 	bpy.context.view_layer.objects.active = parent
@@ -500,84 +520,12 @@ def add_material_to_mesh(mesh, materials , uvs):
 	# mesh.data.shade_smooth()
 	
 def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False):
-	meshes = []
-	uvMaps = [[], [], [], [], []]
+	meshes = [None] * wmb.wmb3_header.meshCount
 	usedVerticeIndexArrays = []
 	mesh_array = wmb.meshArray
 	#each vertexgroup -> each lod -> each group -> mesh
 	for vertexGroupIndex in range(wmb.wmb3_header.vertexGroupCount):
 		vertex_flags = wmb.vertexGroupArray[vertexGroupIndex].vertexFlags
-
-		if vertex_flags == 0:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[1].append(uv)
-			uvMaps[2].append(None)
-			uvMaps[3].append(None)
-			uvMaps[4].append(None)
-
-		if vertex_flags in {1, 4}:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[1].append(uv)
-			uvMaps[2].append(None)
-			uvMaps[3].append(None)
-			uvMaps[4].append(None)
-
-		if vertex_flags == 5:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[1].append(uv)
-			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[2].append(uv)
-			uvMaps[3].append(None)
-			uvMaps[4].append(None)
-
-
-		if vertex_flags in {7, 10}:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[1].append(uv)
-			uvMaps[2].append(None)
-			uvMaps[3].append(None)
-			uvMaps[4].append(None)
-
-		if vertex_flags in {8, 11}:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertexExData.textureU2, 1 - vertexExData.textureV2) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[1].append(uv)
-			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[2].append(uv)
-			uvMaps[3].append(None)
-			uvMaps[4].append(None)
-
-		if vertex_flags == 12:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[1].append(uv)
-			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[2].append(uv)
-			uv = [(vertexExData.textureU4, 1 - vertexExData.textureV4) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[3].append(uv)
-			uv = [(vertexExData.textureU5, 1 - vertexExData.textureV5) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[4].append(uv)
-
-		if vertex_flags == 14:
-			uv = [(vertex.textureU, 1 - vertex.textureV) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[0].append(uv)
-			uv = [(vertex.textureU2, 1 - vertex.textureV2) for vertex in wmb.vertexGroupArray[vertexGroupIndex].vertexArray]
-			uvMaps[1].append(uv)
-			uv = [(vertexExData.textureU3, 1 - vertexExData.textureV3) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[2].append(uv)
-			uv = [(vertexExData.textureU4, 1 - vertexExData.textureV4) for vertexExData in wmb.vertexGroupArray[vertexGroupIndex].vertexesExDataArray]
-			uvMaps[3].append(uv)
-			uvMaps[4].append(None)
 
 		for meshGroupInfoArrayIndex in range(len(wmb.meshGroupInfoArray)):
 			meshGroupInfo =  wmb.meshGroupInfoArray[meshGroupInfoArrayIndex]
@@ -597,7 +545,9 @@ def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False)
 					unknownWorldDataIndex = meshArrayData[2]
 					meshVertexGroupIndex = wmb.meshArray[meshArrayIndex].vertexGroupIndex
 					if meshVertexGroupIndex == vertexGroupIndex:
-						meshName = "%d-%s-%d"%(meshArrayIndex, meshGroup.meshGroupname, vertexGroupIndex)
+						meshName = meshGroup.meshGroupname
+						if LOD_name != "LOD0":
+							meshName += "-" + LOD_name
 						meshInfo = wmb.clear_unused_vertex(meshArrayIndex, meshVertexGroupIndex)
 						vertices = meshInfo[0]
 						faces =  meshInfo[1]
@@ -605,6 +555,7 @@ def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False)
 						boneWeightInfoArray = meshInfo[3]
 						vertex_colors = meshInfo[4]
 						normals = meshInfo[5]
+						vertex_uvs = meshInfo[6]
 						usedVerticeIndexArrays.append(usedVerticeIndexArray)
 						flag = False
 						has_bone = wmb.hasBone
@@ -612,9 +563,9 @@ def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False)
 						if boneSetIndex == 0xffffffff:
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
-						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature, import_mesh_indices)
-						meshes.append(obj)
-	return meshes, uvMaps, usedVerticeIndexArrays
+						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, vertex_uvs, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature, import_mesh_indices)
+						meshes[meshArrayIndex] = obj
+	return meshes, usedVerticeIndexArrays
 
 def get_wmb_material(wmb, texture_dir):
 	materials = []
@@ -674,7 +625,7 @@ def get_wmb_material(wmb, texture_dir):
 		
 	return materials
 
-def import_colTreeNodes(wmb, collection):
+def import_colTreeNodes(wmb, collection, mesh_objects):
 	colTreeNodesDict = {}
 	#collision_col = bpy.data.collections.new("CollisionNodes")
 	#collection.children.link(collision_col)
@@ -683,28 +634,26 @@ def import_colTreeNodes(wmb, collection):
 	if not colTreeNodesCollection:
 		colTreeNodesCollection = bpy.data.collections.new("wmb_colTreeNodes")
 		collection.children.link(colTreeNodesCollection)
+		colTreeNodesCollection.hide_viewport = True
 
-	bpy.context.view_layer.active_layer_collection.children["WMB"].children[collection.name].children["wmb_colTreeNodes"].hide_viewport = True
-
-	rootNode = bpy.data.objects.new("Root_wmb", None)
-	rootNode.hide_viewport = True
-	colTreeNodesCollection.objects.link(rootNode)
-	rootNode.rotation_euler = (math.radians(90),0,0)
+	# rootNode = bpy.data.objects.new("Root_wmb", None)
+	# rootNode.hide_viewport = True
+	# colTreeNodesCollection.objects.link(rootNode)
+	# rootNode.rotation_euler = (math.radians(90),0,0)
 	for nodeIdx, node in enumerate(wmb.colTreeNodes):
 		colTreeNodeName = 'colTreeNode' + str(nodeIdx)
 		objName = str(nodeIdx) + "_" + str(node.left) + "_" + str(node.right) + "_wmb"
 		obj = bpy.data.objects.new(objName, None)
 		colTreeNodesCollection.objects.link(obj)
-		obj.parent = rootNode
+		# obj.parent = rootNode
 		obj.empty_display_type = 'CUBE'
 
-		obj.location = node.p1
-		obj.scale = node.p2
+		obj.location = [node.p1[0], -node.p1[2], node.p1[1]]
+		obj.scale = [node.p2[0], node.p2[2], node.p2[1]]
 		meshIndices = []
-		for bObj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+		for i, bObj in enumerate(mesh_objects):
 			if bObj["colTreeNodeIndex"] == nodeIdx:
-				idx = int(bObj.name.split("-")[0])
-				meshIndices.append(idx)
+				meshIndices.append(i)
 		
 		if len(meshIndices) > 0:
 			obj["meshIndices"] = meshIndices
@@ -739,7 +688,6 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 
 	col = bpy.data.collections.new(collection_name)
 	wmbCollection.children.link(col)
-	#bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
 	
 	texture_dir = wmb_file.replace(wmbname, 'textures')
 	if not hasattr(wmb, 'wmb3_header'):
@@ -754,7 +702,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 		armature_name_split = armature_no_wmb.split('/')
 		armature_name = armature_name_split[len(armature_name_split)-1] # THIS IS SPAGHETT I KNOW. I WAS TIRED
 		armature = construct_armature(armature_name, wmb.boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
-	meshes, uvs, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices)
+	meshes, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
 	materials = []
 	bpy.context.scene.WTAMaterials.clear()
@@ -766,24 +714,26 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	for meshGroupInfo in wmb.meshGroupInfoArray:
 		for Index in range(len(meshGroupInfo.groupedMeshArray)):
 			mesh_start = meshGroupInfo.meshStart
-			meshIndex = int(meshes[Index + mesh_start].name.split('-')[0])
+			meshIndex = Index + mesh_start
 			materialIndex = meshGroupInfo.groupedMeshArray[meshIndex - mesh_start].materialIndex
-			groupIndex = int(meshes[Index + mesh_start].name.split('-')[2])
-			uvMaps = [[], [], [], [], []]
-			for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
-				VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
-				for k in range(5):
-					if uvs[k][groupIndex] != None:
-						uvMaps[k].append( uvs[k][groupIndex][VertexIndex])
+			groupIndex = int(meshes[Index + mesh_start]['vertexGroup'])
+			del meshes[Index + mesh_start]['vertexGroup']
+			# uvMaps = [[], [], [], [], []]
+			# for i in range(len(usedVerticeIndexArrays[Index + mesh_start])):
+			# 	VertexIndex = usedVerticeIndexArrays[Index + mesh_start][i]
+			# 	for k in range(5):
+			# 		if uvs[k][groupIndex] != None:
+			# 			uvMaps[k].append( uvs[k][groupIndex][VertexIndex])
 			if len(materials) > 0:
-				add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uvMaps)
+				meshes[Index + mesh_start].data.materials.append(materials[materialIndex])
+				# add_material_to_mesh(meshes[Index + mesh_start], [materials[materialIndex]], uvMaps)
 	if wmb.hasBone:
 		amt = bpy.data.objects.get(armature_name)
 	if wmb.hasBone:
 		for mesh in meshes:
 			set_partent(amt,mesh)
 	if wmb.hasColTreeNodes:
-		import_colTreeNodes(wmb, col)
+		import_colTreeNodes(wmb, col, meshes)
 	if wmb.hasUnknownWorldData:
 		import_unknowWorldDataArray(wmb)
 

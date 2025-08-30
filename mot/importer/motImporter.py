@@ -24,7 +24,7 @@ def importMot(file: str, printProgress: bool = True) -> None:
 		obj.scale = (1, 1, 1)
 	
 	# 90 degree rotation wrapper, to adjust for Y-up
-	objRotationWrapper(armatureObj)
+	# objRotationWrapper(armatureObj)
 
 	# new animation action
 	if header.animationName in bpy.data.actions:

@@ -1,6 +1,7 @@
 import bpy
 
 from .vertexGroup import c_vertexGroup
+from ....utils.util import getMeshVertexGroups, calculateVertexFlags
 
 
 class c_vertexGroups(object):
@@ -8,22 +9,13 @@ class c_vertexGroups(object):
         self.offsetVertexGroups = offsetVertexGroups
 
         def get_vertexGroups(self, offsetVertexGroups):
-            vertexGroupIndex = []
+            meshVertexGroups = getMeshVertexGroups("WMB")
 
-            for obj in bpy.data.collections['WMB'].all_objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('-')
-                    obj_vertexGroupIndex = int(obj_name[-1])
-                    if obj_vertexGroupIndex not in vertexGroupIndex:
-                        vertexGroupIndex.append(obj_vertexGroupIndex)
-
-            vertexGroupIndex.sort()
-
-            vertexesOffset = offsetVertexGroups + len(vertexGroupIndex) * 48
+            vertexesOffset = offsetVertexGroups + len(meshVertexGroups) * 48
             
             vertexGroups = []
-            for index in vertexGroupIndex:
-                print('[+] Creating Vertex Group', index)
+            for index, vertexGroup in enumerate(meshVertexGroups):
+                print('[+] Creating Vertex Group', index, 'with flag', calculateVertexFlags(vertexGroup[0]))
                 vertexGroups.append(c_vertexGroup(index, vertexesOffset))
                 vertexesOffset += vertexGroups[index].vertexGroupSize
             return vertexGroups

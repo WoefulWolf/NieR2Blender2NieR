@@ -144,6 +144,12 @@ class MotRecord:
 			raise Exception(f"Unknown property index: {self.propertyIndex}")
 	
 	def getPropertyIndex(self) -> int:
+		if self.boneIndex == -1:
+			if self.propertyIndex == 1:
+				return 2
+			elif self.propertyIndex == 2:
+				return 1
+
 		if self.propertyIndex in {0, 3, 7}:
 			return 0
 		elif self.propertyIndex in {1, 4, 8}:
@@ -222,6 +228,8 @@ class MotInterpolConst(MotInterpolation):
 		keyframe.interpolationType = "CONSTANT"
 		keyframe.frame = 0
 		keyframe.value = self.value
+		if self.record.boneIndex == -1 and self.record.propertyIndex == 2:
+			keyframe.value *= -1
 		keyframe.applyInterpolation = MotInterpolConst.applyInterpolationToKeyFrame
 		return [keyframe]
 	
@@ -259,6 +267,8 @@ class MotInterpolValues(MotInterpolation):
 			keyframe.interpolationType = "LINEAR"
 			keyframe.frame = i
 			keyframe.value = value
+			if self.record.boneIndex == -1 and self.record.propertyIndex == 2:
+				keyframe.value *= -1
 			keyframes.append(keyframe)
 			keyframe.applyInterpolation = MotInterpolValues.applyInterpolationToKeyFrame
 		return keyframes
@@ -381,6 +391,10 @@ class MotInterpolSplines(MotInterpolation):
 			keyframe.value = spline.value
 			keyframe.m0 = spline.m0
 			keyframe.m1 = spline.m1
+			if self.record.boneIndex == -1 and self.record.propertyIndex == 2:
+				keyframe.value *= -1
+				keyframe.m0 *= -1
+				keyframe.m1 *= -1
 			keyframes.append(keyframe)
 			keyframe.applyInterpolation = MotInterpolSplines.applyInterpolationToKeyFrame
 		return keyframes

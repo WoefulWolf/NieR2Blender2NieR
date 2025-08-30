@@ -1,7 +1,7 @@
 import bpy
 from mathutils import Vector
 
-from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndexByName
+from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndexByName, getMeshName, getAllMeshObjectsInOrder
 
 def getObjectCenter(obj):
     obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
@@ -13,9 +13,9 @@ def getMeshBoundingBox(meshObj):
     yVals = []
     zVals = []
 
-    meshName = meshObj.name.split("-")[1]
-    for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
-        if obj.name.split("-")[1] == meshName:
+    meshName = getMeshName(meshObj)
+    for obj in getAllMeshObjectsInOrder('WMB'):
+        if getMeshName(obj) == meshName:
             xVals.extend([getObjectCenter(obj)[0] - obj.dimensions[0]/2, getObjectCenter(obj)[0] + obj.dimensions[0]/2])
             yVals.extend([getObjectCenter(obj)[1] - obj.dimensions[1]/2, getObjectCenter(obj)[1] + obj.dimensions[1]/2])
             zVals.extend([getObjectCenter(obj)[2] - obj.dimensions[2]/2, getObjectCenter(obj)[2] + obj.dimensions[2]/2])
@@ -40,9 +40,9 @@ class c_mesh(object):
 
         def get_materials(self, obj):
             materials = []
-            obj_mesh_name = obj.name.split('-')[1]
-            for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                if mesh.name.split('-')[1] == obj_mesh_name:
+            obj_mesh_name = getMeshName(obj)
+            for mesh in getAllMeshObjectsInOrder('WMB'):
+                if getMeshName(mesh) == obj_mesh_name:
                     for slot in mesh.material_slots:
                         material = slot.material
                         for indx, mat in enumerate(getUsedMaterials()):
@@ -57,9 +57,9 @@ class c_mesh(object):
         def get_bones(self, obj):
             bones = []
             numBones = 0
-            obj_mesh_name = obj.name.split('-')[1]
-            for mesh in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                if mesh.name.split('-')[1] == obj_mesh_name:
+            obj_mesh_name = getMeshName(obj)
+            for mesh in getAllMeshObjectsInOrder('WMB'):
+                if getMeshName(mesh) == obj_mesh_name:
                     for vertexGroup in mesh.vertex_groups:
                         boneName = getBoneIndexByName("WMB", vertexGroup.name)
                         if boneName not in bones:
@@ -78,7 +78,7 @@ class c_mesh(object):
 
         self.boundingBox = get_BoundingBox(self, obj)
 
-        self.name = obj.name.split('-')[1]
+        self.name = getMeshName(obj)
 
         self.offsetMaterials = self.nameOffset + len(self.name) + 1
 

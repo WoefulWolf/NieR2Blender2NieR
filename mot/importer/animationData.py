@@ -49,8 +49,14 @@ class PropertyAnimation:
 
 		parentOffset = 0
 		if self.propertyName == "location" and self.bone is not None:
-			parentBonePos = self.bone.parent.bone.head_local[self.channelIndex] if self.bone.parent else 0
-			parentOffset = self.bone.bone.head_local[self.channelIndex] - parentBonePos
+			offsetChannel = self.channelIndex
+			if self.channelIndex == 1:
+				offsetChannel = 2
+			elif self.channelIndex == 2:
+				offsetChannel = 1
+			
+			parentBonePos = self.bone.parent.bone.head_local[offsetChannel] if self.bone.parent else 0
+			parentOffset = self.bone.bone.head_local[offsetChannel] - parentBonePos
 
 		animObj = self.bone or self.object
 		animProp = animObj.path_resolve(self.propertyName)

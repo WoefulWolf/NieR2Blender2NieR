@@ -10,7 +10,7 @@ from .meshes.create_meshes import *
 from .meshes.meshMaterials import *
 from .unknownWorldData.unknownWorldData import *
 from .vertexGroups.create_vertexGroups import *
-from ...utils.util import getFullVersionText
+from ...utils.util import getFullVersionText, getAllMeshObjectsInOrder
 
 class c_generate_data(object):
     def __init__(self):
@@ -22,12 +22,20 @@ class c_generate_data(object):
             if obj.type == 'ARMATURE':
                 print('Armature found, exporting bones structures.')
                 hasArmature = True
+                break
 
-        if 'colTreeNodes' in bpy.context.scene:
-            hasColTreeNodes = True
+        for obj in getAllMeshObjectsInOrder('WMB'):
+            if 'colTreeNodeIndex' in obj and obj['colTreeNodeIndex'] != -1:
+                hasColTreeNodes = True
+            if 'unknownWorldDataIndex' in obj and obj['unknownWorldDataIndex'] != -1:
+                hasUnknownWorldData = True
+            if hasColTreeNodes and hasUnknownWorldData:
+                break
 
-        if 'unknownWorldData' in bpy.context.scene:
-            hasUnknownWorldData = True
+        if hasColTreeNodes:
+            print("colTreeNodeIndex found, exporting colTreeNodes")
+        if hasUnknownWorldData:
+            print("unknownWorldDataIndex found, exporting unknownWorldData")
 
         # Generate custom boneSets from Blender vertex groups
         if hasArmature:

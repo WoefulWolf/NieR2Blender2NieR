@@ -85,15 +85,15 @@ def generate_colTreeNodes():
     if not custom_colTreeNodesCollection:
         custom_colTreeNodesCollection = bpy.data.collections.new("custom_col_colTreeNodes")
         colCollection.children.link(custom_colTreeNodesCollection)
-        bpy.context.view_layer.active_layer_collection.children["COL"].children["custom_col_colTreeNodes"].hide_viewport = True
+        custom_colTreeNodesCollection.hide_viewport = True
     for obj in [o for o in custom_colTreeNodesCollection.objects]:
         bpy.data.objects.remove(obj)
 
     # Create Root Node
-    rootNode = bpy.data.objects.new("custom_Root_col", None)
-    rootNode.hide_viewport = True
-    custom_colTreeNodesCollection.objects.link(rootNode)
-    rootNode.rotation_euler = (math.radians(90),0,0)
+    # rootNode = bpy.data.objects.new("custom_Root_col", None)
+    # rootNode.hide_viewport = True
+    # custom_colTreeNodesCollection.objects.link(rootNode)
+    # rootNode.rotation_euler = (math.radians(90),0,0)
 
     unassigned_objs = [obj for obj in objectsInCollectionInOrder("COL") if obj.type == 'MESH']
 
@@ -117,7 +117,7 @@ def generate_colTreeNodes():
         colEmptyName = str(len(nodes)) + "_col"
         colEmpty = bpy.data.objects.new(colEmptyName, None)
         custom_colTreeNodesCollection.objects.link(colEmpty)
-        colEmpty.parent = rootNode
+        # colEmpty.parent = rootNode
         colEmpty.empty_display_type = 'CUBE'
 
         colEmpty.location = getObjectCenter(largest_obj)
@@ -171,7 +171,7 @@ def generate_colTreeNodes():
             colEmptyName = str(len(nodes)) + "_col"
             colEmpty = bpy.data.objects.new(colEmptyName, None)
             custom_colTreeNodesCollection.objects.link(colEmpty)
-            colEmpty.parent = rootNode
+            # colEmpty.parent = rootNode
             colEmpty.empty_display_type = 'CUBE'
             loc, scale = getVolumeSurrounding(deepest_nodes_sorted[i].position, deepest_nodes_sorted[i].scale*2, closest_node.position, closest_node.scale*2)
 
@@ -223,41 +223,19 @@ def generate_colTreeNodes():
         splitName = node.bObj.name.split(".")
         node.bObj.name = splitName[0]
 
-
     nodes = sorted(nodes, key=lambda x: x.index) 
     return nodes
-
-class ColTreeNode:
-    def __init__(self, bObj):
-        self.bObj = bObj
-
-        self.position = bObj.location
-        self.scale = bObj.scale
-
-        split_name = bObj.name.split("_")
-        
-        self.left = int(split_name[1])
-        self.right = int(split_name[2])
-
-        self.offsetMeshIndices = 0
-        self.meshIndexCount = 0
-        self.meshIndices = []
-
-        self.structSize = 12 + 12 + (4*4)
-
 
 class ColTreeNodes:
     def __init__(self, colTreeNodesStartOffset, generateColTree):
         self.structSize = 0
 
         self.colTreeNodes = []
-        for obj in objectsInCollectionInOrder("col_colTreeNodes"):
-            if "Root" not in obj.name:
-                newColTreeNode = ColTreeNode(obj)
-                self.colTreeNodes.append(newColTreeNode)
-                self.structSize += newColTreeNode.structSize
         if generateColTree:
             self.colTreeNodes = generate_colTreeNodes()
+            for node in self.colTreeNodes:
+                node.position = [node.position[0], node.position[2], -node.position[1]]
+                node.scale = [node.scale[0], node.scale[2], node.scale[1]]
             self.structSize = len(self.colTreeNodes) * self.colTreeNodes[0].structSize
             #calculate_meshIndices(self.colTreeNodes)
         update_offsetMeshIndices(self.colTreeNodes, colTreeNodesStartOffset + self.structSize)

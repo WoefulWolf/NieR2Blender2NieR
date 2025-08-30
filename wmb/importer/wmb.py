@@ -122,7 +122,7 @@ class wmb3_vertex(object):
 		if vertex_flags in {7, 8, 10, 11}:
 			self.boneIndices = read_uint8_x4(wmb_fp)
 			self.boneWeights = [x / 255 for x in read_uint8_x4(wmb_fp)]
-		if vertex_flags in {4, 5, 12, 14}:
+		if vertex_flags in {3, 4, 5, 12, 14}:
 			self.color = read_uint8_x4(wmb_fp)
 
 class wmb3_vertexExData(object):
@@ -186,7 +186,7 @@ class wmb3_vertexExData(object):
 		
 		#0x0 has no ExVertexData
 
-		if vertex_flags in {1, 4}: #0x1, 0x4
+		if vertex_flags in {1, 3, 4}: #0x1, 0x3, 0x4
 			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
 			dummy = read_float16(wmb_fp)
 
@@ -680,6 +680,7 @@ class WMB3(object):
 		vertexesExData: list[wmb3_vertexExData] = vertexesExDataArray[vertexStart : vertexStart + vertexCount]
 
 		vertex_colors = []
+		vertex_uvs = [[], [], [], [], []]
 
 		faceRawArray = self.vertexGroupArray[vertexGroupIndex].faceRawArray
 		facesRaw = faceRawArray[faceRawStart : faceRawStart + faceRawCount ]
@@ -702,16 +703,34 @@ class WMB3(object):
 			boneWeightInfos = [0] * len(usedVertexIndexArray)
 		for newIndex in range(len(usedVertexIndexArray)):
 			i = usedVertexIndexArray[newIndex]
-			usedVertices[newIndex] = (meshVertices[i].positionX, meshVertices[i].positionY, meshVertices[i].positionZ)
-			if vertexesExData[i].normal:
-				usedNormals[newIndex] = (vertexesExData[i].normal[0], vertexesExData[i].normal[1], vertexesExData[i].normal[2])
+			usedVertices[newIndex] = (meshVertices[i].positionX, -meshVertices[i].positionZ, meshVertices[i].positionY)
+
+			# Normals are in VertexData
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {0}:
+				usedNormals[newIndex] = (meshVertices[i].normal[0], -meshVertices[i].normal[2], meshVertices[i].normal[1])
+			# Normals are in VertexExData
+			else:
+				usedNormals[newIndex] = (vertexesExData[i].normal[0], -vertexesExData[i].normal[2], vertexesExData[i].normal[1])
 
 			# Vertex_Colors are stored in VertexData
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {4, 5, 12, 14}:
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {3, 4, 5, 12, 14}:
 				vertex_colors.append(meshVertices[i].color)
 			# Vertex_Colors are stored in VertexExData
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {10, 11}:
+			elif self.vertexGroupArray[vertexGroupIndex].vertexFlags in {10, 11}:
 				vertex_colors.append(vertexesExData[i].color)
+
+			# UVs
+			vertex_uvs[0].append([meshVertices[i].textureU, 1 - meshVertices[i].textureV])				# UV1
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {1, 4, 5, 12, 14}:				# UV2
+				vertex_uvs[1].append([meshVertices[i].textureU2, 1 - meshVertices[i].textureV2])		
+			elif self.vertexGroupArray[vertexGroupIndex].vertexFlags in {7, 10, 11}:
+				vertex_uvs[1].append([vertexesExData[i].textureU2, 1 - vertexesExData[i].textureV2])
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {5, 8, 11, 12, 14}:				# UV3
+				vertex_uvs[2].append([vertexesExData[i].textureU3, 1 - vertexesExData[i].textureV3])
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {12, 14}:							# UV4
+				vertex_uvs[3].append([vertexesExData[i].textureU4, 1 - vertexesExData[i].textureV4])
+			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {12}:								# UV5
+				vertex_uvs[4].append([vertexesExData[i].textureU5, 1 - vertexesExData[i].textureV5])
 
 			if self.hasBone:
 				bonesetIndex = mesh.bonesetIndex
@@ -727,7 +746,7 @@ class WMB3(object):
 						print(meshVertices[i].boneWeights) 
 				else:
 					self.hasBone = False
-		return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors, usedNormals
+		return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors, usedNormals, vertex_uvs
 
 
 def export_obj(wmb, wta, wtp_fp, obj_file):

@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nier2Blender2NieR (NieR:Automata Data Exporter)",
     "author": "Woeful_Wolf & RaiderB",
-    "version": (0, 3, 5),
+    "version": (0, 4, 0),
     "blender": (2, 80, 0),
     "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files.",
     "category": "Import-Export"}
@@ -15,7 +15,7 @@ from .col.exporter.col_ui_manager import enableCollisionTools, disableCollisionT
 from .dat_dtt.exporter import dat_dtt_ui_manager
 from .utils.util import *
 from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGroups, MergeVertexGroupCopies, \
-    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, RestoreImportPose
+    DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, RestoreImportPose, RestoreMotionPose, Swap2BA2VertexGroups
 from .utils.visibilitySwitcher import enableVisibilitySelector, disableVisibilitySelector
 from .utils import visibilitySwitcher
 from .wta_wtp.exporter import wta_wtp_ui_manager
@@ -44,14 +44,17 @@ class NierObjectMenu(bpy.types.Menu):
     bl_idname = 'OBJECT_MT_n2b2n'
     bl_label = 'NieR Tools'
     def draw(self, context):
-        self.layout.operator(RecalculateObjectIndices.bl_idname, icon="LINENUMBERS_ON")
+        # self.layout.operator(RecalculateObjectIndices.bl_idname, icon="LINENUMBERS_ON")
         self.layout.operator(RemoveUnusedVertexGroups.bl_idname, icon="GROUP_VERTEX")
         self.layout.operator(MergeVertexGroupCopies.bl_idname, icon="GROUP_VERTEX")
         self.layout.operator(DeleteLooseGeometrySelected.bl_idname, icon="EDITMODE_HLT")
         self.layout.operator(DeleteLooseGeometryAll.bl_idname, icon="EDITMODE_HLT")
         self.layout.operator(RipMeshByUVIslands.bl_idname, icon="UV_ISLANDSEL")
         self.layout.operator(CreateLayVisualization.bl_idname, icon="CUBE")
-        self.layout.operator(RestoreImportPose.bl_idname, icon='OUTLINER_OB_ARMATURE')
+        self.layout.operator(Swap2BA2VertexGroups.bl_idname, icon="ARROW_LEFTRIGHT")
+        if bpy.context.active_object.type == "ARMATURE":
+            self.layout.operator(RestoreImportPose.bl_idname, icon='OUTLINER_OB_ARMATURE')
+            self.layout.operator(RestoreMotionPose.bl_idname, icon='OUTLINER_OB_ARMATURE')
         syncOpAndIcon = getDropDownOperatorAndIcon()
         if syncOpAndIcon is not None:
             self.layout.operator(syncOpAndIcon[0], icon=syncOpAndIcon[1])
@@ -137,14 +140,12 @@ def on_mesh_group_props_update(self, context):
     if self.updated:
         return
     source_obj = context.object
-    if '-' not in source_obj.name:
-        return
-    source_mesh_name = source_obj.name.split('-')[1]
+    source_mesh_name = source_obj.name.split('.')[0]
     objects = getAllMeshObjectsInOrder('WMB')
     for obj in objects:
         if obj == source_obj:
             continue
-        mesh_name = obj.name.split('-')[1]
+        mesh_name = obj.name.split('.')[0]
         if mesh_name == source_mesh_name:
             obj.mesh_group_props.updated = True
             copy_property_group(source_obj, obj)
@@ -227,15 +228,17 @@ classes = (
     CreateLayVisualization,
     NierObjectMenu,
     NierArmatureMenu,
-    RecalculateObjectIndices,
+    # RecalculateObjectIndices,
     RemoveUnusedVertexGroups,
     MergeVertexGroupCopies,
     DeleteLooseGeometrySelected,
     DeleteLooseGeometryAll,
     RipMeshByUVIslands,
     RestoreImportPose,
+    RestoreMotionPose,
     HidePl000fIrrelevantBones,
-    RemovePl000fIrrelevantAnimations
+    RemovePl000fIrrelevantAnimations,
+    Swap2BA2VertexGroups
 )
 
 preview_collections = {}

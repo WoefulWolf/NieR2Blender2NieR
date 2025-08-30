@@ -29,7 +29,7 @@ class Batch:
 
         self.vertexPositions = []
         for vertex in bm.verts:
-            vertexVec4 = [vertex.co[0], vertex.co[1], vertex.co[2], 1]
+            vertexVec4 = [vertex.co[0], vertex.co[2], -vertex.co[1], 1]
             self.vertexPositions.append(vertexVec4)
 
         for face in bm.faces:

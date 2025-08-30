@@ -2,7 +2,7 @@ import math
 from time import time
 
 import bpy
-from ....utils.util import getBoneIndexByName
+from ....utils.util import getBoneIndexByName, getMeshVertexGroups, calculateVertexFlags
 
 class c_vertexGroup(object):
     def __init__(self, vertexGroupIndex, vertexesStart):
@@ -11,18 +11,15 @@ class c_vertexGroup(object):
 
         def get_blenderObjects(self):
             objs = {}
-            for obj in bpy.data.collections['WMB'].all_objects:
-                if obj.type == 'MESH':
-                    obj_name = obj.name.split('-')
-                    if int(obj_name[-1]) == vertexGroupIndex:
-                        if len(obj.data.uv_layers) == 0:
-                            obj.data.uv_layers.new()
-                        obj.data.calc_tangents()
-                        objs[int(obj_name[0])] = obj
-
+            
+            meshes = getMeshVertexGroups('WMB')[vertexGroupIndex]
+            
             blenderObjects = []
-            for key in sorted (objs):
-                blenderObjects.append(objs[key])
+            for obj in meshes:
+                if len(obj.data.uv_layers) == 0:
+                    obj.data.uv_layers.new()
+                obj.data.calc_tangents()
+                blenderObjects.append(obj)
 
             return blenderObjects
         
@@ -64,45 +61,9 @@ class c_vertexGroup(object):
             uv_coords = objOwner.data.uv_layers[uvSlot].data[loopIndex].uv
             return [uv_coords.x, 1-uv_coords.y]
 
-        # Has bones = 7, 8, 10, 11
-        # 1 UV  = 0, 3
-        # 2 UVs = 1, 4, 7, 10
-        # 3 UVs = 5, 8, 11
-        # 4 UVs = 14
-        # 5 UVs = 12
-        # Has Color = 3, 4, 5, 10, 11, 12, 14
-
-        if len(self.blenderObjects[0].data.uv_layers) == 1:         # 0, 3
-            if self.blenderObjects[0].data.vertex_colors:
-                self.vertexFlags = 3
-            else:
-                self.vertexFlags = 0
-        elif len(self.blenderObjects[0].data.uv_layers) == 2:       # 1, 4, 7, 10
-            if self.blenderObjects[0]['boneSetIndex'] != -1:        # > 7, 10
-                if self.blenderObjects[0].data.vertex_colors:       # >> 10
-                    self.vertexFlags = 10
-                else:                                               # >> 7
-                    self.vertexFlags = 7
-            else:                                                   # > 1, 4
-                if self.blenderObjects[0].data.vertex_colors:       # >> 4
-                    self.vertexFlags = 4
-                else:                                               # >> 1
-                    self.vertexFlags = 1
-        elif len(self.blenderObjects[0].data.uv_layers) == 3:       # 5, 8, 11
-            if self.blenderObjects[0]['boneSetIndex'] != -1:
-                if self.blenderObjects[0].data.vertex_colors:       # >> 11
-                    self.vertexFlags = 11
-                else:                                               # >> 8
-                    self.vertexFlags = 8
-            else:                                                   # >> 5
-                self.vertexFlags = 5
-
-        elif len(self.blenderObjects[0].data.uv_layers) == 4:       # 14
-            self.vertexFlags = 14
-        elif len(self.blenderObjects[0].data.uv_layers) == 5:       # 12
-            self.vertexFlags = 12
-        else:
-            print(" - UV Maps Error: No UV Map found!")
+        calculated_vertex_flags = calculateVertexFlags(self.blenderObjects[0])
+        if calculated_vertex_flags != None:
+            self.vertexFlags = calculated_vertex_flags
 
         if self.vertexFlags == 0:
             self.vertexExDataSize = 0
@@ -159,13 +120,12 @@ class c_vertexGroup(object):
             
                     bvertex = bvertex_obj[0][loop.vertex_index]
                     # XYZ Position
-                    position = [bvertex.co.x, bvertex.co.y, bvertex.co.z]
+                    position = [bvertex.co.x, bvertex.co.z, -bvertex.co.y]
 
                     # Tangents
-                    loopTangent = loop.tangent * 127
-                    tx = int(loopTangent[0] + 127.0)
-                    ty = int(loopTangent[1] + 127.0)
-                    tz = int(loopTangent[2] + 127.0)
+                    tx = int(loop.tangent[0] * 127 + 127.0)
+                    ty = int(loop.tangent[2] * 127 + 127.0)
+                    tz = int(-loop.tangent[1] * 127 + 127.0)
                     sign = int(-loop.bitangent_sign*127.0+128.0)
 
                     tangents = [tx, ty, tz, sign]
@@ -173,7 +133,7 @@ class c_vertexGroup(object):
                     # Normal
                     normal = []
                     if self.vertexFlags == 0:
-                        normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                        normal = [loop.normal[0], loop.normal[2], -loop.normal[1], 0]
 
                     # UVs
                     uv_maps = []
@@ -262,7 +222,7 @@ class c_vertexGroup(object):
                             new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
 
                     if self.vertexFlags in {1, 3, 4, 5, 7, 8, 10, 11, 12, 14}:
-                        normal = [loop.normal[0], loop.normal[1], loop.normal[2], 0]
+                        normal = [loop.normal[0], loop.normal[2], -loop.normal[1], 0]
                     
                     if self.vertexFlags == 5:
                         uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
@@ -320,13 +280,9 @@ class c_vertexGroup(object):
                 indexesOffset += len(obj.data.vertices)          
 
             # Reverse this loop order
-            flip_counter = 0
             for i in range(len(indexes)):
-                if flip_counter == 2:
+                if i % 3 == 2:
                     indexes[i], indexes[i-1] = indexes[i-1], indexes[i]
-                    flip_counter = 0
-                    continue
-                flip_counter += 1
 
             return indexes
 

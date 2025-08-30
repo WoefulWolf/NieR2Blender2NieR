@@ -22,10 +22,28 @@ def update_clh_bone_items():
 
     if armatureObj is None:
         return
+
+
     for bone in armatureObj.data.bones:
         if boneHasID(bone):
             bone_id = str(getBoneID(bone))
-            bone_items.append((bone_id, bone.name + " (" + bone_id + ")", ""))
+            if bpy.context.scene.clh_search_options.filter_out_clp and len(bpy.context.scene.clp_clothwk) > 0:
+                found_bone = False
+                for clothwk in bpy.context.scene.clp_clothwk:
+                    if bone_id == clothwk.no:
+                        found_bone = True
+                if found_bone:
+                    continue
+
+            bone_items.append((bone_id, bone.name, ""))
+    
+    bone_items.sort(key=lambda x: int(x[0]))
+
+def on_filter_out_clp_update(self, context):
+    update_clh_bone_items()
+
+class CLHSearchOptions(bpy.types.PropertyGroup):
+    filter_out_clp : bpy.props.BoolProperty(default=True, update=on_filter_out_clp_update)
 
 class UpdateBoneItems(bpy.types.Operator):
     bl_idname = "clh.update_bone_items"
@@ -132,11 +150,15 @@ def drawCLHWKList(layout):
     row = layout.row()
     row.operator("clh.add_cloth_at_wk", text="Add ClothATWK")
 
+    search_options = bpy.context.scene.clh_search_options
+    row = layout.row()
+    row.prop(search_options, "filter_out_clp")
+
     next_container = layout
     for idx, cloth_at_wk in enumerate(bpy.context.scene.clh_clothatwk):
         if cloth_at_wk.capsule:
             next_container = layout.box()
-
+    
         box = next_container.box()
 
         if not cloth_at_wk.capsule:
@@ -165,7 +187,8 @@ def drawCLHWKList(layout):
         row = box.row()
         row.prop(cloth_at_wk, "weight", text="Weight")
         row.prop(cloth_at_wk, "radius", text="Radius")
-        row.prop(cloth_at_wk, "capsule", text="Capsule")
+        if idx + 1 < len(bpy.context.scene.clh_clothatwk):
+            row.prop(cloth_at_wk, "capsule", text="Capsule")
 
 class UpdateCLHVisualizer(bpy.types.Operator):
     bl_idname = "clh.update_clh_visualizer"
@@ -196,8 +219,8 @@ class UpdateCLHVisualizer(bpy.types.Operator):
             pos2 = p2_bone.head_local + mathutils.Vector(cloth_at_wk.offset2)
 
             # Rotate 90 on x
-            pos1.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
-            pos2.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
+            # pos1.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
+            # pos2.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
 
             weight = cloth_at_wk.weight
 
@@ -242,8 +265,9 @@ class UpdateCLHVisualizer(bpy.types.Operator):
                 next_pos1 = next_p1_bone.head_local + mathutils.Vector(next_cloth_at_wk.offset1)
                 next_pos2 = next_p2_bone.head_local + mathutils.Vector(next_cloth_at_wk.offset2)
 
-                next_pos1.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
-                next_pos2.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
+                # Rotate 90 on x
+                # next_pos1.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
+                # next_pos2.rotate(mathutils.Euler((math.pi / 2, 0, 0), 'XYZ'))
 
                 next_weight = next_cloth_at_wk.weight
                 next_final_pos = next_pos2.lerp(next_pos1, next_weight)
@@ -302,6 +326,7 @@ def drawCLHVisualizer(layout):
 
 
 def register():
+    bpy.utils.register_class(CLHSearchOptions)
     bpy.utils.register_class(ClothATWK)
     bpy.utils.register_class(UpdateBoneItems)
     bpy.utils.register_class(MoveClothATWK)
@@ -311,10 +336,12 @@ def register():
     bpy.utils.register_class(UpdateCLHVisualizer)
     bpy.utils.register_class(ClearCLHVisualizer)
 
+    bpy.types.Scene.clh_search_options = bpy.props.PointerProperty(type=CLHSearchOptions)
     bpy.types.Scene.clh_clothatnum = bpy.props.IntProperty(default=0)
     bpy.types.Scene.clh_clothatwk = bpy.props.CollectionProperty(type=ClothATWK)
 
 def unregister():
+    bpy.utils.unregister_class(CLHSearchOptions)
     bpy.utils.unregister_class(ClothATWK)
     bpy.utils.unregister_class(UpdateBoneItems)
     bpy.utils.unregister_class(MoveClothATWK)

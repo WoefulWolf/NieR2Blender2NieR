@@ -8,19 +8,10 @@ def isVisibilitySelectorSupported() -> bool:
            ("COL" in bpy.data.collections and len(bpy.data.collections["COL"].all_objects) > 0)
 
 def getObjectName(obj: bpy.types.Object) -> str:
-    name = re.match(r"^\d+-(.*)", obj.name)
-    if name:
-        return name.group(1)
-    else:
-        return obj.name
+    return obj.name.split('.')[0]
 
 def objectNameSortKey(name: str) -> str:
-    nameAndLod = re.match(r"^(.*)-(\d+)$", name.lower())
-    if nameAndLod:
-        lod = int(nameAndLod.group(2))
-        return f"{lod:04d}-{nameAndLod.group(1)}"
-    else:
-        return name
+    return name.lower()
 
 def getMeshParts(collection: str) -> List[str]:
     names: List[str] = []
@@ -49,10 +40,8 @@ def getMeshPartGroups(collection: str) -> Dict[str, List[str]]:
         for obj in list(bpy.data.collections[collection].all_objects):
             if obj.type != "MESH":
                 continue
-            objLod = re.search(r"-(\d+)$", obj.name)
-            if objLod:
-                objLod = objLod.group(1)
-            else:
+            objLod = obj.mesh_group_props.lod_name
+            if not objLod:
                 objLod = "0"
 
             lodName = f"Group_{objLod}"
@@ -304,29 +293,29 @@ def unregister():
 
 outfitToParts = {
     "2B": {
-        "Normal": ["Body-0", "Body-1", "Eyelash-0", "Eyemask-0", "facial_normal-0", "facial_serious-0", "Feather-0", "Hair-0", "Skirt-0"],
-        "Normal Broken": ["Broken-0", "Body-0", "Body-1", "Eyelash-0", "Eyemask-0", "facial_normal-0", "facial_serious-0", "Feather-0", "Hair-0"],
-        "Base": ["Body-0", "Body-1", "Eyelash-0", "Eyemask-0", "facial_normal-0", "facial_serious-0", "Hair-0"],
-        "Armor": ["Armor_Body-1", "Armor_Head-1"],
-        "DLC": ["DLC_Body-0", "DLC_Body-1", "DLC_Skirt-0", "Eyelash-0", "facial_normal-0", "facial_serious-0", "Hair-0"],
-        "DLC Broken": ["DLC_Body-0", "DLC_Body-1", "DLC_Broken-0", "Eyelash-0", "facial_normal-0", "facial_serious-0", "Hair-0"]
+        "Normal": ["Body", "Body", "Eyelash", "Eyemask", "facial_normal", "facial_serious", "Feather", "Hair", "Skirt"],
+        "Normal Broken": ["Broken", "Body", "Body", "Eyelash", "Eyemask", "facial_normal", "facial_serious", "Feather", "Hair"],
+        "Base": ["Body", "Body", "Eyelash", "Eyemask", "facial_normal", "facial_serious", "Hair"],
+        "Armor": ["Armor_Body", "Armor_Head"],
+        "DLC": ["DLC_Body", "DLC_Body", "DLC_Skirt", "Eyelash", "facial_normal", "facial_serious", "Hair"],
+        "DLC Broken": ["DLC_Body", "DLC_Body", "DLC_Broken", "Eyelash", "facial_normal", "facial_serious", "Hair"]
     },
     "9S": {
-        "Normal": ["Body-0", "Body-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "Leg-0", "Leg-1", "Pants-0", "Pants-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2", "mesh_pl0200-0", "mesh_pl0200-1"],
-        "Self Destruct": ["Body-0", "Body-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "Leg-0", "Leg-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2", "mesh_pl0200-0", "mesh_pl0200-1"],
-        "Normal Broken Left": ["Body-0", "Body-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "Leg-0", "Leg-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2", "mesh_es0200-0", "mesh_es0200-1"],
-        "Normal Broken Right": ["Body-0", "Body-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "Leg-0", "Leg-1", "Pants-0", "Pants-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2", "mesh_es0206-0", "mesh_es0206-1"],
-        "Normal Broken Holes": ["Body-0", "Body-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "Leg-0", "Leg-1", "Pants-0", "Pants-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2", "mesh_es0201-0", "mesh_es0201-1"],
-        "Normal Broken 2B Hand": ["Body-0", "Body-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "Leg-0", "Leg-1", "Pants-0", "Pants-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2", "mesh_es0202-0", "mesh_es0202-1"],
-        "DLC": ["DLC_Body-0", "DLC_Body-1", "DLC_Leg-0", "DLC_Leg-1", "DLC_Pants-1", "DLC_mesh_pl0200-0", "DLC_mesh_pl0200-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2",],
-        "DLC Broken Left": ["DLC_Body-0", "DLC_Body-1", "DLC_Leg-0", "DLC_Leg-1", "DLC_mesh_es0200-0", "DLC_mesh_es0200-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2"],
-        "DLC Broken Right": ["DLC_Body-0", "DLC_Body-1", "DLC_Leg-0", "DLC_Leg-1", "DLC_Pants-1", "DLC_mesh_es0206-0", "DLC_mesh_es0206-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2"],
-        "DLC Broken Holes": ["DLC_Body-0", "DLC_Body-1", "DLC_Leg-0", "DLC_Leg-1", "DLC_Pants-1", "DLC_mesh_es0201-0", "DLC_mesh_es0201-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2"],
-        "DLC Broken 2B Hand": ["DLC_Body-0", "DLC_Body-1", "DLC_Leg-0", "DLC_Leg-1", "DLC_Pants-1", "DLC_mesh_es0202-0", "DLC_mesh_es0202-1", "Eyelash-1", "Eyelash_serious-1", "Eyemask-1", "facial_normal-1", "facial_normal-2", "facial_serious-1", "facial_serious-2"]
+        "Normal": ["Body", "Body", "Eyelash", "Eyelash_serious", "Eyemask", "Leg", "Leg", "Pants", "Pants", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2", "mesh_pl0200", "mesh_pl0200"],
+        "Self Destruct": ["Body", "Body", "Eyelash", "Eyelash_serious", "Eyemask", "Leg", "Leg", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2", "mesh_pl0200", "mesh_pl0200"],
+        "Normal Broken Left": ["Body", "Body", "Eyelash", "Eyelash_serious", "Eyemask", "Leg", "Leg", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2", "mesh_es0200", "mesh_es0200"],
+        "Normal Broken Right": ["Body", "Body", "Eyelash", "Eyelash_serious", "Eyemask", "Leg", "Leg", "Pants", "Pants", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2", "mesh_es0206", "mesh_es0206"],
+        "Normal Broken Holes": ["Body", "Body", "Eyelash", "Eyelash_serious", "Eyemask", "Leg", "Leg", "Pants", "Pants", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2", "mesh_es0201", "mesh_es0201"],
+        "Normal Broken 2B Hand": ["Body", "Body", "Eyelash", "Eyelash_serious", "Eyemask", "Leg", "Leg", "Pants", "Pants", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2", "mesh_es0202", "mesh_es0202"],
+        "DLC": ["DLC_Body", "DLC_Body", "DLC_Leg", "DLC_Leg", "DLC_Pants", "DLC_mesh_pl0200", "DLC_mesh_pl0200", "Eyelash", "Eyelash_serious", "Eyemask", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2",],
+        "DLC Broken Left": ["DLC_Body", "DLC_Body", "DLC_Leg", "DLC_Leg", "DLC_mesh_es0200", "DLC_mesh_es0200", "Eyelash", "Eyelash_serious", "Eyemask", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2"],
+        "DLC Broken Right": ["DLC_Body", "DLC_Body", "DLC_Leg", "DLC_Leg", "DLC_Pants", "DLC_mesh_es0206", "DLC_mesh_es0206", "Eyelash", "Eyelash_serious", "Eyemask", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2"],
+        "DLC Broken Holes": ["DLC_Body", "DLC_Body", "DLC_Leg", "DLC_Leg", "DLC_Pants", "DLC_mesh_es0201", "DLC_mesh_es0201", "Eyelash", "Eyelash_serious", "Eyemask", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2"],
+        "DLC Broken 2B Hand": ["DLC_Body", "DLC_Body", "DLC_Leg", "DLC_Leg", "DLC_Pants", "DLC_mesh_es0202", "DLC_mesh_es0202", "Eyelash", "Eyelash_serious", "Eyemask", "facial_normal", "facial_normal-2", "facial_serious", "facial_serious-2"]
     },
     "A2": {
-        "Normal": ["Body-0", "Body-1", "Cloth-0", "Hair-0", "facial_normal-0", "facial_serious-0"],
-        "Beserk": ["Body-0", "Body-1", "Hair-0", "facial_normal-0", "facial_serious-0"],
-        "DLC": ["DLC_Body-0", "DLC_Body-1", "DLC_Cloth-0", "Hair-0", "facial_normal-0", "facial_serious-0"]
+        "Normal": ["Body", "Body", "Cloth", "Hair", "facial_normal", "facial_serious"],
+        "Beserk": ["Body", "Body", "Hair", "facial_normal", "facial_serious"],
+        "DLC": ["DLC_Body", "DLC_Body", "DLC_Cloth", "Hair", "facial_normal", "facial_serious"]
     }
 }

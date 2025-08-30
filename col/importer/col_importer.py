@@ -60,33 +60,29 @@ def main(colFilePath):
                 obj.surfaceType = "-1"
                 obj["UNKNOWN_surfaceType"] = mesh.surfaceType
 
-            obj.rotation_euler = (math.radians(90),0,0)
+            # obj.rotation_euler = (math.radians(90),0,0)
 
     # Create colTreeNodes Sub-Collection
     colTreeNodesCollection = bpy.data.collections.get("col_colTreeNodes")
     if not colTreeNodesCollection:
         colTreeNodesCollection = bpy.data.collections.new("col_colTreeNodes")
         colCollection.children.link(colTreeNodesCollection)
-
-    try:
-        bpy.context.view_layer.active_layer_collection.children["COL"].children["col_colTreeNodes"].hide_viewport = True
-    except:
-        pass
+        colTreeNodesCollection.hide_viewport = True
     
     # Create colTreeNodes
-    rootNode = bpy.data.objects.new("Root_col", None)
-    rootNode.hide_viewport = True
-    colTreeNodesCollection.objects.link(rootNode)
-    rootNode.rotation_euler = (math.radians(90),0,0)
+    # rootNode = bpy.data.objects.new("Root_col", None)
+    # rootNode.hide_viewport = True
+    # colTreeNodesCollection.objects.link(rootNode)
+    # rootNode.rotation_euler = (math.radians(90),0,0)
     for nodeIdx, node in enumerate(col.colTreeNodes):
         objName = str(nodeIdx) + "_" + str(node.left) + "_" + str(node.right) + "_col"
         obj = bpy.data.objects.new(objName, None)
         colTreeNodesCollection.objects.link(obj)
-        obj.parent = rootNode
+        # obj.parent = rootNode
         obj.empty_display_type = 'CUBE'
 
-        obj.location = node.p1
-        obj.scale = node.p2
+        obj.location = [node.p1[0], -node.p1[2], node.p1[1]]
+        obj.scale = [node.p2[0], node.p2[2], node.p2[1]]
 
         if len(node.meshIndices) > 0:
             obj["meshIndices"] = node.meshIndices

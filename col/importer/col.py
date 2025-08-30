@@ -54,7 +54,7 @@ class Batch:
                 y = read_float(colFile)
                 z = read_float(colFile)
                 w = read_float(colFile)
-                self.vertices.append([x, y, z])
+                self.vertices.append([x, -z, y])
 
             colFile.seek(self.offsetIndices)
             self.indices = []
@@ -79,12 +79,11 @@ class Batch:
             self.boneWeights = []
             self.bones = []
             for i in range(self.vertexCount):
-                self.vertices.append([
-                    read_float(colFile),
-                    read_float(colFile),
-                    read_float(colFile),
-                ])
-                read_float(colFile)     # w
+                x = read_float(colFile)
+                y = read_float(colFile)
+                z = read_float(colFile)
+                w = read_float(colFile)
+                self.vertices.append([x, -z, y])
 
                 self.boneWeights.append([
                     read_float(colFile),

@@ -11,6 +11,7 @@ import bpy
 import numpy as np
 from mathutils import Vector
 import glob
+from collections import defaultdict
 
 from .ioUtils import read_uint32
 from ..consts import ADDON_NAME, DAT_EXTENSIONS
@@ -47,7 +48,7 @@ def drawMultilineLabel(context, text, parent):
 
 def getUsedMaterials():
     materials = []
-    for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
+    for obj in getAllMeshObjectsInOrder('WMB'):
         for slot in obj.material_slots:
             material = slot.material
             if material not in materials:
@@ -88,10 +89,7 @@ def getGlobalBoundingBox():
 
 def getObjKey(obj):
     p1 = obj.name.split('-')
-    if p1[0].isdigit():
-        return f"{int(p1[0]):04d}-"
-    else:
-        return f"0000-{obj.name}"
+    return f"0000-{p1}"
 
 def objectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].objects, key=getObjKey) if collectionName in bpy.data.collections else []
@@ -100,10 +98,88 @@ def allObjectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey) if collectionName in bpy.data.collections else []
 
 def getAllObjectsWithMaterial(collectionName, materialName):
-    return [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH" and obj.material_slots[0].material.name == materialName]
+    return [obj for obj in getAllMeshObjectsInOrder(collectionName) if obj.material_slots[0].material.name == materialName]
 
 def getAllMeshObjectsInOrder(collectionName):
-     return [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH"]
+    objs = [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH"]
+    objs = sorted(
+        objs,
+        key=lambda obj: (obj.mesh_group_props.lod_level < 0, obj.mesh_group_props.lod_level if obj.mesh_group_props.lod_level >= 0 else float('inf'))
+    )
+    objs = sorted(
+        objs,
+        key=lambda obj: obj.mesh_group_props.index if obj.mesh_group_props.override_index else float('inf')
+    )
+    return objs
+
+def calculateVertexFlags(obj):
+    # Has bones = 7, 8, 10, 11
+    # 1 UV  = 0, 3
+    # 2 UVs = 1, 4, 7, 10
+    # 3 UVs = 5, 8, 11
+    # 4 UVs = 14
+    # 5 UVs = 12
+    # Has Color = 3, 4, 5, 10, 11, 12, 14
+
+    if getPreferences().maximizeShaderCompatibility:
+        if len(obj.data.uv_layers) == 0:
+            obj.data.uv_layers.new(name="UVMap1")
+
+        if len(obj.data.uv_layers) == 1:
+            obj.data.uv_layers.new(name="UVMap2")
+
+        if len(obj.data.vertex_colors) == 0:
+            vertex_color = obj.data.vertex_colors.new()
+            vertex_color.active = True
+            for loop_idx in range(len(obj.data.loops)):
+                vertex_color.data[loop_idx].color = [0, 0, 0, 0]
+
+    # You cannot have bones without at least 2 UVs
+    if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:
+        if len(obj.data.uv_layers) == 1:
+            new_layer = obj.data.uv_layers.new(name="UVMap2")
+
+    if len(obj.data.uv_layers) == 1:         # 0, 3
+        if obj.data.vertex_colors:
+            return 3
+        else:
+            return 0
+    elif len(obj.data.uv_layers) == 2:       # 1, 4, 7, 10
+        if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:        # > 7, 10
+            if obj.data.vertex_colors:       # >> 10
+                return 10
+            else:                                               # >> 7
+                return 7
+        else:                                                   # > 1, 4
+            if obj.data.vertex_colors:       # >> 4
+                return 4
+            else:                                               # >> 1
+                return 1
+    elif len(obj.data.uv_layers) == 3:       # 5, 8, 11
+        if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:
+            if obj.data.vertex_colors:       # >> 11
+                return 11
+            else:                                               # >> 8
+                return 8
+        else:                                                   # >> 5
+            return 5
+    elif len(obj.data.uv_layers) == 4:       # 14
+        return 14
+    elif len(obj.data.uv_layers) == 5:       # 12
+        return 12
+    else:
+        return None
+
+def getMeshVertexGroups(collectionName):
+    meshes = getAllMeshObjectsInOrder(collectionName)
+    group_map = {}
+
+    for mesh in meshes:
+        identifier = (calculateVertexFlags(mesh), mesh.mesh_group_props.lod_level)
+        if identifier not in group_map:
+            group_map[identifier] = []
+        group_map[identifier].append(mesh)
+    return list(group_map.values())
 
 def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
     return sorted(obj.children, key=getObjKey)
@@ -119,18 +195,15 @@ def getBoneIndexByName(collectionName, name):
             return i
         
 def getAllMeshNamesInOrder(collectionName):
-    meshes = []
-    for obj in (x for x in allObjectsInCollectionInOrder(collectionName) if x.type == "MESH"):
-        obj_name = obj.name.split('-')[1]
-        mesh_group_index = obj.mesh_group_props.index if obj.mesh_group_props.override_index else None
-        meshes.append((obj_name, mesh_group_index))
-
-    meshes = list(set(meshes))
-    sorted_meshes = sorted(meshes, key=lambda x: (x[1] is None, x[1]))
-    mesh_names = [x[0] for x in sorted_meshes]
-
+    mesh_names = []
+    for obj in getAllMeshObjectsInOrder(collectionName):
+        mesh_name = getMeshName(obj)
+        if mesh_name not in mesh_names:
+            mesh_names.append(mesh_name)
     return mesh_names
 
+def getMeshName(obj):
+    return obj.name.split('.')[0].split('-')[0]
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):
@@ -219,6 +292,23 @@ def centre_origins(collection: str):
             obj.select_set(True)
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             obj.select_set(False)
+
+def restore_import_pose(collection: str):
+    if "NONE" in bpy.data.actions:
+        bpy.data.actions.remove(bpy.data.actions["NONE"])
+    action = bpy.data.actions.new("NONE")
+    for obj in allObjectsInCollectionInOrder(collection):
+        if obj.type == "ARMATURE":
+            if obj.animation_data:
+                obj.animation_data.action = action
+                bpy.context.view_layer.update()
+
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.b2n.restoreimportpose()
+            obj.location = (0, 0, 0)
+            obj.rotation_mode = "XYZ"
+            obj.rotation_euler = (0, 0, 0)
+            obj.scale = (1, 1, 1)
 
 def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
     dir = os.path.dirname(filepath)

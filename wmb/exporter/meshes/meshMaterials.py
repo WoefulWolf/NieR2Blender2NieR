@@ -1,19 +1,13 @@
-from ....utils.util import getUsedMaterials
-from ....utils.util import allObjectsInCollectionInOrder
+from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getAllMeshNamesInOrder, getMeshName, getAllMeshObjectsInOrder
 
 class c_meshMaterials(object):
     def __init__(self):
         def get_meshMaterials(self):
             meshMaterials = []
-            meshNames = []
+            meshNames = getAllMeshNamesInOrder('WMB')
 
-            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                obj_name = obj.name.split('-')[1]
-                if obj_name not in meshNames:
-                    meshNames.append(obj_name)
-
-            for obj in (x for x in allObjectsInCollectionInOrder('WMB') if x.type == "MESH"):
-                obj_name = obj.name.split('-')[1]
+            for obj in getAllMeshObjectsInOrder('WMB'):
+                obj_name = getMeshName(obj)
 
                 mesh_index = meshNames.index(obj_name)
                 

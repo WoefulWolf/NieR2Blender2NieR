@@ -4,6 +4,7 @@ import bpy
 from mathutils import Matrix
 
 from .util import ShowMessageBox
+from ..mot.importer.tPoseFixer import fixTPose
 
 
 class RecalculateObjectIndices(bpy.types.Operator):
@@ -189,6 +190,45 @@ class DeleteLooseGeometryAll(bpy.types.Operator):
             ShowMessageBox(str(v_delete_count) + ' vertexes have been deleted.', 'Blender2NieR: Tool Info')
         return {'FINISHED'}
 
+BONE_SWAP = [
+    ("bone2576", "bone2592"),
+    ("bone2577", "bone2593"),
+    ("bone2609", "bone2608")
+]
+
+class Swap2BA2VertexGroups(bpy.types.Operator):
+    """Swap Equivalent 2B & A2 Vertex Groups (Selected)"""
+    bl_idname = "b2n.swap2ba2vertexgroups"
+    bl_label = "Swap Equivalent 2B & A2 Vertex Groups (Selected)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        selected_objects = set(o for o in bpy.context.selected_objects if o.type == 'MESH')
+
+        swap_dict = {a: b for a, b in BONE_SWAP}
+        swap_dict.update({b: a for a, b in BONE_SWAP})
+
+        for obj in selected_objects:
+            if not obj.vertex_groups:
+                continue
+
+            vg_names = {vg.name for vg in obj.vertex_groups}
+
+            temp_mapping = {}
+            for old_name in vg_names:
+                if old_name in swap_dict:
+                    temp_name = old_name + "_TEMP_SWAP"
+                    vg = obj.vertex_groups.get(old_name)
+                    if vg:
+                        vg.name = temp_name
+                        temp_mapping[temp_name] = swap_dict[old_name]
+                        
+            for temp_name, final_name in temp_mapping.items():
+                vg = obj.vertex_groups.get(temp_name)
+                if vg:
+                    vg.name = final_name
+
+        return {'FINISHED'}
 
 class RipMeshByUVIslands(bpy.types.Operator):
     """Rip Mesh by UV Islands"""
@@ -232,8 +272,71 @@ class RipMeshByUVIslands(bpy.types.Operator):
 
         return {'FINISHED'}
 
+FIXED_FLAG = "FIXED_T-POSE"
+
+def revertMotionTPose(armObj: bpy.types.Object):
+    active_object = armObj
+    if active_object.type != "ARMATURE":
+        ShowMessageBox('Please select an armature object.', 'Blender2NieR: Tool Info')
+        return {'FINISHED'}
+
+    if FIXED_FLAG not in active_object or not active_object[FIXED_FLAG]:
+        ShowMessageBox('Motion pose already reverted.', 'Blender2NieR: Tool Info')
+        return {'CANCELLED'}
+    
+    for pose_bone in active_object.pose.bones:
+        pose_bone.matrix_basis = Matrix()
+    bpy.context.view_layer.update()
+
+    # apply armature as rest pose
+    bpy.context.view_layer.objects.active = active_object
+    bpy.ops.object.mode_set(mode="POSE")
+    bpy.ops.pose.armature_apply()
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    for pose_bone in active_object.pose.bones:
+        pose_bone.matrix_basis = Matrix()
+        if 'localRotation' in pose_bone.bone:
+            rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+            pose_bone.matrix_basis = rot_mat @ pose_bone.matrix_basis
+    bpy.context.view_layer.update()
+
+    for child in active_object.children:
+        if child.type != "MESH":
+            continue
+        for mod in child.modifiers:
+            if mod.type != "ARMATURE":
+                continue
+            bpy.context.view_layer.objects.active = child
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+
+    # apply armature as rest pose
+    bpy.context.view_layer.objects.active = active_object
+    bpy.ops.object.mode_set(mode="POSE")
+    bpy.ops.pose.armature_apply()
+    bpy.ops.object.mode_set(mode="OBJECT")
+    
+    # add armature modifier back
+    for child in active_object.children:
+        if child.type != "MESH":
+            continue
+        mod: bpy.types.ArmatureModifier
+        mod = child.modifiers.new(name="Armature", type="ARMATURE")
+        mod.object = active_object
+
+    for pose_bone in active_object.pose.bones:
+        pose_bone.matrix_basis = Matrix()
+        if 'localRotation' in pose_bone.bone:
+            rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+            pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
+    bpy.context.view_layer.update()
+
+    active_object[FIXED_FLAG] = False
+
+    return {'FINISHED'}
+
 class RestoreImportPose(bpy.types.Operator):
-    """Restore Import Pose (If you have changed the pose since importing)"""
+    """Restore Import Pose (If you have changed the pose or imported motion since importing)"""
     bl_idname = "b2n.restoreimportpose"
     bl_label = "Restore Import Pose"
     bl_options = {'REGISTER', 'UNDO'}
@@ -243,6 +346,9 @@ class RestoreImportPose(bpy.types.Operator):
         if active_object.type != "ARMATURE":
             ShowMessageBox('Please select an armature object.', 'Blender2NieR: Tool Info')
             return {'FINISHED'}
+
+        if FIXED_FLAG in active_object and active_object[FIXED_FLAG]:
+            return revertMotionTPose(active_object)
             
         for pose_bone in active_object.pose.bones:
             # Clear the bone matrix
@@ -253,3 +359,31 @@ class RestoreImportPose(bpy.types.Operator):
                 pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
         bpy.context.view_layer.update()
         return {'FINISHED'}
+
+class RestoreMotionPose(bpy.types.Operator):
+    """Restore Motion Pose (If you have restored import pose)"""
+    bl_idname = "b2n.restoremotionpose"
+    bl_label = "Restore Motion Pose"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        active_object = bpy.context.active_object
+        if active_object.type != "ARMATURE":
+            ShowMessageBox('Please select an armature object.', 'Blender2NieR: Tool Info')
+            return {'FINISHED'}
+
+        if FIXED_FLAG not in active_object or active_object[FIXED_FLAG]:
+            ShowMessageBox('Already in motion pose.', 'Blender2NieR: Tool Info')
+            return {'CANCELLED'}
+
+        for pose_bone in active_object.pose.bones:
+            if 'localRotation' in pose_bone.bone:
+                pose_bone.matrix_basis = Matrix()
+                rot_mat = Matrix.Rotation(pose_bone.bone["localRotation"][2], 4, 'Z') @ Matrix.Rotation(pose_bone.bone["localRotation"][1], 4, 'Y') @ Matrix.Rotation(pose_bone.bone["localRotation"][0], 4, 'X')
+                pose_bone.matrix_basis = rot_mat.inverted() @ pose_bone.matrix_basis
+        bpy.context.view_layer.update()
+
+        fixTPose(active_object)
+        return {'FINISHED'}
+        
+
