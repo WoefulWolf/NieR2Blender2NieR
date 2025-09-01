@@ -6,11 +6,15 @@ from ..exporter.col_ui_manager import enableCollisionTools
 from ...utils.util import setExportFieldsFromImportFile, setColourByCollisionType
 
 def updateCollisionType(self, context):
+    if not context.object:
+        return
     if self.col_type != "-1":
         self.unk_col_type = 0
     setColourByCollisionType(context.object)
 
 def updateSurfaceType(self, context):
+    if not context.object:
+        return
     if self.surface_type != "-1":
         self.unk_surface_type = 0
 
@@ -57,10 +61,6 @@ surfaceTypes = [
 ]
 
 class ColMeshProps(bpy.types.PropertyGroup):
-    is_col_mesh: bpy.props.BoolProperty(
-        name="Is Collision Mesh",
-        default=False
-    )
     col_type: bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType, default="255")
     unk_col_type: bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255)
     modifier: bpy.props.EnumProperty(name="Modifier", items=colModifierTypes)
@@ -82,13 +82,6 @@ class B2N_PT_ColMeshProperties(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         obj = context.object
-
-        # Is Collision Mesh
-        box = layout.box()
-        row = box.row()
-        row.prop(obj.col_mesh_props, "is_col_mesh")
-        if not obj.col_mesh_props.is_col_mesh:
-            return
         
         # Collision Type
         box = layout.box()

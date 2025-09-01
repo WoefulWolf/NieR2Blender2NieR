@@ -184,7 +184,6 @@ def getColMeshGroups(collectionName):
     def objToKey(obj):
         return str({
             'name': getMeshName(obj),
-            'is_col_mesh': obj.col_mesh_props.is_col_mesh,
             'col_type': obj.col_mesh_props.col_type,
             'unk_col_type': obj.col_mesh_props.unk_col_type,
             'modifier': obj.col_mesh_props.modifier,
@@ -193,7 +192,7 @@ def getColMeshGroups(collectionName):
             'unk_byte': obj.col_mesh_props.unk_byte,
         })
 
-    meshes = [x for x in getAllMeshObjectsInOrder(collectionName) if x.col_mesh_props.is_col_mesh]
+    meshes = getAllMeshObjectsInOrder(collectionName)
 
     if bpy.context.scene["exportColTree"]:
         return [[x] for x in meshes]

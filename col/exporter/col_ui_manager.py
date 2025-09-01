@@ -41,7 +41,6 @@ class B2NApplyCollisionToAllSelected(bpy.types.Operator):
         for obj in bpy.context.selected_objects:
             if obj.type != "MESH":
                 continue
-            obj.col_mesh_props.is_col_mesh = context.object.col_mesh_props.is_col_mesh
             obj.col_mesh_props.col_type = context.object.col_mesh_props.col_type
             obj.col_mesh_props.unk_col_type = context.object.col_mesh_props.unk_col_type
             obj.col_mesh_props.modifier = context.object.col_mesh_props.modifier
@@ -61,7 +60,6 @@ class B2NJoinCollisionObjects(bpy.types.Operator):
         def objToKey(obj):
             return str({
                 'name': getMeshName(obj),
-                'is_col_mesh': obj.col_mesh_props.is_col_mesh,
                 'col_type': obj.col_mesh_props.col_type,
                 'unk_col_type': obj.col_mesh_props.unk_col_type,
                 'modifier': obj.col_mesh_props.modifier,

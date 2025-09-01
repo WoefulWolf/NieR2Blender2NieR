@@ -24,6 +24,8 @@ def copy_property_group(source_obj, target_obj, prop_name="mesh_group_props"):
 def on_mesh_group_props_update(self, context):
     if self.updated:
         return
+    if not context.object:
+        return
     source_obj = context.object
     source_mesh_name = source_obj.name.split('.')[0]
     objects = getAllMeshObjectsInOrder('WMB')

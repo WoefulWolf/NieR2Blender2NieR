@@ -34,7 +34,6 @@ def main(colFilePath):
             objName = meshName
             objMesh = bpy.data.meshes.new(objName)
             obj = bpy.data.objects.new(objName, objMesh)
-            obj.col_mesh_props.is_col_mesh = True
             colCollection.objects.link(obj)
             #obj.display_type = 'WIRE'
             obj.show_wire = True
