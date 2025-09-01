@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nier2Blender2NieR (NieR:Automata Data Exporter)",
     "author": "Woeful_Wolf & RaiderB",
-    "version": (0, 4, 0),
+    "version": (0, 4, 1),
     "blender": (2, 80, 0),
     "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files.",
     "category": "Import-Export"}
@@ -24,7 +24,7 @@ from .bxm.exporter.sarExportOperator import ExportNierSar
 from .bxm.importer.gaAreaImportOperator import ImportNierGaArea
 from .bxm.importer.sarImportOperator import ImportNierSar
 from .col.exporter.colExportOperator import ExportNierCol
-from .col.importer.colImportOperator import ImportNierCol
+from .col.importer.colImportOperator import ImportNierCol, ColMeshProps, B2N_PT_ColMeshProperties
 from .dat_dtt.importer.datImportOperator import ImportNierDtt, ImportNierDat
 from .lay.exporter.layExportOperator import ExportNierLay
 from .lay.importer.layImportOperator import ImportNierLay
@@ -35,7 +35,7 @@ from .mot.common.pl000fChecks import HidePl000fIrrelevantBones, RemovePl000fIrre
 from .sync import install_dependencies
 from .sync.shared import getDropDownOperatorAndIcon
 from .wmb.exporter.wmbExportOperator import ExportNierWmb
-from .wmb.importer.wmbImportOperator import ImportNierWmb
+from .wmb.importer.wmbImportOperator import ImportNierWmb, MeshGroupProps, B2N_PT_MeshGroupProperties
 from .wta_wtp.importer.wtpImportOperator import ExtractNierWtaWtp
 from .xmlScripting.importer.yaxXmlImportOperator import ImportNierYaxXml
 from .bxm.importer import physPanel
@@ -120,93 +120,9 @@ def menu_func_editbone_utils(self, context):
     yorha_icon = pcoll["yorha"]
     self.layout.menu(NierArmatureMenu.bl_idname, icon_value=yorha_icon.icon_id)
 
-def copy_property_group(source_obj, target_obj, prop_name="mesh_group_props"):
-    source_props = getattr(source_obj, prop_name, None)
-    target_props = getattr(target_obj, prop_name, None)
-
-    if not source_props or not target_props:
-        print("Property group not found on one of the objects.")
-        return
-
-    # Copy each property using RNA
-    for prop_id in source_props.bl_rna.properties:
-        if prop_id.is_readonly or prop_id.identifier in ["rna_type", "updated"]:
-            continue  # Skip read-only/internal/updated properties
-
-        value = getattr(source_props, prop_id.identifier)
-        setattr(target_props, prop_id.identifier, value)
-
-def on_mesh_group_props_update(self, context):
-    if self.updated:
-        return
-    source_obj = context.object
-    source_mesh_name = source_obj.name.split('.')[0]
-    objects = getAllMeshObjectsInOrder('WMB')
-    for obj in objects:
-        if obj == source_obj:
-            continue
-        mesh_name = obj.name.split('.')[0]
-        if mesh_name == source_mesh_name:
-            obj.mesh_group_props.updated = True
-            copy_property_group(source_obj, obj)
-            obj.mesh_group_props.updated = False
-
-class MeshGroupProps(bpy.types.PropertyGroup):
-    updated: bpy.props.BoolProperty(
-        name="Updated",
-        default=False
-    )
-    # Index
-    override_index: bpy.props.BoolProperty(
-        name="Override Index",
-        default=False,
-        update=on_mesh_group_props_update
-    )
-    index: bpy.props.IntProperty(
-        name="Index",
-        default=-1,
-        update=on_mesh_group_props_update
-    )
-    lod_level: bpy.props.IntProperty(
-        name="LOD Level",
-        default=0,
-        update=on_mesh_group_props_update
-    )
-    lod_name: bpy.props.StringProperty(
-        name="LOD Name",
-        default="LOD0",
-        update=on_mesh_group_props_update
-    )
-
-
-class B2N_PT_MeshGroupProperties(bpy.types.Panel):
-    bl_label = "NieR:Automata Mesh Group Properties"
-    bl_idname = "OBJECT_PT_mesh_group_properties"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "object"
-
-    @classmethod
-    def poll(cls, context):
-        return context.object is not None
-
-    def draw(self, context):
-        layout = self.layout
-        obj = context.object
-
-        # Index
-        box = layout.box()
-        row = box.row()
-        row.prop(obj.mesh_group_props, "override_index")
-        if obj.mesh_group_props.override_index:
-            row.prop(obj.mesh_group_props, "index")
-        # LOD
-        box = layout.box()
-        row = box.row()
-        row.prop(obj.mesh_group_props, "lod_name", text="")
-        row.prop(obj.mesh_group_props, "lod_level")
-
 classes = (
+    ColMeshProps,
+    B2N_PT_ColMeshProperties,
     MeshGroupProps,
     B2N_PT_MeshGroupProperties,
     ImportNierWmb,
@@ -265,11 +181,7 @@ def register():
     bpy.types.VIEW3D_MT_edit_armature.append(menu_func_editbone_utils)
     install_dependencies.register()
 
-    bpy.types.Object.collisionType = bpy.props.EnumProperty(name="Collision Type", items=collisionTypes, update=updateCollisionType)
-    bpy.types.Object.UNKNOWN_collisionType = bpy.props.IntProperty(name="Unknown Collision Type", min=0, max=255, update=updateCollisionType)
-    bpy.types.Object.colModifier = bpy.props.EnumProperty(name="Modifier", items=colModifierTypes)
-    bpy.types.Object.surfaceType = bpy.props.EnumProperty(name="Surface Type", items=surfaceTypes)
-
+    bpy.types.Object.col_mesh_props = bpy.props.PointerProperty(type=ColMeshProps)
     bpy.types.Object.mesh_group_props = bpy.props.PointerProperty(type=MeshGroupProps)
 
     bpy.app.handlers.load_post.append(checkCustomPanelsEnableDisable)
@@ -296,6 +208,7 @@ def unregister():
     bpy.types.VIEW3D_MT_object.remove(menu_func_utils)
     bpy.types.VIEW3D_MT_edit_armature.remove(menu_func_editbone_utils)
 
+    del bpy.types.Object.col_mesh_props
     del bpy.types.Object.mesh_group_props
 
     bpy.app.handlers.load_post.remove(checkCustomPanelsEnableDisable)
@@ -374,66 +287,6 @@ def migrateDatDirs():
         if os.path.isdir(datDir):
             if not importContentsFileFromFolder(datDir, dirType["newList"]):
                 print("No dat_info.json or file_order.metadata found in " + datDir)
-
-## Collision Extras
-def setColourByCollisionType(obj):
-    opacity = 1.0
-    collisionType = int(obj.collisionType)
-    if collisionType == 127:
-        obj.color = [0.0, 1.0, 0.0, opacity]
-    elif collisionType == 88:
-        obj.color = [0.0, 0.5, 1.0, opacity]
-    elif collisionType == 3:
-        obj.color = [1.0, 0.5, 0.0, opacity]
-    elif collisionType == 255:
-        obj.color = [1.0, 0.0, 0.0, opacity]
-    else:
-        obj.color = [1.0, 0.45, 1.0, opacity]
-
-def updateCollisionType(self, context):
-    setColourByCollisionType(self)
-
-collisionTypes = [
-    ("-1", "UNKNOWN", ""),
-    ("3", "Block Actors", "If modifier is enabled, this will not block players who are jumping (e.g. to prevent accidentally walking off ledges)."),
-    ("88", "Water", ""),
-    ("127", "Grabbable Block All", ""),
-    ("255", "Block All", "")
-]
-
-# Identified by NSA Cloud
-surfaceTypes = [
-    ("-1", "UNKNOWN", ""),
-    ("0", "Concrete1", ""),
-    ("1", "Dirt", ""),
-    ("2", "Concrete2", ""),
-    ("3", "Metal Floor", ""),
-    ("4", "Rubble", ""),
-    ("5", "Metal Grate", ""),
-    ("6", "Gravel", ""),
-    ("7", "Rope Bridge", ""),
-    ("8", "Grass", ""),
-    ("9", "Wood Plank", ""),
-    ("11", "Water", ""),
-    ("12", "Sand", ""),
-    ("13", "Rocky Gravel 1", ""),
-    ("15", "Mud", ""),
-    ("16", "Rocky Gravel 2", ""),
-    ("17", "Concrete 3", ""),
-    ("18", "Bunker Floor", ""),
-    ("22", "Concrete 4", ""),
-    ("23", "Car", ""),
-    ("24", "Flowers", "")
-]
-
-colModifierTypes = [
-    ("0", "", ""),
-    ("1", "Slidable", ""),
-    ("2", "Transparent wall", ""),
-    ("8", "Unknown (8)", ""),
-    ("32", "Unknown (32)", ""),
-    ("129", "Unknown (129)", ""),
-]
 
 if __name__ == '__main__':
     register()

@@ -9,20 +9,20 @@ from ...utils.ioUtils import write_uInt32, write_byte
 
 
 class Mesh:
-    def __init__(self, meshBlenderObject: bpy.types.Object, nameGroups: NameGroup, batchOffset: int, boneMap: BoneMap):
-        meshIndex = meshBlenderObject.name.split("-")[0]
+    def __init__(self, meshIndex: int, objs: list[bpy.types.Object], nameGroups: NameGroup, batchOffset: int, boneMap: BoneMap):
+        bObj = objs[0]
 
-        self.collisionType = int(meshBlenderObject.collisionType)
+        self.collisionType = int(bObj.col_mesh_props.col_type)
         if self.collisionType == -1:
-            self.collisionType = meshBlenderObject["UNKNOWN_collisionType"]
-        self.modifier = int(meshBlenderObject.colModifier)
-        self.unknownByte = meshBlenderObject["unknownByte"]
-        self.surfaceType = int(meshBlenderObject.surfaceType)
+            self.collisionType = bObj.col_mesh_props.unk_col_type
+        self.modifier = int(bObj.col_mesh_props.modifier)
+        self.unknownByte = bObj.col_mesh_props.unk_byte
+        self.surfaceType = int(bObj.col_mesh_props.surface_type)
         if self.surfaceType == -1:
-            self.surfaceType = meshBlenderObject["UNKNOWN_surfaceType"]
+            self.surfaceType = bObj.col_mesh_props.unk_surface_type
 
-        self.nameIndex = nameGroups.get_nameIndex(meshBlenderObject.name.split("-")[1])
-        self.batchType = 2 if len(meshBlenderObject.vertex_groups) <= 1 else 3
+        self.nameIndex = nameGroups.get_nameIndex(getMeshName(bObj))
+        self.batchType = 2 if len(bObj.vertex_groups) <= 1 else 3
         self.batchOffset = batchOffset
 
         self.totalBatchesStructSize = 0
@@ -30,17 +30,15 @@ class Mesh:
 
         # Get the batches for this mesh
         self.batches = []
-        for obj in objectsInCollectionInOrder("COL"):
-            if obj.type == 'MESH':
-                if obj.name.split("-")[0] == meshIndex:
-                    if self.batchType == 2:
-                        newBatch = BatchT2(obj, boneMap)
-                    else:
-                        newBatch = BatchT3(obj, boneMap)
+        for obj in objs:
+            if self.batchType == 2:
+                newBatch = BatchT2(obj, boneMap)
+            else:
+                newBatch = BatchT3(obj, boneMap)
 
-                    self.batches.append(newBatch)
-                    self.totalBatchesStructSize += newBatch.headerStructSize
-                    batchesDataOffset += newBatch.headerStructSize
+            self.batches.append(newBatch)
+            self.totalBatchesStructSize += newBatch.headerStructSize
+            batchesDataOffset += newBatch.headerStructSize
 
         # data offset are only known after all batches are created
         for batch in self.batches:
@@ -55,22 +53,16 @@ class Meshes:
     def __init__(self, meshesStartOffset, nameGroups, boneMap: BoneMap, boneMap2: BoneMap):
 
         # Get all the mesh indices
-        meshBlenderObjs = []
-        meshIndices = []
-        for obj in objectsInCollectionInOrder("COL"):
-            if obj.type == 'MESH':
-                meshIndex = obj.name.split("-")[0]
-                if meshIndex not in meshIndices:
-                    meshIndices.append(meshIndex)
-                    meshBlenderObjs.append(obj)
+        meshGroups = getColMeshGroups("COL")
 
         # Get meshes
-        batchesStartOffset = meshesStartOffset + (len(meshIndices) * 20)
+        batchesStartOffset = meshesStartOffset + (len(meshGroups) * 20)
         currentBatchOffset = batchesStartOffset
         totalMeshesSize = 0
         self.meshes = []
-        for obj in meshBlenderObjs:
-            newMesh = Mesh(obj, nameGroups, currentBatchOffset, boneMap if len(obj.vertex_groups) <= 1 else boneMap2)
+        for meshIdx, group in enumerate(meshGroups):
+            obj = group[0]
+            newMesh = Mesh(meshIdx, group, nameGroups, currentBatchOffset, boneMap if len(obj.vertex_groups) <= 1 else boneMap2)
             self.meshes.append(newMesh)
             currentBatchOffset += newMesh.totalBatchesStructSize
             totalMeshesSize += newMesh.totalStructSize

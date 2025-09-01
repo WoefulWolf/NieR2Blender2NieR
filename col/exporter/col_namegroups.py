@@ -11,11 +11,10 @@ class NameGroups:
         
         # Get all names to add
         names_to_add = []
-        for obj in objectsInCollectionInOrder('COL'):
-            if obj.type == 'MESH':
-                name = obj.name.split("-")[1]
-                if name not in names_to_add:
-                    names_to_add.append(name)
+        for obj in getAllMeshObjectsInOrder('COL'):
+            name = getMeshName(obj)
+            if name not in names_to_add:
+                names_to_add.append(name)
 
         # Create the namegroups and structSize
         self.structSize = len(names_to_add) * 4

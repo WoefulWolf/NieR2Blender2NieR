@@ -4,7 +4,7 @@ from typing import List, Dict
 import bpy
 
 from .col import Col, Batch
-from ...utils.util import centre_origins, getBoneID, setViewportColorTypeToObject
+from ...utils.util import centre_origins, getBoneID, setViewportColorTypeToObject, setColourByCollisionType
 from mathutils import Matrix
 
 
@@ -31,9 +31,10 @@ def main(colFilePath):
 
         # Create batches
         for batchIdx, batch in enumerate(mesh.batches):
-            objName = str(meshIdx) + "-" + meshName# + "-" + str(batchIdx)
+            objName = meshName
             objMesh = bpy.data.meshes.new(objName)
             obj = bpy.data.objects.new(objName, objMesh)
+            obj.col_mesh_props.is_col_mesh = True
             colCollection.objects.link(obj)
             #obj.display_type = 'WIRE'
             obj.show_wire = True
@@ -44,22 +45,23 @@ def main(colFilePath):
                 bindBones(obj, mesh.batchType, batch, col.boneMaps, col.boneMaps2)
 
             try:
-                obj.collisionType = str(mesh.collisionType)
+                obj.col_mesh_props.col_type = str(mesh.collisionType)
             except:
                 print("[!] Collision mesh flagged with unknown collisionType:", mesh.collisionType)
-                obj.collisionType = "-1"
-                obj["UNKNOWN_collisionType"] = mesh.collisionType
+                obj.col_mesh_props.col_type = "-1"
+                obj.col_mesh_props.unk_col_type = mesh.collisionType
 
-            obj.colModifier = str(mesh.modifier)
-            obj["unknownByte"] = mesh.unknownByte
+            obj.col_mesh_props.modifier = str(mesh.modifier)
+            obj.col_mesh_props.unk_byte = mesh.unknownByte
 
             try:
-                obj.surfaceType = str(mesh.surfaceType)
+                obj.col_mesh_props.surface_type = str(mesh.surfaceType)
             except:
                 print("[!] Collision mesh flagged with unknown surfaceType:", mesh.surfaceType)
-                obj.surfaceType = "-1"
-                obj["UNKNOWN_surfaceType"] = mesh.surfaceType
+                obj.col_mesh_props.surface_type = "-1"
+                obj.col_mesh_props.unk_surface_type = mesh.surfaceType
 
+            setColourByCollisionType(obj)
             # obj.rotation_euler = (math.radians(90),0,0)
 
     # Create colTreeNodes Sub-Collection

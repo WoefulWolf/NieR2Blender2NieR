@@ -88,8 +88,7 @@ def getGlobalBoundingBox():
     return midPoint, scale
 
 def getObjKey(obj):
-    p1 = obj.name.split('-')
-    return f"0000-{p1}"
+    return obj.name
 
 def objectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].objects, key=getObjKey) if collectionName in bpy.data.collections else []
@@ -181,6 +180,33 @@ def getMeshVertexGroups(collectionName):
         group_map[identifier].append(mesh)
     return list(group_map.values())
 
+def getColMeshGroups(collectionName):
+    def objToKey(obj):
+        return str({
+            'name': getMeshName(obj),
+            'is_col_mesh': obj.col_mesh_props.is_col_mesh,
+            'col_type': obj.col_mesh_props.col_type,
+            'unk_col_type': obj.col_mesh_props.unk_col_type,
+            'modifier': obj.col_mesh_props.modifier,
+            'surface_type': obj.col_mesh_props.surface_type,
+            'unk_surface_type': obj.col_mesh_props.unk_surface_type,
+            'unk_byte': obj.col_mesh_props.unk_byte,
+        })
+
+    meshes = [x for x in getAllMeshObjectsInOrder(collectionName) if x.col_mesh_props.is_col_mesh]
+
+    if bpy.context.scene["exportColTree"]:
+        return [[x] for x in meshes]
+
+    group_map = {}
+
+    for mesh in meshes:
+        identifier = objToKey(mesh)
+        if identifier not in group_map:
+            group_map[identifier] = []
+        group_map[identifier].append(mesh)
+    return list(group_map.values())
+
 def getChildrenInOrder(obj: bpy.types.Object) -> List[bpy.types.Object]:
     return sorted(obj.children, key=getObjKey)
 
@@ -248,6 +274,24 @@ def getVolumeSurrounding(volumeCenter, volumeScale, otherVolumeCenter, otherVolu
     midPoint = [(minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2]
     scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
     return midPoint, scale
+
+def setColourByCollisionType(obj):
+    try:
+        opacity = bpy.context.scene.collisionTools.globalAlpha
+    except:
+        opacity = 1.0
+
+    collisionType = int(obj.col_mesh_props.col_type)
+    if collisionType == 127:
+        obj.color = [0.0, 1.0, 0.0, opacity]
+    elif collisionType == 88:
+        obj.color = [0.0, 0.5, 1.0, opacity]
+    elif collisionType == 3:
+        obj.color = [1.0, 0.5, 0.0, opacity]
+    elif collisionType == 255:
+        obj.color = [1.0, 0.0, 0.0, opacity]
+    else:
+        obj.color = [1.0, 0.45, 1.0, opacity]
 
 class custom_ColTreeNode:
     def __init__(self):

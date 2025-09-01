@@ -1,5 +1,5 @@
 import math
-
+import itertools
 from ...utils.ioUtils import write_Int32, write_uInt32, write_float
 
 
@@ -67,7 +67,8 @@ def calculate_meshIndices(colTreeNodes):
         print("[>] All meshes found appropriate nodes! :D")
 """
 def getColMeshIndex(objToFind):
-    colMeshObjs = [obj for obj in objectsInCollectionInOrder("COL") if obj.type == 'MESH']
+    groups = getColMeshGroups("COL")
+    colMeshObjs = list(itertools.chain.from_iterable(groups))
     for i, obj in enumerate(colMeshObjs):
         if obj == objToFind:
             return i
@@ -95,7 +96,8 @@ def generate_colTreeNodes():
     # custom_colTreeNodesCollection.objects.link(rootNode)
     # rootNode.rotation_euler = (math.radians(90),0,0)
 
-    unassigned_objs = [obj for obj in objectsInCollectionInOrder("COL") if obj.type == 'MESH']
+    groups = getColMeshGroups("COL")
+    unassigned_objs = list(itertools.chain.from_iterable(groups))
 
     nodes = []
     while len(unassigned_objs) > 0:
