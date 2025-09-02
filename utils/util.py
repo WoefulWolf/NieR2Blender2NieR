@@ -87,6 +87,13 @@ def getGlobalBoundingBox():
     scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
     return midPoint, scale
 
+def isObjInCollection(obj, collectionName):
+    if not collectionName in bpy.data.collections:
+        return False
+    if obj in bpy.data.collections[collectionName].all_objects.values():
+        return True
+    return False
+
 def getObjKey(obj):
     return obj.name
 

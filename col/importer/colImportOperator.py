@@ -3,7 +3,7 @@ from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
 from ..exporter.col_ui_manager import enableCollisionTools
-from ...utils.util import setExportFieldsFromImportFile, setColourByCollisionType
+from ...utils.util import setExportFieldsFromImportFile, setColourByCollisionType, isObjInCollection
 
 def updateCollisionType(self, context):
     if not context.object:
@@ -77,7 +77,7 @@ class B2N_PT_ColMeshProperties(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None and context.object.type == 'MESH'
+        return context.object is not None and context.object.type == 'MESH' and isObjInCollection(context.object, "COL")
 
     def draw(self, context):
         layout = self.layout

@@ -3,7 +3,7 @@ from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
 from ...utils.visibilitySwitcher import enableVisibilitySelector
-from ...utils.util import setExportFieldsFromImportFile, getAllMeshObjectsInOrder
+from ...utils.util import setExportFieldsFromImportFile, getAllMeshObjectsInOrder, isObjInCollection
 
 def copy_property_group(source_obj, target_obj, prop_name="mesh_group_props"):
     source_props = getattr(source_obj, prop_name, None)
@@ -75,7 +75,7 @@ class B2N_PT_MeshGroupProperties(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None and context.object.type == 'MESH'
+        return context.object is not None and context.object.type == 'MESH' and isObjInCollection(context.object, "WMB")
 
     def draw(self, context):
         layout = self.layout
