@@ -35,28 +35,27 @@ colModifierTypes = [
     ("129", "Unknown (129)", ""),
 ]
 
-# Identified by NSA Cloud
 surfaceTypes = [
     ("-1", "UNKNOWN", ""),
-    ("0", "Concrete1", ""),
+    ("0", "Concrete", ""),
     ("1", "Dirt", ""),
-    ("2", "Concrete2", ""),
-    ("3", "Metal Floor", ""),
+    ("2", "Rock", ""),
+    ("3", "Metal Solid", ""),
     ("4", "Rubble", ""),
     ("5", "Metal Grate", ""),
-    ("6", "Gravel", ""),
-    ("7", "Rope Bridge", ""),
-    ("8", "Grass", ""),
-    ("9", "Wood Plank", ""),
+    ("6", "Tree Trunk", ""),
+    ("7", "Wood", ""),
+    ("8", "Grass 1", ""),
+    ("9", "Grass 2", ""),
     ("11", "Water", ""),
     ("12", "Sand", ""),
-    ("13", "Rocky Gravel 1", ""),
-    ("15", "Mud", ""),
-    ("16", "Rocky Gravel 2", ""),
-    ("17", "Concrete 3", ""),
+    ("13", "Gravel 1", ""),
+    ("15", "Oil", ""),
+    ("16", "Rubble 2", ""),
+    ("17", "Crystallized Silicon & Carbon", ""),
     ("18", "Bunker Floor", ""),
-    ("22", "Concrete 4", ""),
-    ("23", "Car", ""),
+    ("22", "Concrete 2", ""),
+    ("23", "Metal Hollow", ""),
     ("24", "Flowers", "")
 ]
 
