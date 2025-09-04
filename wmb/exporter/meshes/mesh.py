@@ -56,7 +56,6 @@ class c_mesh(object):
 
         def get_bones(self, obj):
             bones = []
-            numBones = 0
             obj_mesh_name = getMeshName(obj)
             for mesh in getAllMeshObjectsInOrder('WMB'):
                 if getMeshName(mesh) == obj_mesh_name:
@@ -65,12 +64,15 @@ class c_mesh(object):
                         if boneName not in bones:
                             if boneName:
                                 bones.append(boneName)
-                                numBones += 1
+
             if len(bones) == 0:
-                bones.append(0)
+                for obj in bpy.data.collections['WMB'].all_objects:
+                    if obj.type == 'ARMATURE' and len(obj.data.bones) > 0:
+                        bones.append(0)
+                        break
 
             bones.sort()
-            return bones, numBones
+            return bones, len(bones)
       
         self.bones, self.numBones = get_bones(self, obj)
 

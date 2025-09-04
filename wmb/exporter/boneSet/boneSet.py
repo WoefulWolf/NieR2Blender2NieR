@@ -41,20 +41,16 @@ class c_boneSet(object):
 
 class c_b_boneSets(object):
     def __init__(self):
-        # Find Armature
+        # Generate boneMap
+        boneMap = []
         for obj in bpy.data.collections['WMB'].all_objects:
             if obj.type == 'ARMATURE':
                 amt = obj
-
-        # Generate boneMap
-        boneMap = []
-        for obj in getAllMeshObjectsInOrder('WMB'):
-            for group in obj.vertex_groups:
-                boneID = getBoneIndexByName("WMB", group.name)
-                if boneID not in boneMap:
-                    #print("Adding ID to boneMap: " + str(boneID))
+                for bone in amt.data.bones:
+                    boneID = getBoneIndexByName("WMB", bone.name)
                     if boneID != None:
-                        boneMap.append(boneID)
+                        if boneID not in boneMap:
+                            boneMap.append(boneID)
 
         # Set boneMap to armature
         boneMap = sorted(boneMap)
@@ -73,6 +69,9 @@ class c_b_boneSets(object):
                     if boneID != None:
                         boneMapIndex = boneMap.index(boneID)
                         vertex_group_bones.append(boneMapIndex)
+
+                if len(vertex_group_bones) == 0:
+                    continue
                     
                 if vertex_group_bones not in b_boneSets:
                     b_boneSets.append(vertex_group_bones)
