@@ -270,7 +270,7 @@ class ExportAll(bpy.types.Operator):
         datFilePath = os.path.join(datDttExportDir, datFileName)
         dttFilePath = os.path.join(datDttExportDir, dttFileName)
 
-        if bpy.context.view_layer.objects.active is None:
+        if bpy.context.view_layer.objects.active is None and len(bpy.data.objects) > 0:
             bpy.context.view_layer.objects.active = bpy.data.objects[0]
         bpy.ops.object.mode_set(mode='OBJECT')
 
