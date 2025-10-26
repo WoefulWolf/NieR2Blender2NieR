@@ -2,7 +2,7 @@ import os
 import bpy
 
 from ...utils.util import getTexture
-from ...utils.nodes import grid_location, invert_channel, if_nz
+from ...utils.nodes import grid_location, invert_channel, if_nz, binarize
 
 # material_array = [material_name, textures, uniforms, shader_name, technique_name, parameterGroups]
 def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
@@ -112,8 +112,7 @@ def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
     links.new(albedo.outputs[1], if_nz_1bitmask.inputs['True'])
 
     bitmask = nodes.new('ShaderNodeGroup')
-    bitmask.label = 'Binarize'
-    bitmask.node_tree = if_nz("Float")
+    bitmask.node_tree = binarize("Float")
     bitmask.location = grid_location(5, -1)
     bitmask.hide = True
     bitmask.inputs['True'].default_value = 1.0
