@@ -136,12 +136,12 @@ def calculateVertexFlags(obj):
             obj.data.uv_layers.new(name="UVMap2")
             print("[i] Maximize Shader Compatibility: Added UVMap2 to", obj.name)
 
-        if len(obj.data.vertex_colors) == 0:
-            vertex_color = obj.data.vertex_colors.new()
-            vertex_color.active = True
-            for loop_idx in range(len(obj.data.loops)):
-                vertex_color.data[loop_idx].color = [0, 0, 0, 0]
-            print("[i] Maximize Shader Compatibility: Added Color attribute to", obj.name)
+        # if len(obj.data.vertex_colors) == 0:
+        #     vertex_color = obj.data.vertex_colors.new()
+        #     vertex_color.active = True
+        #     for loop_idx in range(len(obj.data.loops)):
+        #         vertex_color.data[loop_idx].color = [0, 0, 0, 0]
+        #     print("[i] Maximize Shader Compatibility: Added Color attribute to", obj.name)
 
     # You cannot have bones without at least 2 UVs
     if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:
