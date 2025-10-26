@@ -13,6 +13,7 @@ def clh_bone_items(self, context):
 def update_clh_bone_items():
     global bone_items
     bone_items = []
+    bone_items.append(("4095", "None", ""))
 
     armatureObj = None
     for obj in bpy.data.collections['WMB'].all_objects:
@@ -23,6 +24,8 @@ def update_clh_bone_items():
     if armatureObj is None:
         return
 
+    seen_ids = set()
+    seen_ids.add("4095")
 
     for bone in armatureObj.data.bones:
         if boneHasID(bone):
@@ -35,9 +38,11 @@ def update_clh_bone_items():
                 if found_bone:
                     continue
 
-            bone_items.append((bone_id, bone.name, ""))
+            if bone_id not in seen_ids:
+                bone_items.append((bone_id, bone.name, ""))
+                seen_ids.add(bone_id)
     
-    bone_items.sort(key=lambda x: int(x[0]))
+    bone_items.sort(key=lambda x: (x[0] != "4095", int(x[0])))
 
 def on_filter_out_clp_update(self, context):
     update_clh_bone_items()
