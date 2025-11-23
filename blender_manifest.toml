@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "nier2blender2nier"
+version = "0.4.10"
+name = "NieR2Blender2NieR (NieR:Automata Asset Tools)"
+tagline = "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files"
+maintainer = "Woeful_Wolf & RaiderB"
+type = "add-on"
+website = "https://github.com/WoefulWolf/NieR2Blender2NieR"
+tags = ["Import-Export"]
+permissions = ["files"]
+
+blender_version_min = "4.2.0"
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
