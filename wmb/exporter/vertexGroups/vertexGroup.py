@@ -17,7 +17,8 @@ class c_vertexGroup(object):
                     if int(obj_name[-1]) == vertexGroupIndex:
                         if len(obj.data.uv_layers) == 0:
                             obj.data.uv_layers.new()
-                        obj.data.calc_tangents()
+                        if len(obj.data.loops) > 0:
+                            obj.data.calc_tangents()
                         objs[int(obj_name[0])] = obj
 
             blenderObjects = []
