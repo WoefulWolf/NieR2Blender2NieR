@@ -271,12 +271,16 @@ def construct_materials(texture_dir, material_array):
 	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/" + getPreferences().shaderParamsFile, "r")
 	shaders = json.load(shaderFile)
 
+	# One list of names per parameter group.
+	names = shaders.get(shader_name, {}).get("Parameters", [])
+
 	for gindx, parameterGroup in enumerate(parameterGroups):
+		groupNames = names[gindx] if gindx < len(names) else []
 		for pindx, parameter in enumerate(parameterGroup):
-			if (gindx == 0) and (shader_name in shaders) and (pindx < len(shaders[shader_name]["Parameters"])):
-				material[str(gindx) + '_' + str(pindx).zfill(2) + '_' + shaders[shader_name]["Parameters"][pindx]] = parameter
-			else:
-				material[str(gindx) + '_' + str(pindx).zfill(2)] = parameter
+			key = str(gindx) + '_' + str(pindx).zfill(2)
+			if pindx < len(groupNames):
+				key += '_' + groupNames[pindx]
+			material[key] = parameter
 
 	albedo_maps = {}
 	normal_maps = {}
