@@ -249,7 +249,7 @@ def separate_color(tree, color, location=(0, 0)):
     connect(tree, node.inputs['Color'], color)
     return node.outputs
 
-GROUP_VERSION = 2
+GROUP_VERSION = 3
 
 def existing_group(name):
     group = bpy.data.node_groups.get(name)
@@ -306,6 +306,33 @@ def parameter_node(material, name, default, location):
     target.id = material
     target.data_path = '["%s"]' % key
     return node
+
+def enum_value(material, prop, item):
+    return material.bl_rna.properties[prop].enum_items[item].value
+
+def flag_driver(material, prop, keys, on, off):
+    driver = material.driver_add(prop).driver
+    driver.type = 'SCRIPTED'
+    for i, key in enumerate(keys):
+        variable = driver.variables.new()
+        variable.name = 'flag%d' % i
+        variable.type = 'SINGLE_PROP'
+        target = variable.targets[0]
+        target.id_type = 'MATERIAL'
+        target.id = material
+        target.data_path = '["%s"]' % key
+    flags = ', '.join(variable.name for variable in driver.variables)
+    driver.expression = '%d if %s else %d' % (on, 'max(%s)' % flags if len(keys) > 1 else flags, off)
+
+def blend_mode_driver(material, names):
+    keys = [key for key in (parameter_key(material, name) for name in names) if key is not None]
+    if not keys:
+        return
+    if hasattr(material, 'surface_render_method'):
+        flag_driver(material, 'surface_render_method', keys, enum_value(material, 'surface_render_method', 'BLENDED'), enum_value(material, 'surface_render_method', material.surface_render_method))
+        return
+    flag_driver(material, 'blend_method', keys, enum_value(material, 'blend_method', 'BLEND'), enum_value(material, 'blend_method', material.blend_method))
+    flag_driver(material, 'shadow_method', keys, enum_value(material, 'shadow_method', 'NONE'), enum_value(material, 'shadow_method', material.shadow_method))
 
 TEXTURE_TYPE_NAMES = [
     ['g_AlbedoMap1', 'g_AlbedoMap', 'g_AlbedoColor'],
@@ -526,6 +553,7 @@ def surface():
         ('Occlusion', 'Float', 1.0),
         ('Alpha', 'Float', 1.0),
         ('1-Bit Mask', 'Float', 0.0),
+        ('Decal', 'Float', 0.0),
     ], [('Shader', 'Shader', None)], 'SHADER')
 
     black = add_node(group, 'ShaderNodeEmission', grid_location(0, 1), label='No light')
@@ -538,9 +566,14 @@ def surface():
 
     kept = math_node(group, 'GREATER_THAN', inputs['Alpha'], 0.8 - 1e-6, location=grid_location(0, 3))
     visible = mix_node(group, 'Float', inputs['1-Bit Mask'], 1.0, kept, location=grid_location(1, 3))
+    blended = mix_node(group, 'Float', inputs['Decal'], 1.0, inputs['Alpha'], location=grid_location(1, 4))
+    light_path = add_node(group, 'ShaderNodeLightPath', grid_location(0, 5))
+    no_shadow = math_node(group, 'MULTIPLY', inputs['Decal'], light_path.outputs['Is Shadow Ray'], location=grid_location(1, 5))
+    coverage = math_node(group, 'MULTIPLY', visible, blended, location=grid_location(2, 3))
+    coverage = math_node(group, 'MULTIPLY', coverage, math_node(group, 'SUBTRACT', 1.0, no_shadow, location=grid_location(2, 5)), location=grid_location(3, 3))
     transparent = add_node(group, 'ShaderNodeBsdfTransparent', grid_location(1, 2))
-    cut_out = add_node(group, 'ShaderNodeMixShader', grid_location(2, 0), label='Cut-out')
-    connect(group, cut_out.inputs[0], visible)
+    cut_out = add_node(group, 'ShaderNodeMixShader', grid_location(4, 0), label='Cut-out')
+    connect(group, cut_out.inputs[0], coverage)
     connect(group, cut_out.inputs[1], transparent.outputs[0])
     connect(group, cut_out.inputs[2], occluded.outputs[0])
     connect(group, outputs['Shader'], cut_out.outputs[0])

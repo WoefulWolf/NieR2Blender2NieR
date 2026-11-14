@@ -11,6 +11,7 @@ from .shader_PBS00_XXXXX import pbs00_xxxxx
 from .shader_CLT00_XXXXX import clt00_xxxxx
 from .shader_Hair01_XXXXX import hair01_xxxxx
 from .shader_SKN00_XXXXX import skn00_xxxxx
+from .shader_CNS00_XXXXX import cns00_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
 from ...utils.nodes import invert_channel
@@ -320,6 +321,9 @@ def construct_materials(texture_dir, material_array):
 		return material
 	elif shader_name == "SKN00_XXXXX":
 		skn00_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "CNS00_XXXXX":
+		cns00_xxxxx(material, material_array, texture_dir)
 		return material
 
 	# Recreate Nodes and Links with references

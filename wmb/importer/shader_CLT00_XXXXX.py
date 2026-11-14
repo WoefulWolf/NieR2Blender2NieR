@@ -1,7 +1,7 @@
 import bpy
 
 from ...utils.nodes import (grid_location, add_node, combine_color, separate_color, mix_node, group_node,
-                            parameter_node, texture_node, uv_node, material_output,
+                            parameter_node, blend_mode_driver, texture_node, uv_node, material_output,
                             uv_tiling, tangent_normal, fuzz, anisotropy, shading, surface)
 
 
@@ -87,7 +87,9 @@ def clt00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
         'Occlusion': occlusion_map if mask.image is not None else 1.0,
         'Alpha': albedo.outputs['Alpha'],
         '1-Bit Mask': value('g_1BitMask', 0.0, 8, -3),
+        'Decal': value('g_Decal', 0.0, 8, -4),
     }, grid_location(9, 0)).outputs['Shader']
     material_output(tree, shader, grid_location(10, 0))
+    blend_mode_driver(material, ['g_Decal'])
 
     return material

@@ -1,7 +1,7 @@
 import bpy
 
 from ...utils.nodes import (grid_location, combine_color, separate_color, math_node, mix_node, group_node,
-                            parameter_node, texture_node, uv_node, material_output,
+                            parameter_node, blend_mode_driver, texture_node, uv_node, material_output,
                             uv_tiling, tangent_normal, shading, surface)
 
 
@@ -64,7 +64,9 @@ def pbs00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
         'Occlusion': occlusion,
         'Alpha': albedo.outputs['Alpha'],
         '1-Bit Mask': value('g_1BitMask', 0.0, 7, -3),
+        'Decal': value('g_Decal', 0.0, 7, -4),
     }, grid_location(8, 0)).outputs['Shader']
     material_output(tree, shader, grid_location(9, 0))
+    blend_mode_driver(material, ['g_Decal'])
 
     return material
