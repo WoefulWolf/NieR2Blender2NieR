@@ -65,7 +65,9 @@ class c_material(object):
                 parameters = []
                 for key, value in material.items():
                     if key[0] == str(i):
-                        parameters.append(value)
+                        slot = key.split('_')[1] if '_' in key else ''
+                        parameters.append((int(slot) if slot.isdigit() else len(parameters), value))
+                parameters = [value for _, value in sorted(parameters, key=lambda parameter: parameter[0])]
                         
                 numParameters = len(parameters)
 
@@ -82,20 +84,21 @@ class c_material(object):
             return parameterGroups_StructSize
 
         def get_variables(self, material, offsetVariables):
-            numVariables = 0
+            values = {}
             for key, val in material.items():
-                if (isinstance(val, float)) and (key[0] not in ('0', '1')):
-                    numVariables += 1
-            
+                if isinstance(val, float) and not key[0].isdigit():
+                    values[key] = val
+            for key, val in material.items():
+                group, _, rest = key.partition('_')
+                index, _, name = rest.partition('_')
+                if group.isdigit() and index.isdigit() and name.startswith('g_') and name not in values and isinstance(val, (int, float)):
+                    values[name] = float(val)
+
             variables = []
-            offset = offsetVariables + numVariables * 8
-            for key, val in material.items():
-                if (isinstance(val, float)) and (key[0] not in ('0', '1')):
-                    offsetName = offset
-                    value = val
-                    name = key
-                    variables.append([offsetName, value, name])
-                    offset += len(name) + 1
+            offset = offsetVariables + len(values) * 8
+            for name, value in values.items():
+                variables.append([offset, value, name])
+                offset += len(name) + 1
             return variables
 
         def get_variables_StructSize(self, variables):

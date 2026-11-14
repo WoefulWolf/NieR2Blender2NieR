@@ -7,6 +7,9 @@ from mathutils import Vector, Matrix
 
 from .shader_PBS10_XXXXX import pbs10_xxxxx
 from .shader_PBS00_XXXXX import pbs00_xxxxx
+from .shader_CLT00_XXXXX import clt00_xxxxx
+from .shader_Hair01_XXXXX import hair01_xxxxx
+from .shader_SKN00_XXXXX import skn00_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
 from ...utils.nodes import invert_channel
@@ -261,10 +264,7 @@ def construct_materials(texture_dir, material_array):
 	material.node_tree.nodes.clear()
 
 	material.blend_method = 'CLIP'
-
-	# Shader Parameters
-	for key in uniforms.keys():
-		material[key] = uniforms.get(key)
+	material.use_backface_culling = True
 
 	# Custom Shader Parameters
 
@@ -274,13 +274,22 @@ def construct_materials(texture_dir, material_array):
 	# One list of names per parameter group.
 	names = shaders.get(shader_name, {}).get("Parameters", [])
 
+	slot_values = {}
 	for gindx, parameterGroup in enumerate(parameterGroups):
 		groupNames = names[gindx] if gindx < len(names) else []
 		for pindx, parameter in enumerate(parameterGroup):
 			key = str(gindx) + '_' + str(pindx).zfill(2)
 			if pindx < len(groupNames):
 				key += '_' + groupNames[pindx]
+				slot_values[groupNames[pindx]] = parameter
 			material[key] = parameter
+
+	# Shader Parameters
+	for key in uniforms.keys():
+		value = uniforms.get(key)
+		if key in slot_values and isinstance(value, (int, float)) and abs(slot_values[key] - value) <= 1e-6:
+			continue
+		material[key] = value
 
 	albedo_maps = {}
 	normal_maps = {}
@@ -293,19 +302,28 @@ def construct_materials(texture_dir, material_array):
 		texture_file = getTexture(texture_dir, textures[texturesType])
 		if texture_file != None:
 			if textures_type.find('albedo') > -1:
-				albedo_maps[textures_type] = textures.get(texturesType)
+				albedo_maps[texturesType] = textures.get(texturesType)
 			elif textures_type.find('normal') > -1:
-				normal_maps[textures_type] = textures.get(texturesType)
+				normal_maps[texturesType] = textures.get(texturesType)
 			elif textures_type.find('mask') > -1:
-				mask_maps[textures_type] = textures.get(texturesType)
+				mask_maps[texturesType] = textures.get(texturesType)
 			elif textures_type.find('curvature') > -1:
-				curvature_maps[textures_type] = textures.get(texturesType)	
+				curvature_maps[texturesType] = textures.get(texturesType)
 
 	if shader_name == "PBS10_XXXXX":
 		pbs10_xxxxx(material, material_array, texture_dir)
 		return material
 	elif shader_name == "PBS00_XXXXX":
 		pbs00_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "CLT00_XXXXX":
+		clt00_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "Hair01_XXXXX":
+		hair01_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "SKN00_XXXXX":
+		skn00_xxxxx(material, material_array, texture_dir)
 		return material
 
 	# Recreate Nodes and Links with references
@@ -327,7 +345,7 @@ def construct_materials(texture_dir, material_array):
 	# Albedo Nodes
 	albedo_nodes = []
 	albedo_mixRGB_nodes = []
-	for i, textureID in enumerate(albedo_maps.values()):
+	for i, (texture_name, textureID) in enumerate(albedo_maps.items()):
 		texture_file = getTexture(texture_dir, textureID)
 		if texture_file != None:
 			albedo_image = nodes.new(type='ShaderNodeTexImage')
@@ -335,10 +353,7 @@ def construct_materials(texture_dir, material_array):
 			albedo_image.location = 0,i*-60
 			albedo_image.image = bpy.data.images.load(texture_file)
 			albedo_image.hide = True
-			if i > 0:
-				albedo_image.label = "g_AlbedoMap" + str(i-1)
-			else:
-				albedo_image.label = "g_AlbedoMap"
+			albedo_image.label = texture_name
 
 			if i > 0:
 				mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
@@ -364,7 +379,7 @@ def construct_materials(texture_dir, material_array):
 	mask_nodes = []
 	mask_sepRGB_nodes = []
 	mask_invert_nodes = []
-	for i, textureID in enumerate(mask_maps.values()):
+	for i, (texture_name, textureID) in enumerate(mask_maps.items()):
 		texture_file = getTexture(texture_dir, textureID)
 		if texture_file != None:
 			mask_image = nodes.new(type='ShaderNodeTexImage')
@@ -373,10 +388,7 @@ def construct_materials(texture_dir, material_array):
 			mask_image.image = bpy.data.images.load(texture_file)
 			mask_image.image.colorspace_settings.name = 'Non-Color'
 			mask_image.hide = True
-			if i > 0:
-				mask_image.label = "g_MaskMap" + str(i-1)
-			else:
-				mask_image.label = "g_MaskMap"
+			mask_image.label = texture_name
 
 			if 'Hair' not in material['Shader_Name']:
 				invert_g_node = nodes.new('ShaderNodeGroup')
@@ -407,7 +419,7 @@ def construct_materials(texture_dir, material_array):
 	# Normal Nodes
 	normal_nodes = []
 	normal_mixRGB_nodes = []
-	for i, textureID in enumerate(normal_maps.values()):
+	for i, (texture_name, textureID) in enumerate(normal_maps.items()):
 		texture_file = getTexture(texture_dir, textureID)
 		if texture_file != None:
 			normal_image = nodes.new(type='ShaderNodeTexImage')
@@ -415,10 +427,7 @@ def construct_materials(texture_dir, material_array):
 			normal_image.image = bpy.data.images.load(texture_file)
 			normal_image.image.colorspace_settings.name = 'Non-Color'
 			normal_image.hide = True
-			if i > 0:
-				normal_image.label = "g_NormalMap" + str(i-1)
-			else:
-				normal_image.label = "g_NormalMap"
+			normal_image.label = texture_name
 
 			invert_g_node = nodes.new('ShaderNodeGroup')
 			invert_g_node.node_tree = invert_channel("Green")
@@ -453,7 +462,7 @@ def construct_materials(texture_dir, material_array):
 	curvature_nodes = []
 	curvature_sepRGB_nodes = []
 	curvature_mul_nodes = []
-	for i, textureID in enumerate(curvature_maps.values()):
+	for i, (texture_name, textureID) in enumerate(curvature_maps.items()):
 		texture_file = getTexture(texture_dir, textureID)
 		if texture_file != None:
 			curvature_image = nodes.new(type='ShaderNodeTexImage')
@@ -461,10 +470,7 @@ def construct_materials(texture_dir, material_array):
 			curvature_image.location = -600, ((len(albedo_maps)+1)*-60)-i*60+50
 			curvature_image.image = bpy.data.images.load(texture_file)
 			curvature_image.hide = True
-			if i > 0:
-				curvature_image.label = "g_CurvatureMap" + str(i-1)
-			else:
-				curvature_image.label = "g_CurvatureMap"
+			curvature_image.label = texture_name
 			sepRGB_shader = nodes.new(type="ShaderNodeSeparateColor")
 			curvature_sepRGB_nodes.append(sepRGB_shader)
 			sepRGB_shader.location = -350, ((len(albedo_maps)+1)*-60)-i*60+50
