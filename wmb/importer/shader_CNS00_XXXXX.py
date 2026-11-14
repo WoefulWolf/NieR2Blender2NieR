@@ -2,7 +2,7 @@ import bpy
 
 from ...utils.nodes import (grid_location, add_node, connect, combine_color, mix_node, vector_math_node,
                             group_node, parameter_node, blend_mode_driver, texture_node, uv_node, material_output, WHITE,
-                            uv_tiling, surface)
+                            uv_tiling, uv_scroll, surface)
 
 
 # material_array = [material_name, textures, uniforms, shader_name, technique_name, parameterGroups]
@@ -18,7 +18,12 @@ def cns00_xxxxx(material: bpy.types.Material, material_array, texture_dir: str):
         'X': value('g_Tile_X', 1.0, 0, 1),
         'Y': value('g_Tile_Y', 1.0, 0, 2),
     }, grid_location(1, 0)).outputs['UV']
-    albedo = texture_node(material, texture_dir, 'g_AlbedoMap', grid_location(2, 0), uv)
+    uv = group_node(tree, uv_scroll(), {
+        'UV': uv,
+        'X': value('g_UvAnimation_X', 0.0, 1, 1),
+        'Y': value('g_UvAnimation_Y', 0.0, 1, 2),
+    }, grid_location(2, 0)).outputs['UV']
+    albedo = texture_node(material, texture_dir, 'g_AlbedoMap', grid_location(3, 0), uv)
 
     albedo_color = combine_color(tree, *(value('g_AlbedoColor_' + axis, 1.0, 2, -4 + i) for i, axis in enumerate('XYZ')), location=grid_location(3, -3))
     color = mix_node(tree, 'Color', value('g_bAlbedoOverWrite', 0.0, 3, -1), albedo.outputs['Color'], albedo_color, location=grid_location(4, 0))

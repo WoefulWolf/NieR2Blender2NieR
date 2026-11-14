@@ -227,7 +227,7 @@ def vector_math_node(tree, operation, *values, location=(0, 0)):
     sockets = [node.inputs[0], node.inputs['Scale']] if operation == 'SCALE' else node.inputs
     for socket, value in zip(sockets, values):
         connect(tree, socket, value)
-    return node.outputs[0]
+    return node.outputs['Value'] if operation in {'LENGTH', 'DISTANCE', 'DOT_PRODUCT'} else node.outputs[0]
 
 def mix_node(tree, type, factor, a, b, location=(0, 0), blend='MIX'):
     node = add_node(tree, 'ShaderNodeMix', location)
@@ -364,7 +364,7 @@ TEXTURE_DEFAULTS = [
     None,
     (0.0, 0.0, 1.0, 0.0),
     (0.0, 0.0, 0.0, 0.0),
-    None,
+    WHITE,
     None,
     WHITE,
 ]
@@ -469,6 +469,111 @@ def uv_tiling():
     connect(group, scale.inputs['Y'], inputs['Y'])
     scale.inputs['Z'].default_value = 1.0
     connect(group, outputs['UV'], vector_math_node(group, 'MULTIPLY', inputs['UV'], scale.outputs[0], location=grid_location(1, 0)))
+    return group
+
+def game_time():
+    name = 'NieR Time'
+    group = existing_group(name)
+    if group is not None:
+        return group
+    group, inputs, outputs = new_group(name, [], [('Frames', 'Float', None), ('Seconds', 'Float', None)], 'INPUT')
+    frames = add_node(group, 'ShaderNodeValue', grid_location(0, 0), label='Game Frames', hide=False)
+    driver = frames.outputs[0].driver_add('default_value').driver
+    driver.type = 'SCRIPTED'
+    for variable_name, data_path in (('fps', 'render.fps'), ('fps_base', 'render.fps_base')):
+        variable = driver.variables.new()
+        variable.name = variable_name
+        variable.type = 'SINGLE_PROP'
+        variable.targets[0].id_type = 'SCENE'
+        variable.targets[0].id = bpy.context.scene
+        variable.targets[0].data_path = data_path
+    driver.expression = 'frame * 60 * fps_base / fps'
+    connect(group, outputs['Frames'], frames.outputs[0])
+    connect(group, outputs['Seconds'], math_node(group, 'DIVIDE', frames.outputs[0], 60.0, location=grid_location(1, 1)))
+    return group
+
+WIND_DEFAULTS = (('Amplitude', 0.08), ('Speed', 0.03), ('Phase Scale', 30.0))
+WIND_DIRECTION = (-17.0, 26.0, 28.0)
+
+def area_wind():
+    name = 'NieR Wind'
+    group = existing_group(name)
+    if group is not None:
+        return group
+    group, inputs, outputs = new_group(name, [], [(socket, 'Float', None) for socket, _ in WIND_DEFAULTS] + [('Direction', 'Vector', None)], 'INPUT')
+    for i, (socket, default) in enumerate(WIND_DEFAULTS):
+        node = add_node(group, 'ShaderNodeValue', grid_location(0, i), label=socket, hide=False)
+        node.outputs[0].default_value = default
+        connect(group, outputs[socket], node.outputs[0])
+    direction = add_node(group, 'ShaderNodeCombineXYZ', grid_location(0, 4), label='Direction', hide=False)
+    for socket, value in zip('XYZ', WIND_DIRECTION):
+        direction.inputs[socket].default_value = value
+    nudged = vector_math_node(group, 'ADD', direction.outputs[0], (0.0, 0.001, 0.0), location=grid_location(1, 4))
+    connect(group, outputs['Direction'], vector_math_node(group, 'NORMALIZE', nudged, location=grid_location(2, 4)))
+    return group
+
+def uv_scroll():
+    name = 'NieR UV Scroll'
+    group = existing_group(name)
+    if group is not None:
+        return group
+    group, inputs, outputs = new_group(name, [('UV', 'Vector', None), ('X', 'Float', 0.0), ('Y', 'Float', 0.0)], [('UV', 'Vector', None)], 'VECTOR')
+    frames = group_node(group, game_time(), {}, grid_location(0, -2)).outputs['Frames']
+    offsets = []
+    for i, axis in enumerate('XY'):
+        y = i * 3
+        period = math_node(group, 'MULTIPLY', inputs[axis], 30.0, location=grid_location(1, y))
+        cycles = math_node(group, 'DIVIDE', frames, math_node(group, 'ABSOLUTE', period, location=grid_location(2, y + 1)), location=grid_location(3, y))
+        offsets.append(math_node(group, 'MULTIPLY', math_node(group, 'FRACT', cycles, location=grid_location(4, y)), math_node(group, 'SIGN', period, location=grid_location(4, y + 1)), location=grid_location(5, y)))
+    offset = add_node(group, 'ShaderNodeCombineXYZ', grid_location(6, 0))
+    connect(group, offset.inputs['X'], offsets[0])
+    connect(group, offset.inputs['Y'], math_node(group, 'MULTIPLY', offsets[1], -1.0, location=grid_location(6, 3)))
+    connect(group, outputs['UV'], vector_math_node(group, 'ADD', inputs['UV'], offset.outputs[0], location=grid_location(7, 0)))
+    return group
+
+def wind_sway():
+    name = 'NieR Wind Sway'
+    group = existing_group(name)
+    if group is not None:
+        return group
+    group, inputs, outputs = new_group(name, [
+        ('Vertex Color', 'Color', (0.0, 0.0, 0.0, 1.0)),
+        ('Swing Power', 'Float', 0.0),
+        ('Swing Speed', 'Float', 0.0),
+        ('Swing Height Cycle', 'Float', 0.0),
+    ], [('Displacement', 'Vector', None)], 'VECTOR')
+    frames = group_node(group, game_time(), {}, grid_location(0, -3)).outputs['Frames']
+    wind = group_node(group, area_wind(), {}, grid_location(0, 6)).outputs
+    weight, phase = separate_color(group, inputs['Vertex Color'], grid_location(0, 2))[:2]
+
+    geometry = add_node(group, 'ShaderNodeNewGeometry', grid_location(0, -1))
+    distance = vector_math_node(group, 'LENGTH', geometry.outputs['Position'], location=grid_location(1, -1))
+    wave = math_node(group, 'SUBTRACT', math_node(group, 'MULTIPLY', inputs['Swing Speed'], frames, location=grid_location(2, -3)), math_node(group, 'MULTIPLY', inputs['Swing Height Cycle'], distance, location=grid_location(2, -2)), location=grid_location(3, -2))
+    puff = math_node(group, 'MULTIPLY', math_node(group, 'ADD', math_node(group, 'COSINE', wave, location=grid_location(4, -2)), 1.0, location=grid_location(5, -2)), inputs['Swing Power'], location=grid_location(6, -2))
+    normal = add_node(group, 'ShaderNodeVectorTransform', grid_location(1, 0))
+    normal.vector_type = 'NORMAL'
+    normal.convert_from = 'WORLD'
+    normal.convert_to = 'OBJECT'
+    connect(group, normal.inputs['Vector'], geometry.outputs['Normal'])
+    breathing = vector_math_node(group, 'SCALE', vector_math_node(group, 'NORMALIZE', normal.outputs[0], location=grid_location(2, 0)), puff, location=grid_location(7, 0))
+
+    angle = math_node(group, 'SUBTRACT', math_node(group, 'MULTIPLY', wind['Speed'], frames, location=grid_location(1, 3)), math_node(group, 'MULTIPLY', phase, wind['Phase Scale'], location=grid_location(1, 4)), location=grid_location(2, 3))
+    direction = add_node(group, 'ShaderNodeSeparateXYZ', grid_location(1, 6))
+    connect(group, direction.inputs[0], wind['Direction'])
+    swing_x = math_node(group, 'ADD', math_node(group, 'SINE', angle, location=grid_location(3, 3)), 1.0, location=grid_location(4, 3))
+    swing_y = math_node(group, 'ADD', math_node(group, 'COSINE', angle, location=grid_location(3, 4)), 1.0, location=grid_location(4, 4))
+    swing_z = math_node(group, 'ADD', math_node(group, 'SINE', math_node(group, 'MULTIPLY', angle, 0.7, location=grid_location(3, 6)), location=grid_location(3, 5)), 1.0, location=grid_location(4, 5))
+    game_x = math_node(group, 'MULTIPLY', swing_x, direction.outputs['X'], location=grid_location(5, 3))
+    game_y = math_node(group, 'MULTIPLY', swing_y, math_node(group, 'MAXIMUM', direction.outputs['Y'], 0.2, location=grid_location(4, 7)), location=grid_location(5, 4))
+    game_z = math_node(group, 'MULTIPLY', swing_z, direction.outputs['Z'], location=grid_location(5, 5))
+    sway = add_node(group, 'ShaderNodeCombineXYZ', grid_location(6, 4))
+    connect(group, sway.inputs['X'], game_x)
+    connect(group, sway.inputs['Y'], math_node(group, 'MULTIPLY', game_z, -1.0, location=grid_location(6, 6)))
+    connect(group, sway.inputs['Z'], game_y)
+    sway = vector_math_node(group, 'SCALE', sway.outputs[0], wind['Amplitude'], location=grid_location(7, 4))
+
+    total = vector_math_node(group, 'ADD', breathing, sway, location=grid_location(8, 2))
+    connect(group, outputs['Displacement'], vector_math_node(group, 'SCALE', total, weight, location=grid_location(9, 2)))
     return group
 
 def noise_normal():
