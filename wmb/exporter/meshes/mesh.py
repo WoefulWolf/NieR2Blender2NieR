@@ -2,6 +2,31 @@ import bpy
 
 from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndices, getMeshName, getAllMeshObjectsInOrder, getGameBoundingBox
 
+def getMeshGroupBones(obj):
+    bones = []
+    boneIndices = getBoneIndices("WMB")
+    obj_mesh_name = getMeshName(obj)
+    for mesh in getAllMeshObjectsInOrder('WMB'):
+        if getMeshName(mesh) == obj_mesh_name:
+            for vertexGroup in mesh.vertex_groups:
+                boneName = boneIndices.get(vertexGroup.name)
+                if boneName is not None and boneName not in bones:
+                    bones.append(boneName)
+
+    if len(bones) == 0:
+        rigidBones = [mesh['rigidBone'] for mesh in getAllMeshObjectsInOrder('WMB') if getMeshName(mesh) == obj_mesh_name and mesh.get('rigidBone') in boneIndices]
+        if rigidBones:
+            bones.append(boneIndices[rigidBones[0]])
+
+    if len(bones) == 0:
+        for armature in bpy.data.collections['WMB'].all_objects:
+            if armature.type == 'ARMATURE' and len(armature.data.bones) > 0:
+                bones.append(0)
+                break
+
+    bones.sort()
+    return bones
+
 def getMeshBoundingBox(meshObj):
     meshName = getMeshName(meshObj)
     return getGameBoundingBox([obj for obj in getAllMeshObjectsInOrder('WMB') if getMeshName(obj) == meshName])
@@ -30,24 +55,7 @@ class c_mesh(object):
             return materials
 
         def get_bones(self, obj):
-            bones = []
-            boneIndices = getBoneIndices("WMB")
-            obj_mesh_name = getMeshName(obj)
-            for mesh in getAllMeshObjectsInOrder('WMB'):
-                if getMeshName(mesh) == obj_mesh_name:
-                    for vertexGroup in mesh.vertex_groups:
-                        boneName = boneIndices.get(vertexGroup.name)
-                        if boneName not in bones:
-                            if boneName:
-                                bones.append(boneName)
-
-            if len(bones) == 0:
-                for obj in bpy.data.collections['WMB'].all_objects:
-                    if obj.type == 'ARMATURE' and len(obj.data.bones) > 0:
-                        bones.append(0)
-                        break
-
-            bones.sort()
+            bones = getMeshGroupBones(obj)
             return bones, len(bones)
       
         self.bones, self.numBones = get_bones(self, obj)

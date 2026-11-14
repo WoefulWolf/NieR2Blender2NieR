@@ -585,6 +585,8 @@ def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False)
 							boneSetIndex = -1
 						boundingBox = meshGroup.boundingBox
 						obj = construct_mesh([meshName, vertices, faces, normals, has_bone, boneWeightInfoArray, boneSetIndex, meshGroupIndex, vertex_colors, vertex_uvs, LOD_name, LOD_level, colTreeNodeIndex, unknownWorldDataIndex, boundingBox, vertexGroupIndex], collection_name, armature, import_mesh_indices)
+						if armature is not None and len(obj.vertex_groups) == 0 and len(meshGroup.boneIndexArray) == 1 and meshGroup.boneIndexArray[0] < len(armature.data.bones):
+							obj['rigidBone'] = armature.data.bones[meshGroup.boneIndexArray[0]].name
 						meshes[meshArrayIndex] = obj
 	return meshes, usedVerticeIndexArrays
 

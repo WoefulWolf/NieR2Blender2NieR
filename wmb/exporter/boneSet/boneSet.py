@@ -1,5 +1,6 @@
 import bpy
-from ....utils.util import getBoneIndices, getIndexLookup, getAllMeshObjectsInOrder
+from ....utils.util import getBoneIndices, getIndexLookup, getAllMeshObjectsInOrder, getMeshName
+from ..meshes.mesh import getMeshGroupBones
 
 class c_boneSet(object):
     def __init__(self, boneMap, boneSets_Offset):
@@ -41,44 +42,45 @@ class c_boneSet(object):
 
 class c_b_boneSets(object):
     def __init__(self):
-        # Generate boneMap
-        boneMap = []
         boneIndices = getBoneIndices("WMB")
-        for obj in bpy.data.collections['WMB'].all_objects:
-            if obj.type == 'ARMATURE':
-                amt = obj
-                for bone in amt.data.bones:
-                    boneID = boneIndices.get(bone.name)
-                    if boneID != None:
-                        if boneID not in boneMap:
-                            boneMap.append(boneID)
+        amt = next(obj for obj in bpy.data.collections['WMB'].all_objects if obj.type == 'ARMATURE')
+        meshes = getAllMeshObjectsInOrder('WMB')
 
-        # Set boneMap to armature
-        boneMap = sorted(boneMap)
-        boneMapIndices = getIndexLookup(boneMap)
-        for obj in bpy.data.collections['WMB'].all_objects:
-            if obj.type == 'ARMATURE':
-                obj.data['boneMap'] = boneMap
-                break
-
-        # Get boneSets
-        b_boneSets = []
-        for obj in getAllMeshObjectsInOrder('WMB'):
+        meshBones = []
+        for obj in meshes:
             vertex_group_bones = []
             if not hasattr(obj, 'boneSetIndex') or obj['boneSetIndex'] != -1:
                 for group in obj.vertex_groups:
                     boneID = boneIndices.get(group.name)
                     if boneID != None:
-                        boneMapIndex = boneMapIndices[boneID]
-                        vertex_group_bones.append(boneMapIndex)
+                        vertex_group_bones.append(boneID)
+            meshBones.append(vertex_group_bones)
 
-                if len(vertex_group_bones) == 0:
-                    continue
-                    
-                if vertex_group_bones not in b_boneSets:
-                    b_boneSets.append(vertex_group_bones)
-                    obj["boneSetIndex"] = len(b_boneSets)-1
-                else:
-                    obj["boneSetIndex"] = b_boneSets.index(vertex_group_bones)
+        # Generate boneMap
+        usedBones = {boneID for bones in meshBones for boneID in bones}
+        meshNames = set()
+        for obj in meshes:
+            if getMeshName(obj) not in meshNames:
+                meshNames.add(getMeshName(obj))
+                usedBones.update(getMeshGroupBones(obj))
+
+        # Set boneMap to armature
+        boneMap = sorted(usedBones)
+        boneMapIndices = getIndexLookup(boneMap)
+        amt.data['boneMap'] = boneMap
+
+        # Get boneSets
+        b_boneSets = []
+        for obj, bones in zip(meshes, meshBones):
+            if len(bones) == 0:
+                continue
+            vertex_group_bones = [boneMapIndices[boneID] for boneID in bones]
+
+            if vertex_group_bones not in b_boneSets:
+                b_boneSets.append(vertex_group_bones)
+                obj["boneSetIndex"] = len(b_boneSets)-1
+            else:
+                obj["boneSetIndex"] = b_boneSets.index(vertex_group_bones)
 
         amt.data['boneSetArray'] = b_boneSets
+        self.boneSets = b_boneSets

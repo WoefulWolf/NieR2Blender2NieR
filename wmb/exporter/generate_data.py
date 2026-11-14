@@ -139,7 +139,7 @@ class c_generate_data(object):
         if hasArmature:
             self.boneSets_Offset = currentOffset
 
-            if len(self.boneMap.boneMap) > 1:
+            if len(self.b_boneSets.boneSets) > 0:
                 self.boneSet = c_boneSet(self.boneMap, self.boneSets_Offset)
                 self.boneSet_Size = self.boneSet.boneSet_StructSize
                 currentOffset += self.boneSet_Size

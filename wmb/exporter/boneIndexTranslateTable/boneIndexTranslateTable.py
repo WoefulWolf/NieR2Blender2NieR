@@ -33,6 +33,8 @@ class c_boneIndexTranslateTable(object):
                             if vgroup.name == bone.name:
                                 vgroup.name = new_name
                                 break
+                        if obj.get('rigidBone') == bone.name:
+                            obj['rigidBone'] = new_name
 
                     bone.name = new_name
                     newBones.append(bone)
