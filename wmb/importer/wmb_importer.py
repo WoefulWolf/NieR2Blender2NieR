@@ -162,49 +162,57 @@ def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = F
 		objmesh.normals_split_custom_set_from_vertices(normals)
 	objmesh.update(calc_edges=True)
 
+	loop_vertices = np.empty(len(objmesh.loops), np.int32)
+	objmesh.loops.foreach_get('vertex_index', loop_vertices)
+
 	if len(mesh_data[8]) != 0:
 		if objmesh.vertex_colors:
 			vcol_layer = objmesh.vertex_colors.active
 		else:
 			vcol_layer = objmesh.vertex_colors.new()
 
-		loop_vertices = np.empty(len(objmesh.loops), np.int32)
-		objmesh.loops.foreach_get('vertex_index', loop_vertices)
 		loop_colors = np.asarray(mesh_data[8], np.float64)[loop_vertices] / 255
 		vcol_layer.data.foreach_set('color', loop_colors.astype(np.float32).ravel())
 
 	# UVs
-	bm = bmesh.new()
-	bm.from_mesh(objmesh)
-	uv_layers = []
 	for m, uv_data in enumerate(mesh_data[9]):
 		if len(uv_data) != 0:
-			uv_layers.append(bm.loops.layers.uv.new("UVMap" + str(m + 1)))
+			uv_layer = objmesh.uv_layers.new(name="UVMap" + str(m + 1))
+			uv_layer.data.foreach_set('uv', np.asarray(uv_data, np.float64)[loop_vertices].astype(np.float32).ravel())
 
-	if len(uv_layers) > 0:
-		for face in bm.faces:
-			face.material_index = 0
-			for l in face.loops:
-				for m, uv_layer in enumerate(uv_layers):
-					luv = l[uv_layer]
-					idx = l.vert.index
-					luv.uv = Vector(mesh_data[9][m][idx])
-	bm.to_mesh(objmesh)
-	bm.free()
+	sharp_edges = objmesh.attributes.get('sharp_edge')
+	if sharp_edges is not None:
+		sharp = np.empty(len(sharp_edges.data), bool)
+		sharp_edges.data.foreach_get('value', sharp)
+		if not sharp.any():
+			objmesh.attributes.remove(sharp_edges)
 
-	if has_bone:
-		weight_infos = mesh_data[5]
-		group_names = sorted(list(set([armature.data.bones[i].name for weight_info in weight_infos for i in weight_info[0]])))
+	if has_bone and isinstance(mesh_data[5], tuple):
+		bone_indices, bone_weights = mesh_data[5]
+		bone_names = [bone.name for bone in armature.data.bones]
+		group_names = sorted(set(bone_names[i] for i in np.unique(bone_indices).tolist()))
 		for group_name in group_names:
 			obj.vertex_groups.new(name=group_name)
-		for i in range(len(weight_infos)):
-			for index in range(4):
-				group_name = armature.data.bones[weight_infos[i][0][index]].name
-				# group_name = "bone%d"%weight_infos[i][0][index]
-				weight = weight_infos[i][1][index]
-				group = obj.vertex_groups[group_name]
-				if weight:
-					group.add([i], weight, "REPLACE")
+		vertex_ids = np.repeat(np.arange(len(bone_indices)), 4)
+		bones = bone_indices.ravel()
+		weights = bone_weights.ravel()
+		assigned = np.flatnonzero(weights)
+		keys = vertex_ids[assigned] * len(bone_names) + bones[assigned]
+		_, first = np.unique(keys, return_index=True)
+		_, last = np.unique(keys[::-1], return_index=True)
+		order = np.argsort(first)
+		first, last = assigned[first[order]], assigned[len(keys) - 1 - last[order]]
+		entry_vertices, entry_bones, entry_weights = vertex_ids[first], bones[first], weights[last]
+		starts = np.flatnonzero(np.r_[True, entry_vertices[1:] != entry_vertices[:-1]]) if len(first) else np.zeros(0, int)
+		rank = np.arange(len(first)) - np.repeat(starts, np.diff(np.r_[starts, len(first)]))
+		groups = {group.name: group for group in obj.vertex_groups}
+		for r in range(int(rank.max()) + 1 if len(rank) else 0):
+			picked = np.flatnonzero(rank == r)
+			picked = picked[np.lexsort((entry_weights[picked], entry_bones[picked]))]
+			runs = np.flatnonzero((np.diff(entry_bones[picked]) != 0) | (np.diff(entry_weights[picked]) != 0)) + 1
+			for run in np.split(picked, runs):
+				if len(run):
+					groups[bone_names[entry_bones[run[0]]]].add(entry_vertices[run].tolist(), float(entry_weights[run[0]]), "REPLACE")
 	# obj.rotation_euler = (math.radians(90),0,0)
 	if mesh_data[6] != "None":
 		obj['boneSetIndex'] = mesh_data[6]
@@ -534,6 +542,12 @@ def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False)
 	usedVerticeIndexArrays = []
 	mesh_array = wmb.meshArray
 	#each vertexgroup -> each lod -> each group -> mesh
+	meshIndexArraysByLod = []
+	for meshGroupInfo in wmb.meshGroupInfoArray:
+		meshIndexArrays = {}
+		for groupedMeshIndex, groupedMesh in enumerate(meshGroupInfo.groupedMeshArray):
+			meshIndexArrays.setdefault(groupedMesh.meshGroupIndex, []).append([meshGroupInfo.meshStart + groupedMeshIndex, groupedMesh.colTreeNodeIndex, groupedMesh.unknownWorldDataIndex])
+		meshIndexArraysByLod.append(meshIndexArrays)
 	for vertexGroupIndex in range(wmb.wmb3_header.vertexGroupCount):
 		vertex_flags = wmb.vertexGroupArray[vertexGroupIndex].vertexFlags
 
@@ -544,10 +558,7 @@ def format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices = False)
 			LOD_name = meshGroupInfo.meshGroupInfoname
 			LOD_level = meshGroupInfo.lodLevel
 			for meshGroupIndex in range(wmb.wmb3_header.meshGroupCount):
-				meshIndexArray = []
-				for groupedMeshIndex in range(len(groupedMeshArray)):
-					if groupedMeshArray[groupedMeshIndex].meshGroupIndex == meshGroupIndex:
-						meshIndexArray.append([mesh_start + groupedMeshIndex, groupedMeshArray[groupedMeshIndex].colTreeNodeIndex, groupedMeshArray[groupedMeshIndex].unknownWorldDataIndex])
+				meshIndexArray = meshIndexArraysByLod[meshGroupInfoArrayIndex].get(meshGroupIndex, [])
 				meshGroup = wmb.meshGroupArray[meshGroupIndex]
 				for meshArrayData in (meshIndexArray):
 					meshArrayIndex = meshArrayData[0]

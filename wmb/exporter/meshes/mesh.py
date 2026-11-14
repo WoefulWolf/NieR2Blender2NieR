@@ -1,35 +1,10 @@
 import bpy
-from mathutils import Vector
 
-from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndices, getMeshName, getAllMeshObjectsInOrder
-
-def getObjectCenter(obj):
-    obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
-    #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
-    return obj_local_bbox_center
+from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndices, getMeshName, getAllMeshObjectsInOrder, getGameBoundingBox
 
 def getMeshBoundingBox(meshObj):
-    xVals = []
-    yVals = []
-    zVals = []
-
     meshName = getMeshName(meshObj)
-    for obj in getAllMeshObjectsInOrder('WMB'):
-        if getMeshName(obj) == meshName:
-            xVals.extend([getObjectCenter(obj)[0] - obj.dimensions[0]/2, getObjectCenter(obj)[0] + obj.dimensions[0]/2])
-            yVals.extend([getObjectCenter(obj)[1] - obj.dimensions[1]/2, getObjectCenter(obj)[1] + obj.dimensions[1]/2])
-            zVals.extend([getObjectCenter(obj)[2] - obj.dimensions[2]/2, getObjectCenter(obj)[2] + obj.dimensions[2]/2])
-
-    minX = min(xVals)
-    maxX = max(xVals)
-    minY = min(yVals)
-    maxY = max(yVals)
-    minZ = min(zVals)
-    maxZ = max(zVals)
-
-    midPoint = [(minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2]
-    scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
-    return midPoint, scale
+    return getGameBoundingBox([obj for obj in getAllMeshObjectsInOrder('WMB') if getMeshName(obj) == meshName])
 
 class c_mesh(object):
     def __init__(self, offsetMeshes, numMeshes, obj):

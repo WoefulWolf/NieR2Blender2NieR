@@ -1,5 +1,6 @@
 import math
 import os
+import numpy as np
 import json
 from time import time
 
@@ -66,186 +67,37 @@ class wmb3_vertexHeader(object):
 		self.faceArrayOffset = read_uint32(wmb_fp)		
 		self.faceCount = read_uint32(wmb_fp)				
 
-class wmb3_vertex(object):
-	smartRead = SmartIO.makeFormat(
-		SmartIO.float,
-		SmartIO.float,
-		SmartIO.float,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.float16,
-		SmartIO.float16,
-	)
-	smartReadUV2 = SmartIO.makeFormat(
-		SmartIO.float16,
-		SmartIO.float16,
-	)
+def vertex_dtype(vertex_flags):
+	fields = [('position', '<f4', 3), ('tangent', 'u1', 4), ('uv', '<f2', 2)]
+	if vertex_flags == 0:
+		fields.append(('normal', '<f2', 4))
+	if vertex_flags in {1, 4, 5, 12, 14}:
+		fields.append(('uv2', '<f2', 2))
+	if vertex_flags in {7, 8, 10, 11}:
+		fields += [('boneIndices', 'u1', 4), ('boneWeights', 'u1', 4)]
+	if vertex_flags in {3, 4, 5, 12, 14}:
+		fields.append(('color', 'u1', 4))
+	return np.dtype(fields)
 
-	"""docstring for wmb3_vertex"""
-	def __init__(self, wmb_fp, vertex_flags):
-		super(wmb3_vertex, self).__init__()
-		# self.positionX = read_float(wmb_fp)
-		# self.positionY = read_float(wmb_fp)
-		# self.positionZ = read_float(wmb_fp)
-		# self.normalX = read_uint8(wmb_fp)
-		# self.normalY = read_uint8(wmb_fp)
-		# self.normalZ = read_uint8(wmb_fp)
-		# wmb_fp.read(1)											
-		# self.textureU = read_float16(wmb_fp)				
-		# self.textureV = read_float16(wmb_fp)
-		self.positionX, \
-		self.positionY, \
-		self.positionZ, \
-		self.tangentX, \
-		self.tangentY, \
-		self.tangentZ, \
-		self.tangentSign, \
-		self.textureU, \
-		self.textureV = wmb3_vertex.smartRead.read(wmb_fp)
+VERTEX_EX_DATA_FIELDS = {
+	1: [('normal', '<f2', 4)],
+	3: [('normal', '<f2', 4)],
+	4: [('normal', '<f2', 4)],
+	5: [('normal', '<f2', 4), ('uv3', '<f2', 2)],
+	7: [('uv2', '<f2', 2), ('normal', '<f2', 4)],
+	8: [('uv2', '<f2', 2), ('normal', '<f2', 4), ('uv3', '<f2', 2)],
+	10: [('uv2', '<f2', 2), ('color', 'u1', 4), ('normal', '<f2', 4)],
+	11: [('uv2', '<f2', 2), ('color', 'u1', 4), ('normal', '<f2', 4), ('uv3', '<f2', 2)],
+	12: [('normal', '<f2', 4), ('uv3', '<f2', 2), ('uv4', '<f2', 2), ('uv5', '<f2', 2)],
+	14: [('normal', '<f2', 4), ('uv3', '<f2', 2), ('uv4', '<f2', 2)],
+}
 
-		self.tangentX = (self.tangentX - 127) / 127
-		self.tangentY = (self.tangentY - 127) / 127
-		self.tangentZ = (self.tangentZ - 127) / 127
-		self.tangentSign = (self.tangentSign - 127) / 127
-		self.tangentLength = math.sqrt(self.tangentX ** 2 + self.tangentY ** 2 + self.tangentZ ** 2)
+def read_array(wmb_fp, offset, dtype, count):
+	if count == 0:
+		return np.zeros(0, dtype)
+	wmb_fp.seek(offset)
+	return np.frombuffer(wmb_fp.read(dtype.itemsize * count), dtype, count)
 
-		if vertex_flags == 0:
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-		if vertex_flags in {1, 4, 5, 12, 14}:
-			# self.textureU2 = read_float16(wmb_fp)				
-			# self.textureV2 = read_float16(wmb_fp)
-			self.textureU2, \
-			self.textureV2 = wmb3_vertex.smartReadUV2.read(wmb_fp)
-		if vertex_flags in {7, 8, 10, 11}:
-			self.boneIndices = read_uint8_x4(wmb_fp)
-			self.boneWeights = [x / 255 for x in read_uint8_x4(wmb_fp)]
-		if vertex_flags in {3, 4, 5, 12, 14}:
-			self.color = read_uint8_x4(wmb_fp)
-
-class wmb3_vertexExData(object):
-	smartRead5 = SmartIO.makeFormat(
-		SmartIO.uint64,
-		SmartIO.float16,
-		SmartIO.float16,
-	)
-	smartRead7 = SmartIO.makeFormat(
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.uint64,
-	)
-	smartRead8 = SmartIO.makeFormat(
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.uint64,
-		SmartIO.float16,
-		SmartIO.float16,
-	)
-	smartRead10 = SmartIO.makeFormat(
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint64,
-	)
-	smartRead11 = SmartIO.makeFormat(
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint8,
-		SmartIO.uint64,
-		SmartIO.float16,
-		SmartIO.float16,
-	)
-	smartRead12 = SmartIO.makeFormat(
-		SmartIO.uint64,
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.float16,
-	)
-	smartRead14 = SmartIO.makeFormat(
-		SmartIO.uint64,
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.float16,
-		SmartIO.float16,
-	)
-
-	"""docstring for wmb3_vertexExData"""
-	def __init__(self, wmb_fp, vertex_flags):
-		super(wmb3_vertexExData, self).__init__()
-		
-		#0x0 has no ExVertexData
-
-		if vertex_flags in {1, 3, 4}: #0x1, 0x3, 0x4
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-
-		elif vertex_flags == 5: #0x5
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-
-		elif vertex_flags == 7: #0x7
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-
-		elif vertex_flags == 8: #0x8
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-
-		elif vertex_flags == 10: #0xa
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.color = read_uint8_x4(wmb_fp)
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-			
-
-		elif vertex_flags == 11: #0xb
-			self.textureU2 = read_float16(wmb_fp)				
-			self.textureV2 = read_float16(wmb_fp)
-			self.color = read_uint8_x4(wmb_fp)
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-
-		elif vertex_flags == 12: #0xc
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-			self.textureU4 = read_float16(wmb_fp)				
-			self.textureV4 = read_float16(wmb_fp)
-			self.textureU5 = read_float16(wmb_fp)				
-			self.textureV5 = read_float16(wmb_fp)
-
-
-		elif vertex_flags == 14: #0xe
-			self.normal = [read_float16(wmb_fp), read_float16(wmb_fp), read_float16(wmb_fp)]
-			dummy = read_float16(wmb_fp)
-			self.textureU3 = read_float16(wmb_fp)				
-			self.textureV3 = read_float16(wmb_fp)
-			self.textureU4 = read_float16(wmb_fp)				
-			self.textureV4 = read_float16(wmb_fp)
-	
 class wmb3_vertexGroup(object):
 	"""docstring for wmb3_vertexGroup"""
 	def __init__(self, wmb_fp, faceSize):
@@ -255,24 +107,12 @@ class wmb3_vertexGroup(object):
 
 		self.vertexFlags = self.vertexGroupHeader.vertexFlags	
 		
-		self.vertexArray: list[wmb3_vertex] = [None] * self.vertexGroupHeader.vertexCount
-		wmb_fp.seek(self.vertexGroupHeader.vertexArrayOffset)
-		for vertex_index in range(self.vertexGroupHeader.vertexCount):
-			vertex = wmb3_vertex(wmb_fp, self.vertexGroupHeader.vertexFlags)
-			self.vertexArray[vertex_index] = vertex
-
-		self.vertexesExDataArray: list[wmb3_vertexExData] = [None] * self.vertexGroupHeader.vertexCount
-		wmb_fp.seek(self.vertexGroupHeader.vertexExDataArrayOffset)
-		for vertexIndex in range(self.vertexGroupHeader.vertexCount):
-			self.vertexesExDataArray[vertexIndex] = wmb3_vertexExData(wmb_fp, self.vertexGroupHeader.vertexFlags)
-
-		self.faceRawArray = [None] * self.vertexGroupHeader.faceCount
-		wmb_fp.seek(self.vertexGroupHeader.faceArrayOffset)
-		for face_index in range(self.vertexGroupHeader.faceCount):
-			if faceSize == 2:
-				self.faceRawArray[face_index] = read_uint16(wmb_fp) + 1
-			else:
-				self.faceRawArray[face_index] = read_uint32(wmb_fp) + 1
+		vertexCount = self.vertexGroupHeader.vertexCount
+		self.vertexArray = read_array(wmb_fp, self.vertexGroupHeader.vertexArrayOffset, vertex_dtype(self.vertexFlags), vertexCount)
+		exDataFields = VERTEX_EX_DATA_FIELDS.get(self.vertexFlags)
+		self.vertexesExDataArray = read_array(wmb_fp, self.vertexGroupHeader.vertexExDataArrayOffset, np.dtype(exDataFields), vertexCount) if exDataFields else None
+		faceType = np.dtype('<u2' if faceSize == 2 else '<u4')
+		self.faceRawArray = read_array(wmb_fp, self.vertexGroupHeader.faceArrayOffset, faceType, self.vertexGroupHeader.faceCount).astype(np.int64) + 1
 
 class wmb3_mesh(object):
 	"""docstring for wmb3_mesh"""
@@ -671,82 +511,70 @@ class WMB3(object):
 
 	def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex):
 		mesh = self.meshArray[meshArrayIndex]
-		faceRawStart = mesh.faceStart
-		faceRawCount = mesh.faceCount
-		vertexStart = mesh.vertexStart
-		vertexCount = mesh.vertexCount
+		vertexGroup = self.vertexGroupArray[vertexGroupIndex]
+		vertexFlags = vertexGroup.vertexFlags
 
-		vertexesExDataArray: list[wmb3_vertexExData] = self.vertexGroupArray[vertexGroupIndex].vertexesExDataArray
-		vertexesExData: list[wmb3_vertexExData] = vertexesExDataArray[vertexStart : vertexStart + vertexCount]
+		facesRaw = vertexGroup.faceRawArray[mesh.faceStart : mesh.faceStart + mesh.faceCount] - 1
+		usedVertexIndexArray, facesRaw = np.unique(facesRaw, return_inverse=True)
+		faces = facesRaw.reshape(-1, 3)[:, ::-1]
+
+		meshVertices = vertexGroup.vertexArray[usedVertexIndexArray]
+		vertexesExData = None
+		if vertexGroup.vertexesExDataArray is not None:
+			vertexesExData = vertexGroup.vertexesExDataArray[mesh.vertexStart : mesh.vertexStart + mesh.vertexCount][usedVertexIndexArray]
+
+		positions = meshVertices['position']
+		usedVertices = np.stack((positions[:, 0], -positions[:, 2], positions[:, 1]), axis=1)
+
+		# Normals are in VertexData
+		if vertexFlags in {0}:
+			normals = meshVertices['normal'].astype(np.float64)
+		# Normals are in VertexExData
+		else:
+			normals = vertexesExData['normal'].astype(np.float64)
+		usedNormals = np.stack((normals[:, 0], -normals[:, 2], normals[:, 1]), axis=1)
 
 		vertex_colors = []
+		# Vertex_Colors are stored in VertexData
+		if vertexFlags in {3, 4, 5, 12, 14}:
+			vertex_colors = meshVertices['color']
+		# Vertex_Colors are stored in VertexExData
+		elif vertexFlags in {10, 11}:
+			vertex_colors = vertexesExData['color']
+
+		def uvs(data, field):
+			uv = data[field].astype(np.float64)
+			return np.stack((uv[:, 0], 1 - uv[:, 1]), axis=1)
+
 		vertex_uvs = [[], [], [], [], []]
+		vertex_uvs[0] = uvs(meshVertices, 'uv')									# UV1
+		if vertexFlags in {1, 4, 5, 12, 14}:										# UV2
+			vertex_uvs[1] = uvs(meshVertices, 'uv2')
+		elif vertexFlags in {7, 10, 11}:
+			vertex_uvs[1] = uvs(vertexesExData, 'uv2')
+		if vertexFlags in {5, 8, 11, 12, 14}:										# UV3
+			vertex_uvs[2] = uvs(vertexesExData, 'uv3')
+		if vertexFlags in {12, 14}:												# UV4
+			vertex_uvs[3] = uvs(vertexesExData, 'uv4')
+		if vertexFlags in {12}:													# UV5
+			vertex_uvs[4] = uvs(vertexesExData, 'uv5')
 
-		faceRawArray = self.vertexGroupArray[vertexGroupIndex].faceRawArray
-		facesRaw = faceRawArray[faceRawStart : faceRawStart + faceRawCount ]
-		facesRaw = [index - 1 for index in facesRaw]
-		usedVertexIndexArray = sorted(list(set(facesRaw)))
-		mappingDict = {}
-		for newIndex in range(len(usedVertexIndexArray)):
-			mappingDict[usedVertexIndexArray[newIndex]] = newIndex
-		for i in range(len(facesRaw)):
-			facesRaw[i] = mappingDict[facesRaw[i]]
-		faces = [0] * int(faceRawCount / 3)
-		usedVertices = [None] * len(usedVertexIndexArray)
-		usedNormals = [None] * len(usedVertexIndexArray)
 		boneWeightInfos = [[],[]]
-		for i in range(0, faceRawCount, 3):
-			faces[int(i/3)] = (facesRaw[i + 2], facesRaw[i + 1], facesRaw[i])
-		meshVertices: list[wmb3_vertex] = self.vertexGroupArray[vertexGroupIndex].vertexArray
-
 		if self.hasBone:
 			boneWeightInfos = [0] * len(usedVertexIndexArray)
-		for newIndex in range(len(usedVertexIndexArray)):
-			i = usedVertexIndexArray[newIndex]
-			usedVertices[newIndex] = (meshVertices[i].positionX, -meshVertices[i].positionZ, meshVertices[i].positionY)
-
-			# Normals are in VertexData
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {0}:
-				usedNormals[newIndex] = (meshVertices[i].normal[0], -meshVertices[i].normal[2], meshVertices[i].normal[1])
-			# Normals are in VertexExData
-			else:
-				usedNormals[newIndex] = (vertexesExData[i].normal[0], -vertexesExData[i].normal[2], vertexesExData[i].normal[1])
-
-			# Vertex_Colors are stored in VertexData
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {3, 4, 5, 12, 14}:
-				vertex_colors.append(meshVertices[i].color)
-			# Vertex_Colors are stored in VertexExData
-			elif self.vertexGroupArray[vertexGroupIndex].vertexFlags in {10, 11}:
-				vertex_colors.append(vertexesExData[i].color)
-
-			# UVs
-			vertex_uvs[0].append([meshVertices[i].textureU, 1 - meshVertices[i].textureV])				# UV1
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {1, 4, 5, 12, 14}:				# UV2
-				vertex_uvs[1].append([meshVertices[i].textureU2, 1 - meshVertices[i].textureV2])		
-			elif self.vertexGroupArray[vertexGroupIndex].vertexFlags in {7, 10, 11}:
-				vertex_uvs[1].append([vertexesExData[i].textureU2, 1 - vertexesExData[i].textureV2])
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {5, 8, 11, 12, 14}:				# UV3
-				vertex_uvs[2].append([vertexesExData[i].textureU3, 1 - vertexesExData[i].textureV3])
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {12, 14}:							# UV4
-				vertex_uvs[3].append([vertexesExData[i].textureU4, 1 - vertexesExData[i].textureV4])
-			if self.vertexGroupArray[vertexGroupIndex].vertexFlags in {12}:								# UV5
-				vertex_uvs[4].append([vertexesExData[i].textureU5, 1 - vertexesExData[i].textureV5])
-
-			if self.hasBone:
-				bonesetIndex = mesh.bonesetIndex
-				boneSetArray = self.boneSetArray
-				boneMap = self.boneMap
-				if bonesetIndex < 0xffffffff:
-					boneSet = boneSetArray[bonesetIndex]
-					boneIndices = [boneMap[boneSet[index]] for index in  meshVertices[i].boneIndices]
-					boneWeightInfos[newIndex] = [boneIndices, meshVertices[i].boneWeights]
-					s = sum([weight for weight in meshVertices[i].boneWeights]) 
-					if s > 1.000000001 or s < 0.999999:
-						print('[-] error weight detect %f' % s)
-						print(meshVertices[i].boneWeights) 
-				else:
-					self.hasBone = False
-		return usedVertices, faces, usedVertexIndexArray, boneWeightInfos, vertex_colors, usedNormals, vertex_uvs
+			if mesh.bonesetIndex < 0xffffffff:
+				boneSet = np.asarray(self.boneSetArray[mesh.bonesetIndex])
+				boneMap = np.asarray(self.boneMap)
+				boneIndices = boneMap[boneSet[meshVertices['boneIndices']]]
+				boneWeights = meshVertices['boneWeights'] / 255
+				sums = boneWeights[:, 0] + boneWeights[:, 1] + boneWeights[:, 2] + boneWeights[:, 3]
+				for row in np.flatnonzero((sums > 1.000000001) | (sums < 0.999999)):
+					print('[-] error weight detect %f' % sums[row])
+					print(boneWeights[row].tolist())
+				boneWeightInfos = (boneIndices, boneWeights)
+			elif len(usedVertexIndexArray):
+				self.hasBone = False
+		return usedVertices.tolist(), faces.tolist(), usedVertexIndexArray, boneWeightInfos, vertex_colors, usedNormals.tolist(), vertex_uvs
 
 
 def export_obj(wmb, wta, wtp_fp, obj_file):

@@ -90,26 +90,28 @@ def getObjectCenter(obj):
     #obj_global_bbox_center = obj.matrix_world @ obj_local_bbox_center
     return obj_local_bbox_center
 
+def getGameBoundingBox(objects):
+    lows = []
+    highs = []
+    for obj in objects:
+        count = len(obj.data.vertices)
+        if count == 0:
+            continue
+        co = np.empty(count * 3, np.float32)
+        obj.data.vertices.foreach_get('co', co)
+        co = co.reshape(count, 3).astype(np.float64)
+        game = np.stack((co[:, 0], co[:, 2], -co[:, 1]), axis=1)
+        lows.append(game.min(axis=0))
+        highs.append(game.max(axis=0))
+    if not lows:
+        return [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
+    low = np.min(lows, axis=0)
+    high = np.max(highs, axis=0)
+    midPoint = (low + high) / 2
+    return midPoint.tolist(), (high - midPoint).tolist()
+
 def getGlobalBoundingBox():
-    xVals = []
-    yVals = []
-    zVals = []
-
-    for obj in (x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"):
-        xVals.extend([getObjectCenter(obj)[0] - obj.dimensions[0]/2, getObjectCenter(obj)[0] + obj.dimensions[0]/2])
-        yVals.extend([getObjectCenter(obj)[1] - obj.dimensions[1]/2, getObjectCenter(obj)[1] + obj.dimensions[1]/2])
-        zVals.extend([getObjectCenter(obj)[2] - obj.dimensions[2]/2, getObjectCenter(obj)[2] + obj.dimensions[2]/2])
-
-    minX = min(xVals)
-    maxX = max(xVals)
-    minY = min(yVals)
-    maxY = max(yVals)
-    minZ = min(zVals)
-    maxZ = max(zVals)
-
-    midPoint = [(minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2]
-    scale = [maxX - midPoint[0], maxY - midPoint[1], maxZ - midPoint[2]]
-    return midPoint, scale
+    return getGameBoundingBox([x for x in bpy.data.collections['WMB'].all_objects if x.type == "MESH"])
 
 def isObjInCollection(obj, collectionName):
     if not collectionName in bpy.data.collections:
@@ -369,11 +371,13 @@ def centre_origins(collection: str):
         bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.scene.cursor.location = [0, 0, 0]
-    for obj in bpy.data.collections[collection].all_objects:
-        if obj.type == 'MESH':
-            obj.select_set(True)
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-            obj.select_set(False)
+    meshes = [obj for obj in bpy.data.collections[collection].all_objects if obj.type == 'MESH']
+    for obj in meshes:
+        obj.select_set(True)
+    if meshes:
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+    for obj in meshes:
+        obj.select_set(False)
 
 def restore_import_pose(collection: str):
     if "NONE" in bpy.data.actions:
