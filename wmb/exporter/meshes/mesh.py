@@ -1,7 +1,7 @@
 import bpy
 from mathutils import Vector
 
-from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndexByName, getMeshName, getAllMeshObjectsInOrder
+from ....utils.util import getUsedMaterials, allObjectsInCollectionInOrder, getBoneIndices, getMeshName, getAllMeshObjectsInOrder
 
 def getObjectCenter(obj):
     obj_local_bbox_center = 0.125 * sum((Vector(b) for b in obj.bound_box), Vector())
@@ -56,11 +56,12 @@ class c_mesh(object):
 
         def get_bones(self, obj):
             bones = []
+            boneIndices = getBoneIndices("WMB")
             obj_mesh_name = getMeshName(obj)
             for mesh in getAllMeshObjectsInOrder('WMB'):
                 if getMeshName(mesh) == obj_mesh_name:
                     for vertexGroup in mesh.vertex_groups:
-                        boneName = getBoneIndexByName("WMB", vertexGroup.name)
+                        boneName = boneIndices.get(vertexGroup.name)
                         if boneName not in bones:
                             if boneName:
                                 bones.append(boneName)

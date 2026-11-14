@@ -2,7 +2,7 @@ import math
 from time import time
 
 import bpy
-from ....utils.util import getBoneIndexByName, getMeshVertexGroups, calculateVertexFlags
+from ....utils.util import getBoneIndices, getIndexLookup, getMeshVertexGroups, calculateVertexFlags
 
 class c_vertexGroup(object):
     def __init__(self, vertexGroupIndex, vertexesStart):
@@ -110,6 +110,10 @@ class c_vertexGroup(object):
 
                 if self.vertexFlags not in {0, 1, 3, 4, 5, 12, 14}:
                     boneSet = get_boneSet(self, bvertex_obj_obj["boneSetIndex"])
+                    boneIndices = getBoneIndices("WMB")
+                    boneMapIndices = getIndexLookup(self.boneMap)
+                    boneSetIndices = getIndexLookup(boneSet)
+                    groupNames = [group.name for group in bvertex_obj_obj.vertex_groups]
                 
                 previousIndex = -1
                 for loop in sorted_loops:
@@ -152,11 +156,11 @@ class c_vertexGroup(object):
                         # Bone Indices
                         for groupRef in bvertex.groups:
                             if len(boneIndexes) < 4:
-                                boneGroupName = bvertex_obj_obj.vertex_groups[groupRef.group].name
-                                boneID = getBoneIndexByName("WMB", boneGroupName)
+                                boneGroupName = groupNames[groupRef.group]
+                                boneID = boneIndices.get(boneGroupName)
 
-                                boneMapIndx = self.boneMap.index(boneID)
-                                boneSetIndx = boneSet.index(boneMapIndx)
+                                boneMapIndx = boneMapIndices[boneID]
+                                boneSetIndx = boneSetIndices[boneMapIndx]
                                 
                                 boneIndexes.append(boneSetIndx)
                         

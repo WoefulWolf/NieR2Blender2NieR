@@ -224,10 +224,14 @@ def getAllBonesInOrder(collectionName):
         if obj.type == 'ARMATURE':
             return list(obj.data.bones)
 
-def getBoneIndexByName(collectionName, name):
-    for i, bone in enumerate(getAllBonesInOrder(collectionName)):
-        if bone.name == name:
-            return i
+def getBoneIndices(collectionName):
+    return {bone.name: i for i, bone in enumerate(getAllBonesInOrder(collectionName) or ())}
+
+def getIndexLookup(values):
+    lookup = {}
+    for i, value in enumerate(values or ()):
+        lookup.setdefault(value, i)
+    return lookup
         
 def getAllMeshNamesInOrder(collectionName):
     mesh_names = []
