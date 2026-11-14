@@ -1,4 +1,5 @@
 from ...utils.ioUtils import create_wmb, close_wmb
+from ...utils.util import exportCache
 from .generate_data import *
 from .write_wmb import *
 
@@ -35,6 +36,10 @@ def restore_blend():
 
 
 def main(filepath):
+    with exportCache():
+        return export_wmb(filepath)
+
+def export_wmb(filepath):
     start_time = int(time.time())
     prepare_blend()
     

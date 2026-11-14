@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import contextmanager
 from functools import wraps
 import json
 import os
@@ -46,6 +47,29 @@ def drawMultilineLabel(context, text, parent):
     for text_line in text_lines:
         col.label(text=text_line)
 
+exportCacheEntries = None
+
+@contextmanager
+def exportCache():
+    global exportCacheEntries
+    exportCacheEntries = {}
+    try:
+        yield
+    finally:
+        exportCacheEntries = None
+
+def cachedDuringExport(function):
+    @wraps(function)
+    def cached(*args):
+        if exportCacheEntries is None:
+            return function(*args)
+        key = (function.__name__,) + args
+        if key not in exportCacheEntries:
+            exportCacheEntries[key] = function(*args)
+        return list(exportCacheEntries[key])
+    return cached
+
+@cachedDuringExport
 def getUsedMaterials():
     materials = []
     for obj in getAllMeshObjectsInOrder('WMB'):
@@ -106,6 +130,7 @@ def allObjectsInCollectionInOrder(collectionName):
 def getAllObjectsWithMaterial(collectionName, materialName):
     return [obj for obj in getAllMeshObjectsInOrder(collectionName) if obj.material_slots[0].material.name == materialName]
 
+@cachedDuringExport
 def getAllMeshObjectsInOrder(collectionName):
     objs = [obj for obj in allObjectsInCollectionInOrder(collectionName) if obj.type == "MESH"]
     objs = sorted(

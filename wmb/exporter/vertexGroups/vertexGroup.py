@@ -2,7 +2,69 @@ import math
 from time import time
 
 import bpy
+import numpy as np
 from ....utils.util import getBoneIndices, getIndexLookup, getMeshVertexGroups, calculateVertexFlags
+
+FIELD_TYPES = {
+    'position': ('<f4', 3),
+    'tangent': ('u1', 4),
+    'normal': ('<f2', 4),
+    'color': ('u1', 4),
+    'boneIndices': ('u1', 4),
+    'boneWeights': ('u1', 4),
+}
+UV_FIELD_TYPE = ('<f2', 2)
+
+EX_DATA_LAYOUTS = {
+    1: [('normal', 'normal')],
+    3: [('normal', 'normal')],
+    4: [('normal', 'normal')],
+    5: [('normal', 'normal'), ('uv3', 2)],
+    7: [('uv2', 1), ('normal', 'normal')],
+    8: [('uv2', 1), ('normal', 'normal'), ('uv3', 2)],
+    10: [('uv2', 1), ('color', 'color'), ('normal', 'normal')],
+    11: [('uv2', 1), ('color', 'color'), ('normal', 'normal'), ('uv3', 2)],
+    12: [('normal', 'normal'), ('uv3', 2), ('uv4', 3), ('uv5', 4)],
+    14: [('normal', 'normal'), ('uv3', 2), ('uv4', 3)],
+}
+
+def vertexLayout(vertexFlags):
+    layout = [('position', 'position'), ('tangent', 'tangent'), ('uv1', 0)]
+    if vertexFlags == 0:
+        layout.append(('normal', 'normal'))
+    if vertexFlags in {1, 4, 5, 12, 14}:
+        layout.append(('uv2', 1))
+    if vertexFlags in {7, 8, 10, 11}:
+        layout += [('boneIndices', 'boneIndices'), ('boneWeights', 'boneWeights')]
+    if vertexFlags in {3, 4, 5, 12, 14}:
+        layout.append(('color', 'color'))
+    return layout
+
+def layoutType(layout):
+    return np.dtype([(name, *(UV_FIELD_TYPE if isinstance(source, int) else FIELD_TYPES[source])) for name, source in layout])
+
+def packRecords(layout, columns, count):
+    records = np.zeros(count, layoutType(layout))
+    for name, source in layout:
+        records[name] = columns[source]
+    return records.tobytes()
+
+def getValues(collection, attribute, count, width):
+    values = np.empty(count * width, np.float32)
+    collection.foreach_get(attribute, values)
+    return values.reshape(count, width)
+
+def toHalfFloats(values):
+    halves = values.astype('<f2')
+    if (np.isinf(halves) & np.isfinite(values)).any():
+        raise OverflowError("float too large to pack with e format")
+    return halves
+
+def toBytes(values):
+    ints = np.asarray(values).astype(np.int64)
+    if ((ints < 0) | (ints > 255)).any():
+        raise ValueError("byte must be in range(0, 256)")
+    return ints.astype(np.uint8)
 
 class c_vertexGroup(object):
     def __init__(self, vertexGroupIndex, vertexesStart):
@@ -38,29 +100,6 @@ class c_vertexGroup(object):
                 numIndexes += len(obj.data.polygons)
             return numIndexes * 3
         
-        def get_blenderVertices(self):
-            blenderVertices = []
-            blenderObjects = self.blenderObjects
-
-            for obj in blenderObjects:
-                blenderVertices.append([obj.data.vertices, obj])
-            return blenderVertices
-            
-        blenderVertices = get_blenderVertices(self)
-
-        def get_blenderLoops(self, objOwner):
-            blenderLoops = []
-            blenderLoops += objOwner.data.loops
-
-            return blenderLoops
-
-        def get_blenderUVCoords(self, objOwner, loopIndex, uvSlot):
-            if uvSlot > len(objOwner.data.uv_layers)-1:
-                print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", objOwner.name, "but it does not exist. Adding one!")
-                objOwner.data.uv_layers.new()
-            uv_coords = objOwner.data.uv_layers[uvSlot].data[loopIndex].uv
-            return [uv_coords.x, 1-uv_coords.y]
-
         calculated_vertex_flags = calculateVertexFlags(self.blenderObjects[0])
         if calculated_vertex_flags != None:
             self.vertexFlags = calculated_vertex_flags
@@ -99,196 +138,160 @@ class c_vertexGroup(object):
                         boneSet.append(val)
                     return boneSet
 
+        def get_boneWeights(bvertex, vertexNumber, groupNames, boneIndices, boneMapIndices, boneSetIndices):
+            boneIndexes = []
+            boneWeights = []
+            # Bone Indices
+            for groupRef in bvertex.groups:
+                if len(boneIndexes) < 4:
+                    boneGroupName = groupNames[groupRef.group]
+                    boneID = boneIndices.get(boneGroupName)
+
+                    boneMapIndx = boneMapIndices[boneID]
+                    boneSetIndx = boneSetIndices[boneMapIndx]
+
+                    boneIndexes.append(boneSetIndx)
+
+            if len(boneIndexes) == 0:
+                print(vertexNumber ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
+
+            while len(boneIndexes) < 4:
+                boneIndexes.append(0)
+
+            # Bone Weights
+            weights = [group.weight for group in bvertex.groups]
+            weightsSum = sum(weights)
+
+            if len(weights) >  4:
+                print(vertexNumber, "- Vertex Weights Error: Vertex has weights assigned to more than 4 groups. Try using Blender's [Weights -> Limit Total] function.")
+
+            normalized_weights = []                                             # Force normalize the weights as Blender's normalization sometimes get some rounding issues.
+            for val in weights:
+                if val > 0:
+                    normalized_weights.append(float(val)/weightsSum)
+                else:
+                    normalized_weights.append(0)
+
+            for val in normalized_weights:
+                if len(boneWeights) < 4:
+                    weight = math.floor(val * 256.0)
+                    if val == 1.0:
+                        weight = 255
+                    boneWeights.append(weight)
+
+            while len(boneWeights) < 4:
+                boneWeights.append(0)
+
+            while sum(boneWeights) < 255:                     # MOAR checks to make sure weights are normalized but in bytes. (A bit cheating but these values should make such a minor impact.)
+                boneWeights[0] += 1
+
+            while sum(boneWeights) > 255:                     
+                boneWeights[0] -= 1
+
+            if sum(boneWeights) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
+                print(vertexNumber, "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.")
+
+            return boneIndexes, boneWeights
+
+        def get_columns(obj, sources, vertexStart, boneLookups):
+            mesh = obj.data
+            loopCount = len(mesh.loops)
+            loopVertices = np.empty(loopCount, np.int32)
+            mesh.loops.foreach_get('vertex_index', loopVertices)
+            used, firstLoops = np.unique(loopVertices, return_index=True)
+            count = len(used)
+            uvSlots = sorted(source for source in sources if isinstance(source, int))
+
+            for uvSlot in uvSlots:
+                if uvSlot > len(mesh.uv_layers)-1:
+                    print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", obj.name, "but it does not exist. Adding one!")
+                    mesh.uv_layers.new()
+            if 'color' in sources and len(mesh.vertex_colors) == 0:
+                print("Object had no vertex colour layer when one was expected - creating one.")
+                mesh.vertex_colors.active = mesh.vertex_colors.new()
+
+            columns = {}
+            positions = getValues(mesh.vertices, 'co', len(mesh.vertices), 3)[used]
+            columns['position'] = np.stack((positions[:, 0], positions[:, 2], -positions[:, 1]), axis=1)
+
+            tangents = getValues(mesh.loops, 'tangent', loopCount, 3)[firstLoops].astype(np.float64)
+            signs = getValues(mesh.loops, 'bitangent_sign', loopCount, 1)[firstLoops, 0].astype(np.float64)
+            columns['tangent'] = toBytes(np.stack((
+                tangents[:, 0] * 127 + 127.0,
+                tangents[:, 2] * 127 + 127.0,
+                -tangents[:, 1] * 127 + 127.0,
+                -signs * 127.0 + 128.0,
+            ), axis=1))
+
+            if 'normal' in sources:
+                normals = getValues(mesh.loops, 'normal', loopCount, 3)[firstLoops].astype(np.float64)
+                columns['normal'] = toHalfFloats(np.stack((normals[:, 0], normals[:, 2], -normals[:, 1], np.zeros(count)), axis=1))
+
+            for uvSlot in uvSlots:
+                uvs = getValues(mesh.uv_layers[uvSlot].data, 'uv', loopCount, 2)[firstLoops].astype(np.float64)
+                columns[uvSlot] = toHalfFloats(np.stack((uvs[:, 0], 1 - uvs[:, 1]), axis=1))
+
+            if 'color' in sources:
+                colorLayer = mesh.vertex_colors.active or mesh.vertex_colors[0]
+                colors = getValues(colorLayer.data, 'color', loopCount, 4)[firstLoops].astype(np.float64)
+                columns['color'] = toBytes(colors * 255)
+
+            if boneLookups is not None:
+                bones = np.zeros((count, 4), np.int64)
+                weights = np.zeros((count, 4), np.int64)
+                vertices = mesh.vertices
+                for row, vertexIndex in enumerate(used.tolist()):
+                    bones[row], weights[row] = get_boneWeights(vertices[vertexIndex], vertexStart + row, *boneLookups)
+                columns['boneIndices'] = toBytes(bones)
+                columns['boneWeights'] = toBytes(weights)
+
+            return columns, count
+
         def get_vertexesData(self):
-            vertexes = []
-            vertexesExData = []
-            for bvertex_obj in blenderVertices:
-                bvertex_obj_obj = bvertex_obj[1]
-                print('   [>] Generating vertex data for object', bvertex_obj_obj.name)
-                loops = get_blenderLoops(self, bvertex_obj_obj)
-                sorted_loops = sorted(loops, key=lambda loop: loop.vertex_index)
-
+            layout = vertexLayout(self.vertexFlags)
+            exDataLayout = EX_DATA_LAYOUTS.get(self.vertexFlags, [])
+            sources = {source for _, source in layout + exDataLayout}
+            vertexBuffers = []
+            exDataBuffers = []
+            vertexCount = 0
+            for obj in self.blenderObjects:
+                print('   [>] Generating vertex data for object', obj.name)
+                boneLookups = None
                 if self.vertexFlags not in {0, 1, 3, 4, 5, 12, 14}:
-                    boneSet = get_boneSet(self, bvertex_obj_obj["boneSetIndex"])
-                    boneIndices = getBoneIndices("WMB")
-                    boneMapIndices = getIndexLookup(self.boneMap)
-                    boneSetIndices = getIndexLookup(boneSet)
-                    groupNames = [group.name for group in bvertex_obj_obj.vertex_groups]
-                
-                previousIndex = -1
-                for loop in sorted_loops:
-                    if loop.vertex_index == previousIndex:
-                        continue
+                    boneSet = get_boneSet(self, obj["boneSetIndex"])
+                    if 'boneIndices' in sources:
+                        boneLookups = (
+                            [group.name for group in obj.vertex_groups],
+                            getBoneIndices("WMB"),
+                            getIndexLookup(self.boneMap),
+                            getIndexLookup(boneSet),
+                        )
+                if len(obj.data.loops) == 0:
+                    continue
 
-                    previousIndex = loop.vertex_index
-            
-                    bvertex = bvertex_obj[0][loop.vertex_index]
-                    # XYZ Position
-                    position = [bvertex.co.x, bvertex.co.z, -bvertex.co.y]
+                columns, count = get_columns(obj, sources, vertexCount, boneLookups)
+                vertexBuffers.append(packRecords(layout, columns, count))
+                if exDataLayout:
+                    exDataBuffers.append(packRecords(exDataLayout, columns, count))
+                vertexCount += count
 
-                    # Tangents
-                    tx = int(loop.tangent[0] * 127 + 127.0)
-                    ty = int(loop.tangent[2] * 127 + 127.0)
-                    tz = int(-loop.tangent[1] * 127 + 127.0)
-                    sign = int(-loop.bitangent_sign*127.0+128.0)
-
-                    tangents = [tx, ty, tz, sign]
-
-                    # Normal
-                    normal = []
-                    if self.vertexFlags == 0:
-                        normal = [loop.normal[0], loop.normal[2], -loop.normal[1], 0]
-
-                    # UVs
-                    uv_maps = []
-
-                    uv1 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 0)
-                    uv_maps.append(uv1)
-
-                    if self.vertexFlags in {1, 4, 5, 12, 14}:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-
-                    # Bones
-                    boneIndexes = []
-                    boneWeights = []
-                    if self.vertexFlags in {7, 8, 10, 11}:
-                        # Bone Indices
-                        for groupRef in bvertex.groups:
-                            if len(boneIndexes) < 4:
-                                boneGroupName = groupNames[groupRef.group]
-                                boneID = boneIndices.get(boneGroupName)
-
-                                boneMapIndx = boneMapIndices[boneID]
-                                boneSetIndx = boneSetIndices[boneMapIndx]
-                                
-                                boneIndexes.append(boneSetIndx)
-                        
-                        if len(boneIndexes) == 0:
-                            print(len(vertexes) ,"- Vertex Weights Error: Vertex has no assigned groups. At least 1 required. Try using Blender's [Select -> Select All By Trait > Ungrouped Verts] function to find them.")
-
-                        while len(boneIndexes) < 4:
-                            boneIndexes.append(0)
-                        
-                        # Bone Weights
-                        weights = [group.weight for group in bvertex.groups]
-                        weightsSum = sum(weights)
-
-                        if len(weights) >  4:
-                            print(len(vertexes), "- Vertex Weights Error: Vertex has weights assigned to more than 4 groups. Try using Blender's [Weights -> Limit Total] function.")
-
-                        normalized_weights = []                                             # Force normalize the weights as Blender's normalization sometimes get some rounding issues.
-                        for val in weights:
-                            if val > 0:
-                                normalized_weights.append(float(val)/weightsSum)
-                            else:
-                                normalized_weights.append(0)
-
-                        for val in normalized_weights:
-                            if len(boneWeights) < 4:
-                                weight = math.floor(val * 256.0)
-                                if val == 1.0:
-                                    weight = 255
-                                boneWeights.append(weight)
-                        
-                        while len(boneWeights) < 4:
-                            boneWeights.append(0)
-
-                        while sum(boneWeights) < 255:                     # MOAR checks to make sure weights are normalized but in bytes. (A bit cheating but these values should make such a minor impact.)
-                            boneWeights[0] += 1
-
-                        while sum(boneWeights) > 255:                     
-                            boneWeights[0] -= 1
-
-                        if sum(boneWeights) != 255:                       # If EVEN the FORCED normalization doesn't work, say something :/
-                            print(len(vertexes), "- Vertex Weights Error: Vertex has a total weight not equal to 1.0. Try using Blender's [Weights -> Normalize All] function.") 
-
-                    color = []
-                    if self.vertexFlags in {3, 4, 5, 12, 14}:
-                        if len (bvertex_obj_obj.data.vertex_colors) == 0:
-                            print("Object had no vertex colour layer when one was expected - creating one.")
-                            new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
-
-                    vertexes.append([position, tangents, normal, uv_maps, boneIndexes, boneWeights, color])
-
-                    
-                    ##################################################
-                    ###### Now lets do the extra data shit ###########
-                    ##################################################
-                    normal = []
-                    uv_maps = []
-                    color = []
-                    if self.vertexFlags in {10, 11}:
-                        if len (bvertex_obj_obj.data.vertex_colors) == 0:
-                            print("Object had no vertex colour layer when one was expected - creating one.")
-                            new_vertex_colors = bvertex_obj_obj.data.vertex_colors.new()
-
-                    if self.vertexFlags in {1, 3, 4, 5, 7, 8, 10, 11, 12, 14}:
-                        normal = [loop.normal[0], loop.normal[2], -loop.normal[1], 0]
-                    
-                    if self.vertexFlags == 5:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-
-                    elif self.vertexFlags == 7:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-
-                    elif self.vertexFlags == 8:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv3)
-
-                    elif self.vertexFlags == 10:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
-
-                    elif self.vertexFlags == 11:
-                        uv2 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv2)
-                        loop_color = bvertex_obj_obj.data.vertex_colors.active.data[loop.index].color
-                        color = [int(loop_color[0]*255), int(loop_color[1]*255), int(loop_color[2]*255), int(loop_color[3]*255)]
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 1)
-                        uv_maps.append(uv3)
-
-                    elif self.vertexFlags == 12:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-                        uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
-                        uv_maps.append(uv4)
-                        uv5 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 4)
-                        uv_maps.append(uv5)
-
-                    elif self.vertexFlags == 14:
-                        uv3 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 2)
-                        uv_maps.append(uv3)
-                        uv4 = get_blenderUVCoords(self, bvertex_obj_obj, loop.index, 3)
-                        uv_maps.append(uv4)
-                    
-                    vertexExData = [normal, uv_maps, color]
-                    vertexesExData.append(vertexExData)
-            
-            return vertexes, vertexesExData
+            return b''.join(vertexBuffers), b''.join(exDataBuffers)
 
         def get_indexes(self):
-            indexesOffset = 0
             indexes = []
+            indexesOffset = 0
             for obj in self.blenderObjects:
-                for loop in obj.data.loops:
-                    indexes.append(loop.vertex_index + indexesOffset)
-                indexesOffset += len(obj.data.vertices)          
+                loopVertices = np.empty(len(obj.data.loops), np.int32)
+                obj.data.loops.foreach_get('vertex_index', loopVertices)
+                indexes.append(loopVertices.astype(np.int64) + indexesOffset)
+                indexesOffset += len(obj.data.vertices)
+            indexes = np.concatenate(indexes) if indexes else np.zeros(0, np.int64)
 
             # Reverse this loop order
-            for i in range(len(indexes)):
-                if i % 3 == 2:
-                    indexes[i], indexes[i-1] = indexes[i-1], indexes[i]
+            triangles = len(indexes) - len(indexes) % 3
+            indexes[:triangles] = indexes[:triangles].reshape(-1, 3)[:, [0, 2, 1]].reshape(-1)
 
-            return indexes
+            return indexes.astype('<u4').tobytes()
 
         self.vertexSize = 28                                            # 28
 
@@ -305,9 +308,9 @@ class c_vertexGroup(object):
 
         self.numIndexes = get_numIndexes(self)
 
-        self.vertexes, self.vertexesExData = get_vertexesData(self)
+        self.vertexBuffer, self.vertexExDataBuffer = get_vertexesData(self)
         
-        self.indexes = get_indexes(self)
+        self.indexBuffer = get_indexes(self)
 
         self.vertexGroupSize = (self.numVertexes * self.vertexSize) + (self.numVertexes * self.vertexExDataSize) + (self.numIndexes * 4)
 

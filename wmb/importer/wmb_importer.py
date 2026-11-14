@@ -2,6 +2,7 @@ from time import time
 import bpy
 import bmesh
 import math
+import numpy as np
 from typing import List, Tuple
 from mathutils import Vector, Matrix
 
@@ -166,15 +167,10 @@ def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = F
 		else:
 			vcol_layer = objmesh.vertex_colors.new()
 
-		for loop_idx, loop in enumerate(objmesh.loops):	
-			meshColor = vcol_layer.data[loop_idx]
-			dataColor = mesh_data[8][loop.vertex_index]
-			meshColor.color = [
-				dataColor[0]/255,
-				dataColor[1]/255,
-				dataColor[2]/255,
-				dataColor[3]/255
-			]
+		loop_vertices = np.empty(len(objmesh.loops), np.int32)
+		objmesh.loops.foreach_get('vertex_index', loop_vertices)
+		loop_colors = np.asarray(mesh_data[8], np.float64)[loop_vertices] / 255
+		vcol_layer.data.foreach_set('color', loop_colors.astype(np.float32).ravel())
 
 	# UVs
 	bm = bmesh.new()
