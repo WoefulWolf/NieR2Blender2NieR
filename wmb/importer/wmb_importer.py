@@ -13,7 +13,7 @@ from .shader_Hair01_XXXXX import hair01_xxxxx
 from .shader_SKN00_XXXXX import skn00_xxxxx
 from .shader_CNS00_XXXXX import cns00_xxxxx
 
-from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings
+from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings, clearTextureIndex
 from ...utils.nodes import invert_channel
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
@@ -693,6 +693,7 @@ def import_unknowWorldDataArray(wmb):
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
 def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb'), import_mesh_indices = False):
+	clearTextureIndex()
 	wmb = WMB3(wmb_file, only_extract)
 	wmbname = os.path.split(wmb_file)[-1] # Split only splits into head and tail, but since we want the last part, we don't need to split the head with wmb_file.split(os.sep)
 

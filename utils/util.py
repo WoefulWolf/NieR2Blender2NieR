@@ -426,6 +426,26 @@ def setExportFieldsFromImportFile(filepath: str, isDatImport: bool) -> None:
 def getPreferences():
     return bpy.context.preferences.addons[ADDON_NAME].preferences
 
+textureIndex = {}
+
+def clearTextureIndex():
+    textureIndex.clear()
+
+def indexTextureDirectory(directory):
+    if directory not in textureIndex:
+        entries = []
+        for folder, _, files in os.walk(directory):
+            depth = 0 if folder == directory else os.path.relpath(folder, directory).count(os.sep) + 1
+            for file in files:
+                if '.' in file:
+                    path = os.path.join(folder, file)
+                    entries.append((depth, path.lower(), path, file.split('.', 1)[0].lower()))
+        found = {}
+        for _, _, path, name in sorted(entries):
+            found.setdefault(name, path)
+        textureIndex[directory] = found
+    return textureIndex[directory]
+
 def getTexture(texture_dir, texture_name):
     def either(c):
         return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
@@ -438,10 +458,11 @@ def getTexture(texture_dir, texture_name):
     
     # If not, check the preferences texture directories
     for dir in getPreferences().textureDirs:
-        texture_search = os.path.join(dir.directory, ''.join(either(char) for char in texture_name) + ".*")
-        texture_files = glob.glob(texture_search, recursive=True)
-        if len(texture_files) > 0:
-            return texture_files[0]
+        if not dir.directory:
+            continue
+        texture_file = indexTextureDirectory(dir.directory).get(texture_name.lower())
+        if texture_file is not None:
+            return texture_file
     return None
 
 def getBoneFromID(bone_id):

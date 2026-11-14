@@ -2,7 +2,7 @@ bl_info = {
     "name": "NieR2Blender2NieR (NieR:Automata Asset Tools)",
     "author": "Woeful_Wolf & RaiderB",
     "version": (0, 5, 0),
-    "blender": (2, 80, 0),
+    "blender": (4, 0, 0),
     "description": "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files",
     "category": "Import-Export"}
 
