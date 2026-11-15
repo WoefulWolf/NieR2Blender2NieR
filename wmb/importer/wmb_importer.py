@@ -14,7 +14,7 @@ from .shader_SKN00_XXXXX import skn00_xxxxx
 from .shader_CNS00_XXXXX import cns00_xxxxx
 from .shader_Plt00_XXXXX import plt00_xxxxx
 
-from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings, clearTextureIndex
+from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings, clearTextureIndex, findPreferenceTexture
 from ...utils.nodes import invert_channel
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
@@ -242,11 +242,18 @@ def set_partent(parent, child):
 	child.select_set(False)
 	parent.select_set(False)
 
+def wtaTexturePath(texture_dir, id):
+	path = os.path.join(texture_dir, f"{id}.dds")
+	if os.path.exists(path):
+		return path
+	path = findPreferenceTexture(id)
+	return path if path is not None and path.lower().endswith(".dds") else None
+
 def addWtaExportMaterial(texture_dir, material):
 	material_name = material[0]
 	textures = material[1]
 	wtaTextures: List[Tuple[str, str, str]] = [
-		(mapType, id, os.path.join(texture_dir, f"{id}.dds"))
+		(mapType, id, wtaTexturePath(texture_dir, id))
 		for mapType, id in textures.items()
 		if isTextureTypeSupported(mapType)
 	]

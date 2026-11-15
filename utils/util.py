@@ -130,7 +130,8 @@ def allObjectsInCollectionInOrder(collectionName):
     return sorted(bpy.data.collections[collectionName].all_objects, key=getObjKey) if collectionName in bpy.data.collections else []
 
 def getAllObjectsWithMaterial(collectionName, materialName):
-    return [obj for obj in getAllMeshObjectsInOrder(collectionName) if obj.material_slots[0].material.name == materialName]
+    return [obj for obj in getAllMeshObjectsInOrder(collectionName)
+            if any(slot.material is not None and slot.material.name == materialName for slot in obj.material_slots)]
 
 @cachedDuringExport
 def getAllMeshObjectsInOrder(collectionName):
@@ -446,6 +447,22 @@ def indexTextureDirectory(directory):
         textureIndex[directory] = found
     return textureIndex[directory]
 
+def isSharedTexture(identifier, path):
+    if not path or path == 'None' or not identifier:
+        return False
+    fullPath = os.path.normcase(os.path.abspath(bpy.path.abspath(path)))
+    if 'nier2blender_extracted' in fullPath.split(os.sep):
+        return False
+    if os.path.basename(fullPath).split('.', 1)[0].lower() != identifier.lower():
+        return False
+    for entry in getPreferences().textureDirs:
+        if not entry.directory:
+            continue
+        root = os.path.normcase(os.path.abspath(bpy.path.abspath(entry.directory))).rstrip(os.sep)
+        if fullPath.startswith(root + os.sep):
+            return True
+    return False
+
 def getTexture(texture_dir, texture_name):
     def either(c):
         return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
@@ -457,6 +474,9 @@ def getTexture(texture_dir, texture_name):
         return texture_files[0]
     
     # If not, check the preferences texture directories
+    return findPreferenceTexture(texture_name)
+
+def findPreferenceTexture(texture_name):
     for dir in getPreferences().textureDirs:
         if not dir.directory:
             continue

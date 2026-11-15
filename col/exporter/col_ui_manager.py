@@ -129,6 +129,8 @@ def register():
 def unregister():
     if not hasattr(bpy.types, B2NCollisionToolsPanel.bl_idname):
         return
+    if hasattr(bpy.types.Scene, "collisionTools"):
+        del bpy.types.Scene.collisionTools
     bpy.utils.unregister_class(CollisionToolsData)
     bpy.utils.unregister_class(B2NCollisionToolsPanel)
     bpy.utils.unregister_class(B2NApplyCollisionToAllSelected)

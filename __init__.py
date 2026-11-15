@@ -18,6 +18,7 @@ from .utils.utilOperators import RecalculateObjectIndices, RemoveUnusedVertexGro
     DeleteLooseGeometrySelected, DeleteLooseGeometryAll, RipMeshByUVIslands, RestoreImportPose, RestoreMotionPose, Swap2BA2VertexGroups
 from .utils.visibilitySwitcher import enableVisibilitySelector, disableVisibilitySelector
 from .utils import visibilitySwitcher
+from .utils import lightmapBaker
 from .wta_wtp.exporter import wta_wtp_ui_manager
 from .bxm.exporter.gaAreaExportOperator import ExportNierGaArea
 from .bxm.exporter.sarExportOperator import ExportNierSar
@@ -174,6 +175,7 @@ def register():
     wta_wtp_ui_manager.register()
     dat_dtt_ui_manager.register()
     physPanel.register()
+    lightmapBaker.register()
     preferences.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
@@ -201,6 +203,7 @@ def unregister():
     col_ui_manager.unregister()
     visibilitySwitcher.unregister()
     physPanel.unregister()
+    lightmapBaker.unregister()
     preferences.unregister()
     install_dependencies.unregister()
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)

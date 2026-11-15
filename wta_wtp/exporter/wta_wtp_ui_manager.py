@@ -7,7 +7,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from ...utils.util import getUsedMaterials, getNodeWithLabel, getAllObjectsWithMaterial
+from ...utils.util import getUsedMaterials, getNodeWithLabel, getAllObjectsWithMaterial, isSharedTexture, findPreferenceTexture, clearTextureIndex
 
 
 def generateID(context):
@@ -75,17 +75,23 @@ def autoSetWtaTexPathsForMat(blendMat: bpy.types.Material, allWtaItems: List[WTA
             textureDirs.append(texDir)
     def searchForTexture(texId: str) -> str:
         for texDir in textureDirs:
+            if not texDir:
+                continue
             texPath = os.path.join(texDir, f"{texId}.dds")
             if os.path.exists(texPath):
                 return texPath
-        return None
+        return findPreferenceTexture(texId)
     
+    exactTextures = {tex["name"]: tex["path"] for tex in texturesInMat}
+
     # set wta texture paths
     for item in wtaItems:
         baseName, index = splitName(item.texture_map_type, -1)
         newTexPath = None
+        if item.texture_map_type in exactTextures:
+            newTexPath = exactTextures[item.texture_map_type] or None
         # best case: texture in texture groups
-        if baseName in groupedTextures and len(groupedTextures[baseName]) > index:
+        elif baseName in groupedTextures and len(groupedTextures[baseName]) > index:
             newTexPath = groupedTextures[baseName][index]
         # if out of range and multiple textures with same name, try previous
         elif baseName in groupedTextures and index != -1 and 0 < len(groupedTextures[baseName]) < index + 1:
@@ -145,6 +151,7 @@ class GetMaterialsOperator(bpy.types.Operator):
     def execute(self, context):
         newMaterialsAdded = 0
         autoTextureWarnings = []
+        clearTextureIndex()
         context.scene.WTAMaterials.clear()
         for mat in getUsedMaterials():
             try:
@@ -181,6 +188,7 @@ class GetNewMaterialsOperator(bpy.types.Operator):
         
         newMaterialsAdded = 0
         autoTextureWarnings = []
+        clearTextureIndex()
         for mat in getUsedMaterials():
             if doesWtaMaterialExist(mat, context):
                 continue
@@ -291,9 +299,9 @@ class ExportWTAOperator(bpy.types.Operator, ExportHelper):
         return{'FINISHED'}
 
 class FilepathSelector(bpy.types.Operator, ImportHelper):
-    '''Select texture file'''
+    '''Open a DDS file for this texture. Rows with the same identifier get it too'''
     bl_idname = "na.filepath_selector"
-    bl_label = "Select Texture"
+    bl_label = "Open File"
     bl_options = {"UNDO"}
 
     filename_ext = ".dds"
@@ -311,6 +319,37 @@ class FilepathSelector(bpy.types.Operator, ImportHelper):
 
         return{'FINISHED'}
 
+def defaultColorspace(mapType: str) -> str:
+    return "sRGB" if any(hint in mapType for hint in ("Albedo", "Color", "EnvMap", "Irradiance")) else "Non-Color"
+
+def loadSyncedImage(path: str, colorspace: str, loaded: dict) -> bpy.types.Image:
+    key = (os.path.normcase(os.path.abspath(bpy.path.abspath(path))), colorspace)
+    if key not in loaded:
+        image = next((image for image in bpy.data.images
+                      if image.source == "FILE" and image.colorspace_settings.name == colorspace
+                      and os.path.normcase(os.path.abspath(bpy.path.abspath(image.filepath))) == key[0]), None)
+        if image is None:
+            image = bpy.data.images.load(path, check_existing=False)
+            image.colorspace_settings.name = colorspace
+        else:
+            image.reload()
+        loaded[key] = image
+    return loaded[key]
+
+def replaceWithImageNode(tree: bpy.types.NodeTree, node: bpy.types.Node, image: bpy.types.Image):
+    imageNode = tree.nodes.new("ShaderNodeTexImage")
+    imageNode.location = node.location
+    imageNode.parent = node.parent
+    imageNode.label = node.label
+    imageNode.hide = node.hide
+    imageNode.image = image
+    for link in list(tree.links):
+        if link.to_node == node and link.to_socket.name == "Vector":
+            tree.links.new(link.from_socket, imageNode.inputs["Vector"])
+        elif link.from_node == node:
+            tree.links.new(imageNode.outputs.get(link.from_socket.name, imageNode.outputs["Color"]), link.to_socket)
+    tree.nodes.remove(node)
+
 class SyncBlenderMaterials(bpy.types.Operator):
     '''Sync the texture of Blender's materials to these'''
     bl_idname = "na.sync_blender_materials"
@@ -318,52 +357,57 @@ class SyncBlenderMaterials(bpy.types.Operator):
     bl_options = {"UNDO"}
 
     def execute(self, context):
+        usedMaterials = {mat.name: mat for mat in getUsedMaterials() if mat is not None and mat.node_tree is not None}
+        loaded = {}
+        renamedUvMaps = set()
+        synced = 0
+        missing = []
         for item in context.scene.WTAMaterials:
-            if item.texture_path == "None":
+            if item.texture_path in ("None", "") or item.parent_mat not in usedMaterials:
                 continue
-            for mat in getUsedMaterials():
-                if mat.name == item.parent_mat:
-                    nodes = mat.node_tree.nodes
+            if not os.path.isfile(bpy.path.abspath(item.texture_path)):
+                missing.append(item.texture_path)
+                continue
+            mat = usedMaterials[item.parent_mat]
+            nodes = mat.node_tree.nodes
 
-                    # Rename used uv maps
-                    uv_nodes_count = 0
-                    while True:
-                        if getNodeWithLabel(nodes, "UV" + str(uv_nodes_count + 1)):
-                            uv_nodes_count += 1
-                        else:
-                            break
+            # Rename used uv maps
+            if mat.name not in renamedUvMaps:
+                renamedUvMaps.add(mat.name)
+                uv_nodes_count = 0
+                while getNodeWithLabel(nodes, "UV" + str(uv_nodes_count + 1)):
+                    uv_nodes_count += 1
+                for obj in getAllObjectsWithMaterial("WMB", mat.name):
+                    for uv_index in range(min(uv_nodes_count, len(obj.data.uv_layers))):
+                        obj.data.uv_layers[uv_index].name = "UVMap" + str(uv_index + 1)
 
-                    for uv_index in range(uv_nodes_count):
-                        objs = getAllObjectsWithMaterial("WMB", mat.name)
-                        for obj in objs:
-                            if len(obj.data.uv_layers) > uv_index:
-                                obj.data.uv_layers[uv_index].name = "UVMap" + str(uv_index + 1)
+            matching = [node for node in nodes if node.label == item.texture_map_type]
+            for node in matching:
+                if node.type == "TEX_IMAGE":
+                    colorspace = node.image.colorspace_settings.name if node.image is not None else defaultColorspace(item.texture_map_type)
+                    node.image = loadSyncedImage(item.texture_path, colorspace, loaded)
+                elif node.type == "GROUP":
+                    replaceWithImageNode(mat.node_tree, node, loadSyncedImage(item.texture_path, defaultColorspace(item.texture_map_type), loaded))
+            synced += len(matching)
+            if not matching and "Principled BSDF" in nodes:
+                # add new texture node
+                node = nodes.new("ShaderNodeTexImage")
+                node.label = item.texture_map_type
+                node.image = loadSyncedImage(item.texture_path, defaultColorspace(item.texture_map_type), loaded)
+                synced += 1
+                # link up
+                if "Albedo" in node.label:
+                    mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Base Color"])
+                elif "Alpha" in node.label:
+                    mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Alpha"])
+                else:
+                    print("Unhandled texture map type:", node.label)
 
-                    hasFoundNode = False
-                    for node in nodes:
-                        if node.label == item.texture_map_type:
-                            hasFoundNode = True
-                            node.image = bpy.data.images.load(item.texture_path)
-                            if "MaskMap" in node.label or "NormalMap" in node.label:
-                                node.image.colorspace_settings.name = 'Non-Color'
-                            break
-                    if not hasFoundNode:
-                        # add new texture node
-                        node = nodes.new("ShaderNodeTexImage")
-                        node.label = item.texture_map_type
-                        node.image = bpy.data.images.load(item.texture_path)
-                        if "MaskMap" in node.label or "NormalMap" in node.label:
-                            node.image.colorspace_settings.name = "Non-Color"
-                        # link up
-                        if "Albedo" in node.label:
-                            mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Base Color"])
-                        elif "Alpha" in node.label:
-                            mat.node_tree.links.new(node.outputs[0], nodes["Principled BSDF"].inputs["Alpha"])
-                        else:
-                            print("Unhandled texture map type:", node.label)
-
-                    break
-        return{'FINISHED'}
+        if missing:
+            self.report({"WARNING"}, f"Synced {synced} texture node{'s' if synced != 1 else ''}; {len(missing)} texture file{'s' if len(missing) != 1 else ''} not found, e.g. {missing[0]}")
+        else:
+            self.report({"INFO"}, f"Synced {synced} texture node{'s' if synced != 1 else ''}")
+        return {'FINISHED'}
 
 class SyncMaterialIdentifiers(bpy.types.Operator):
     '''Sync the texture identifiers of materials to these'''
@@ -417,9 +461,9 @@ class RemoveManualTextureOperator(bpy.types.Operator):
         return {"FINISHED"}
 
 class TextureFilepathSelector(bpy.types.Operator, ImportHelper):
-    '''Select texture file for Texture Replacer'''
+    '''Open a DDS file for the Texture Replacer'''
     bl_idname = "na.texture_filepath_selector"
-    bl_label = "Select Texture"
+    bl_label = "Open File"
     bl_options = {"UNDO"}
 
     filename_ext = ".dds"
@@ -459,6 +503,104 @@ class MassTextureReplacer(bpy.types.Operator):
 
         self.report({"INFO"}, f"Replaced {replacedTextures} texture{'s' if replacedTextures != 1 else ''}")
         return{'FINISHED'}
+
+CORE_TEXTURES_2D = [
+    ("4e9c16f4", "White", "32x32 plain white. The game's default light map and mask texture"),
+    ("5864a24f", "White (8x8)", "8x8 plain white"),
+    ("132ed5c3", "Black", "8x8 plain black"),
+    ("7fd4929a", "Detail Noise Normal", "128x128 fine noise normal map, the game's default detail normal"),
+    ("6b4c494d", "UV Checker Grid", "256x256 labelled colour grid, a debug placeholder"),
+    ("5ff85fe8", "Colour Grading LUT (Neutral)", "256x16 neutral 16x16x16 colour lookup table"),
+    ("04409bc2", "Falloff Gradient", "512x512 radial gradient from black to light grey"),
+    ("0ee619dc", "Dither Pattern 1", "64x64 black and white dither pattern"),
+    ("459fb4d0", "Dither Pattern 2", "64x64 black and white dither pattern"),
+    ("40ec4ff8", "Dither Pattern 3", "64x64 black and white dither pattern"),
+    ("6f484148", "Dither Pattern 4", "64x64 black and white dither pattern"),
+]
+CORE_TEXTURES_CUBE = [
+    ("1fbc0984", "Desert Sky", "128 px cube map of a sandy desert under a blue sky, the game's default environment and irradiance map"),
+    ("3f44a76d", "Overcast Sky (Blurred)", "128 px blurred grey-blue sky cube map"),
+    ("21d3f88f", "Dusk Sky (Blurred)", "64 px blurred dark blue sky cube map"),
+    ("2c96a3cb", "Grey Gradient", "32 px grey cube map, lighter above than below"),
+    ("5b91935d", "Light Grey Gradient (No Alpha)", "32 px light grey cube map with zero alpha"),
+    ("359ff271", "Studio Lights", "32 px grey cube map with bright window-like panels"),
+    ("3c3cad4d", "Black With Light Spots", "64 px black cube map with a few soft bright spots"),
+    ("4d9109fe", "Mid Grey", "8 px flat 50% grey cube map"),
+    ("32f23668", "Dark Grey", "32 px flat dark grey cube map"),
+    ("4298c2e7", "Black", "32 px flat black cube map"),
+]
+
+def isCubeTextureSlot(mapType: str) -> bool:
+    return "EnvMap" in mapType or "Irradiance" in mapType
+
+CORE_TEXTURE_ITEMS = {
+    cube: [(identifier, f"{name} ({identifier})", description) for identifier, name, description in textures]
+    for cube, textures in ((False, CORE_TEXTURES_2D), (True, CORE_TEXTURES_CUBE))
+}
+
+def coreTextureItems(self, context):
+    return CORE_TEXTURE_ITEMS[self.cube]
+
+class UseCoreTexture(bpy.types.Operator):
+    bl_idname = "na.use_core_texture"
+    bl_label = "Core Textures"
+    bl_description = "Use one of the game's built-in core textures for this slot. They're always loaded, so nothing gets packed"
+    bl_options = {"UNDO", "INTERNAL"}
+
+    id: bpy.props.IntProperty()
+    cube: bpy.props.BoolProperty()
+    texture: bpy.props.EnumProperty(name="Core Texture", items=coreTextureItems)
+
+    def invoke(self, context, event):
+        item = getWTAItemByID(context, self.id)
+        if item is None:
+            return {"CANCELLED"}
+        identifiers = [entry[0] for entry in (CORE_TEXTURES_CUBE if self.cube else CORE_TEXTURES_2D)]
+        if item.texture_identifier.lower() in identifiers:
+            self.texture = item.texture_identifier.lower()
+        return context.window_manager.invoke_props_dialog(self, width=360)
+
+    def draw(self, context):
+        item = getWTAItemByID(context, self.id)
+        layout = self.layout
+        if item is not None:
+            layout.label(text=f"{item.texture_map_type} in {item.parent_mat}")
+        layout.column().prop(self, "texture", expand=True)
+
+    def execute(self, context):
+        item = getWTAItemByID(context, self.id)
+        if item is None:
+            return {"CANCELLED"}
+        item.texture_identifier = self.texture
+        item.texture_path = "None"
+        mat = bpy.data.materials.get(item.parent_mat)
+        if mat is not None and item.texture_map_type in mat:
+            mat[item.texture_map_type] = self.texture
+        self.report({"INFO"}, f"{item.texture_map_type} in {item.parent_mat} now uses core texture {self.texture}")
+        return {"FINISHED"}
+
+class SharedTextureInfo(bpy.types.Operator):
+    bl_idname = "na.shared_texture_info"
+    bl_label = "Shared Texture"
+    bl_options = {"INTERNAL"}
+
+    @classmethod
+    def description(cls, context, properties):
+        if context.scene.bSkipSharedTextures:
+            return ("Shared texture: this file is inside one of the texture directories in the add-on preferences, "
+                    "so it won't be exported into the WTA/WTP (Skip Exporting Shared Textures is on)")
+        return ("Shared texture: this file is inside one of the texture directories in the add-on preferences. "
+                "It will still be exported, because Skip Exporting Shared Textures is off")
+
+    def execute(self, context):
+        self.report({"INFO"}, self.description(context, None))
+        return {"FINISHED"}
+
+def drawSharedTextureIcon(row, item):
+    if isSharedTexture(item.texture_identifier, item.texture_path):
+        row.operator(SharedTextureInfo.bl_idname, icon="LINKED", text="", emboss=False)
+    else:
+        row.label(text="", icon="BLANK1")
 
 class WTA_WTP_PT_Export(bpy.types.Panel):
     bl_label = "NieR:Automata WTP/WTA Textures"
@@ -514,6 +656,9 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
+        layout.prop(context.scene, "bSkipSharedTextures")
+        layout.prop(context.scene, "bFilterToSelected")
+
         # texture replacer
         row = layout.row()
         row.alignment = "LEFT"
@@ -530,7 +675,7 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             row.prop(context.scene, "ReplaceTextureName", text="")
             row.prop(context.scene, "NewTextureName", text="")
             row.prop(context.scene, "ReplaceTexturePath", text="")
-            row.operator("na.texture_filepath_selector", icon="FILE", text="")
+            row.operator("na.texture_filepath_selector", icon="FILEBROWSER", text="")
             row = layout.row()
             replacableTexturesCount = len([ mat for mat in context.scene.WTAMaterials
                  if textureMatchesSearch(mat, context.scene.ReplaceTextureName, newTexture=context.scene.ReplaceTexturePath) ])
@@ -548,10 +693,15 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
         row.prop(context.scene, "bSearchTexPaths", icon="FILE", text="")
 
         # materials
+        selectedMaterials = None
+        if context.scene.bFilterToSelected:
+            selectedMaterials = {slot.material.name for obj in context.selected_objects for slot in obj.material_slots if slot.material is not None}
         loaded_mats = []
         for item in context.scene.WTAMaterials:
             # Skip if this texture has no Blender material (is thus manual texture)
             if item.parent_mat == "":
+                continue
+            if selectedMaterials is not None and item.parent_mat not in selectedMaterials:
                 continue
             # text search filter
             if not textureMatchesSearch(item, context.scene.MatSearchStr,
@@ -570,12 +720,20 @@ class WTA_WTP_PT_Materials(bpy.types.Panel):
             row.label(text=item.texture_map_type)
             row.prop(item, "texture_identifier", text="")
             row.prop(item, "texture_path", text="")
-            row.operator("na.filepath_selector", icon="FILE", text="").id = item.id
+            row.operator("na.filepath_selector", icon="FILEBROWSER", text="").id = item.id
+            coreOp = row.operator(UseCoreTexture.bl_idname, icon="TEXTURE", text="")
+            coreOp.id = item.id
+            coreOp.cube = isCubeTextureSlot(item.texture_map_type)
+            drawSharedTextureIcon(row, item)
 
             loaded_mats.append(item.parent_mat)
 
         if len(loaded_mats) == 0:
-            layout.label(text="No materials found", icon="INFO")
+            if selectedMaterials is not None:
+                layout.label(text="Select objects in the 3D viewport to list their materials" if not context.selected_objects
+                             else "The selected objects use none of these materials", icon="INFO")
+            else:
+                layout.label(text="No materials found", icon="INFO")
 
 class WTA_WTP_PT_Manual(bpy.types.Panel):
     bl_parent_id = "WTA_WTP_PT_Export"
@@ -599,7 +757,8 @@ class WTA_WTP_PT_Manual(bpy.types.Panel):
             row.prop(item, "texture_map_type", text="")
             row.prop(item, "texture_identifier", text="")
             row.prop(item, "texture_path", text="")
-            row.operator("na.filepath_selector", icon="FILE", text="").id = item.id
+            row.operator("na.filepath_selector", icon="FILEBROWSER", text="").id = item.id
+            drawSharedTextureIcon(row, item)
             row.operator("na.remove_manual_texture", icon="X", text="").id = item.id
 
 class WTA_WTP_PT_Hints(bpy.types.Panel):
@@ -641,8 +800,20 @@ def register():
     bpy.utils.register_class(SyncMaterialIdentifiers)
     bpy.utils.register_class(TextureFilepathSelector)
     bpy.utils.register_class(MassTextureReplacer)
+    bpy.utils.register_class(SharedTextureInfo)
+    bpy.utils.register_class(UseCoreTexture)
 
     bpy.types.Scene.WTAMaterials = bpy.props.CollectionProperty(type=WTAItems)
+    bpy.types.Scene.bFilterToSelected = bpy.props.BoolProperty(
+        name = "Filter To Selected",
+        default = False,
+        description = "Only list the materials of the objects selected in the 3D viewport",
+    )
+    bpy.types.Scene.bSkipSharedTextures = bpy.props.BoolProperty(
+        name = "Skip Exporting Shared Textures",
+        default = True,
+        description = "Don't export textures whose file is inside one of the texture directories in the add-on preferences into the WTA/WTP; the game is expected to have them already",
+    )
     # Mass texture replacer props
     bpy.types.Scene.bShowMassReplacer = bpy.props.BoolProperty (
         name = "Show texture replacer",
@@ -719,8 +890,12 @@ def unregister():
     bpy.utils.unregister_class(SyncMaterialIdentifiers)
     bpy.utils.unregister_class(TextureFilepathSelector)
     bpy.utils.unregister_class(MassTextureReplacer)
+    bpy.utils.unregister_class(SharedTextureInfo)
+    bpy.utils.unregister_class(UseCoreTexture)
 
     del bpy.types.Scene.WTAMaterials
+    del bpy.types.Scene.bSkipSharedTextures
+    del bpy.types.Scene.bFilterToSelected
     del bpy.types.Scene.bShowMassReplacer
     del bpy.types.Scene.ReplaceTextureName
     del bpy.types.Scene.NewTextureName

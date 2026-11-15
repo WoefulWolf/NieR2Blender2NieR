@@ -249,7 +249,7 @@ def separate_color(tree, color, location=(0, 0)):
     connect(tree, node.inputs['Color'], color)
     return node.outputs
 
-GROUP_VERSION = 3
+GROUP_VERSION = 4
 
 def existing_group(name):
     group = bpy.data.node_groups.get(name)
@@ -547,7 +547,7 @@ def wind_sway():
     weight, phase = separate_color(group, inputs['Vertex Color'], grid_location(0, 2))[:2]
 
     geometry = add_node(group, 'ShaderNodeNewGeometry', grid_location(0, -1))
-    distance = vector_math_node(group, 'LENGTH', geometry.outputs['Position'], location=grid_location(1, -1))
+    distance = vector_math_node(group, 'DOT_PRODUCT', geometry.outputs['True Normal'], geometry.outputs['Position'], location=grid_location(1, -1))
     wave = math_node(group, 'SUBTRACT', math_node(group, 'MULTIPLY', inputs['Swing Speed'], frames, location=grid_location(2, -3)), math_node(group, 'MULTIPLY', inputs['Swing Height Cycle'], distance, location=grid_location(2, -2)), location=grid_location(3, -2))
     puff = math_node(group, 'MULTIPLY', math_node(group, 'ADD', math_node(group, 'COSINE', wave, location=grid_location(4, -2)), 1.0, location=grid_location(5, -2)), inputs['Swing Power'], location=grid_location(6, -2))
     normal = add_node(group, 'ShaderNodeVectorTransform', grid_location(1, 0))

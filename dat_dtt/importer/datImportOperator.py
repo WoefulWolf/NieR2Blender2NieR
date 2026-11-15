@@ -49,8 +49,8 @@ def importDtt(only_extract, filepath, import_mesh_indices = False):
     col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
     if os.path.isfile(col_filepath):
         from ...col.importer import col_importer
-        col_importer.main(col_filepath)
         enableCollisionTools()
+        col_importer.main(col_filepath)
 
     # LAY
     lay_filepath = os.path.join(extract_dir, tailless_tail + '.dat', 'Layout.lay')
@@ -123,8 +123,8 @@ class ImportNierDat(bpy.types.Operator, ImportHelper):
         col_filepath = os.path.join(extract_dir, tailless_tail + '.dat', tailless_tail + '.col')
         if os.path.isfile(col_filepath):
             from ...col.importer import col_importer
-            col_importer.main(col_filepath)
             enableCollisionTools()
+            col_importer.main(col_filepath)
 
         # LAY
         lay_filepath = os.path.join(extract_dir, tailless_tail + '.dat', 'Layout.lay')

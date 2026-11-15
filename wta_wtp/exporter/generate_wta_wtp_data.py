@@ -1,6 +1,6 @@
 import string
 
-from ...utils.util import ShowMessageBox
+from ...utils.util import ShowMessageBox, isSharedTexture
 
 
 def generate(context):
@@ -10,10 +10,15 @@ def generate(context):
     texture_paths_array = []
     albedo_indexes = []
 
+    skipShared = getattr(context.scene, 'bSkipSharedTextures', False)
+    skippedShared = set()
     true_index = 0
     for index, texture in enumerate(wta_data):
         # Avoid duplicates
         if texture.texture_identifier in identifiers_array or texture.texture_path == 'None':
+            continue
+        if skipShared and isSharedTexture(texture.texture_identifier, texture.texture_path):
+            skippedShared.add(texture.texture_identifier)
             continue
 
         # Check if identifier is 8 chars long
@@ -49,4 +54,7 @@ def generate(context):
         
         true_index += 1
 
+    skippedShared -= set(identifiers_array)
+    if skippedShared:
+        print('[i] WTA/WTP Export: skipped %d shared texture%s found in the preferences texture directories.' % (len(skippedShared), '' if len(skippedShared) == 1 else 's'))
     return identifiers_array, texture_paths_array, albedo_indexes
