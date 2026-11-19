@@ -13,6 +13,10 @@ from .shader_Hair01_XXXXX import hair01_xxxxx
 from .shader_SKN00_XXXXX import skn00_xxxxx
 from .shader_CNS00_XXXXX import cns00_xxxxx
 from .shader_Plt00_XXXXX import plt00_xxxxx
+from .shader_PBS11_XXXXX import pbs11_xxxxx
+from .shader_Wtr00_XXXXX import wtr00_xxxxx
+from .shader_Wtr01_XXXXX import wtr01_xxxxx
+from .shader_Wtr02_XXXXX import wtr02_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings, clearTextureIndex, findPreferenceTexture
 from ...utils.nodes import invert_channel
@@ -343,6 +347,18 @@ def construct_materials(texture_dir, material_array):
 		return material
 	elif shader_name == "Plt00_XXXXX":
 		plt00_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "PBS11_XXXXX":
+		pbs11_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "Wtr00_XXXXX":
+		wtr00_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "Wtr01_XXXXX":
+		wtr01_xxxxx(material, material_array, texture_dir)
+		return material
+	elif shader_name == "Wtr02_XXXXX":
+		wtr02_xxxxx(material, material_array, texture_dir)
 		return material
 
 	# Recreate Nodes and Links with references

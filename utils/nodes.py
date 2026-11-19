@@ -249,7 +249,7 @@ def separate_color(tree, color, location=(0, 0)):
     connect(tree, node.inputs['Color'], color)
     return node.outputs
 
-GROUP_VERSION = 4
+GROUP_VERSION = 5
 
 def existing_group(name):
     group = bpy.data.node_groups.get(name)
@@ -392,6 +392,7 @@ def flat_image(name, color, non_color):
     if image is None:
         image = bpy.data.images.new(name, 1, 1, alpha=True, float_buffer=True)
         image.generated_color = color
+    image.alpha_mode = 'CHANNEL_PACKED'
     if non_color:
         image.colorspace_settings.name = 'Non-Color'
     return image
@@ -417,6 +418,7 @@ def texture_node(material, texture_dir, name, location, uv=None, non_color=False
     node.label = found or name
     if texture_path is not None:
         node.image = bpy.data.images.load(texture_path)
+        node.image.alpha_mode = 'CHANNEL_PACKED'
         if non_color:
             node.image.colorspace_settings.name = 'Non-Color'
         return node
@@ -468,7 +470,9 @@ def uv_tiling():
     connect(group, scale.inputs['X'], inputs['X'])
     connect(group, scale.inputs['Y'], inputs['Y'])
     scale.inputs['Z'].default_value = 1.0
-    connect(group, outputs['UV'], vector_math_node(group, 'MULTIPLY', inputs['UV'], scale.outputs[0], location=grid_location(1, 0)))
+    offset = add_node(group, 'ShaderNodeCombineXYZ', grid_location(0, 3))
+    connect(group, offset.inputs['Y'], math_node(group, 'SUBTRACT', 1.0, inputs['Y'], location=grid_location(-1, 3)))
+    connect(group, outputs['UV'], vector_math_node(group, 'MULTIPLY_ADD', inputs['UV'], scale.outputs[0], offset.outputs[0], location=grid_location(1, 0)))
     return group
 
 def game_time():
@@ -682,6 +686,82 @@ def surface():
     connect(group, cut_out.inputs[1], transparent.outputs[0])
     connect(group, cut_out.inputs[2], occluded.outputs[0])
     connect(group, outputs['Shader'], cut_out.outputs[0])
+    return group
+
+def blended(material):
+    if hasattr(material, 'surface_render_method'):
+        material.surface_render_method = 'BLENDED'
+    else:
+        material.blend_method = 'BLEND'
+
+def water_opacity():
+    name = 'NieR Water Opacity'
+    group = existing_group(name)
+    if group is not None:
+        return group
+    group, inputs, outputs = new_group(name, [
+        ('Mask', 'Float', 1.0),
+        ('Fresnel Exp U', 'Float', 0.0),
+        ('Fresnel Exp V', 'Float', 0.0),
+        ('Strength', 'Float', 1.0),
+        ('Power', 'Float', 1.0),
+    ], [('Alpha', 'Float', None)])
+    geometry = add_node(group, 'ShaderNodeNewGeometry', grid_location(0, -3))
+    view = add_node(group, 'ShaderNodeVectorTransform', grid_location(1, -3))
+    view.vector_type = 'NORMAL'
+    view.convert_from = 'WORLD'
+    view.convert_to = 'CAMERA'
+    connect(group, view.inputs['Vector'], geometry.outputs['Normal'])
+    axes = add_node(group, 'ShaderNodeSeparateXYZ', grid_location(2, -3))
+    connect(group, axes.inputs['Vector'], view.outputs['Vector'])
+    edge = inputs['Mask']
+    for i, (axis, exponent) in enumerate((('X', 'Fresnel Exp U'), ('Y', 'Fresnel Exp V'))):
+        y = i * 2
+        facing = math_node(group, 'SUBTRACT', 1.0, math_node(group, 'ABSOLUTE', axes.outputs[axis], location=grid_location(3, y)), location=grid_location(4, y))
+        facing = math_node(group, 'MAXIMUM', facing, 0.001, location=grid_location(5, y))
+        edge = math_node(group, 'MULTIPLY', edge, math_node(group, 'POWER', facing, inputs[exponent], location=grid_location(6, y + 1)), location=grid_location(7, y))
+    shaped = math_node(group, 'MULTIPLY_ADD', math_node(group, 'SUBTRACT', edge, 0.5, location=grid_location(8, 0)), inputs['Strength'], 0.5, location=grid_location(9, 0))
+    curve = math_node(group, 'TANH', math_node(group, 'MULTIPLY', shaped, math_node(group, 'MULTIPLY', inputs['Power'], 0.5, location=grid_location(9, 2)), location=grid_location(10, 0)), location=grid_location(11, 0))
+    connect(group, outputs['Alpha'], math_node(group, 'MAXIMUM', curve, 0.0, location=grid_location(11, 1)))
+    return group
+
+def water_surface():
+    name = 'NieR Water Surface'
+    group = existing_group(name)
+    if group is not None:
+        return group
+    group, inputs, outputs = new_group(name, [
+        ('Shader', 'Shader', None),
+        ('Refraction', 'Float', 0.0),
+        ('Fog Color', 'Color', (0.0, 0.0, 0.0, 1.0)),
+        ('Fog Near', 'Float', 0.0),
+        ('Fog Far', 'Float', 10000.0),
+    ], [('Shader', 'Shader', None)], 'SHADER')
+    camera = add_node(group, 'ShaderNodeCameraData', grid_location(0, 3))
+    clear = math_node(group, 'DIVIDE', math_node(group, 'SUBTRACT', inputs['Fog Far'], camera.outputs['View Distance'], location=grid_location(1, 3)),
+                      math_node(group, 'SUBTRACT', inputs['Fog Far'], inputs['Fog Near'], location=grid_location(1, 4)), location=grid_location(2, 3), clamp=True)
+
+    black = add_node(group, 'ShaderNodeEmission', grid_location(2, 0), label='No light')
+    black.inputs['Strength'].default_value = 0.0
+    lit = add_node(group, 'ShaderNodeMixShader', grid_location(3, 0), label='Distance fog')
+    connect(group, lit.inputs[0], clear)
+    connect(group, lit.inputs[1], black.outputs[0])
+    connect(group, lit.inputs[2], inputs['Shader'])
+
+    through = add_node(group, 'ShaderNodeBsdfTransparent', grid_location(3, 2), label='Refraction')
+    seen = math_node(group, 'MULTIPLY', inputs['Refraction'], clear, location=grid_location(3, 3))
+    connect(group, through.inputs['Color'], combine_color(group, seen, seen, seen, location=grid_location(3, 4)))
+    fog = add_node(group, 'ShaderNodeEmission', grid_location(3, 5), label='Fog colour')
+    connect(group, fog.inputs['Color'], inputs['Fog Color'])
+    connect(group, fog.inputs['Strength'], math_node(group, 'SUBTRACT', 1.0, clear, location=grid_location(2, 5)))
+
+    added = add_node(group, 'ShaderNodeAddShader', grid_location(4, 1))
+    connect(group, added.inputs[0], lit.outputs[0])
+    connect(group, added.inputs[1], through.outputs[0])
+    total = add_node(group, 'ShaderNodeAddShader', grid_location(5, 0))
+    connect(group, total.inputs[0], added.outputs[0])
+    connect(group, total.inputs[1], fog.outputs[0])
+    connect(group, outputs['Shader'], total.outputs[0])
     return group
 
 def layer_blend(type):
