@@ -57,6 +57,9 @@ class PropertyAnimation:
 			
 			parentBonePos = self.bone.parent.bone.head_local[offsetChannel] if self.bone.parent else 0
 			parentOffset = self.bone.bone.head_local[offsetChannel] - parentBonePos
+			# The game's z axis is Blender's -y, so the front/back rest offset changes sign.
+			if self.channelIndex == 2:
+				parentOffset = -parentOffset
 
 		animObj = self.bone or self.object
 		animProp = animObj.path_resolve(self.propertyName)
