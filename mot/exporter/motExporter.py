@@ -50,6 +50,9 @@ def getAllAnimationObjects(arm: bpy.types.Object) -> List[AnimationObject]:
 
 			parentBonePos = animObj.bone.parent.bone.head_local[offsetChannel] if animObj.bone.parent else 0
 			parentOffset = animObj.bone.bone.head_local[offsetChannel] - parentBonePos
+			# The game's z axis is Blender's -y, so the front/back rest offset changes sign.
+			if animObj.channel == 2:
+				parentOffset = -parentOffset
 			animObj.valueOffset = parentOffset
 		else:
 			animObj.valueOffset = 0
