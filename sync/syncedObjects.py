@@ -9,7 +9,7 @@ from uuid import uuid4
 import bmesh
 import bpy
 from mathutils import Euler, Vector
-from ..utils.util import throttle, newGeometryNodesModifier
+from ..utils.util import throttle, newGeometryNodesModifier, newNodeGroupInput, getNodeGroupInputs, setNodesModifierInput, getNodesModifierInput
 from ..lay.importer.lay_importer import updateVisualizationObject
 from .syncClient import SyncMessage, addOnMessageListener, addOnWsEndListener, disconnectFromWebsocket, sendMsgToServer, msgQueue
 from .shared import SyncObjectsType, SyncUpdateType, getDisableDepsgraphUpdates, setDisableDepsgraphUpdates
@@ -523,8 +523,8 @@ class SyncedAreaObject(SyncedXmlObject):
 				SubElement(root, "points").text = points
 			elif codeInt == self._typeCylinderAreaHash:
 				geometryNodeTree = obj.modifiers[0].node_group
-				radiusIdentifier = geometryNodeTree.inputs[1].identifier
-				radius = obj.modifiers[0][radiusIdentifier]
+				radiusIdentifier = getNodeGroupInputs(geometryNodeTree)[1].identifier
+				radius = getNodesModifierInput(obj.modifiers[0], radiusIdentifier)
 				SubElement(root, "radius").text = floatToStr(radius)
 
 			height = obj.modifiers["Solidify"].thickness
@@ -570,9 +570,9 @@ class SyncedAreaObject(SyncedXmlObject):
 		if codeInt == self._typeCylinderAreaHash:
 			radius = strToFloat(xmlRoot.find("radius").text)
 			nodeTree = obj.modifiers[0].node_group
-			radiusIdentifier = nodeTree.inputs[1].identifier
-			obj.modifiers[0][radiusIdentifier] = radius
-			nodeTree.inputs[1].default_value = radius
+			radiusIdentifier = getNodeGroupInputs(nodeTree)[1].identifier
+			setNodesModifierInput(obj.modifiers[0], radiusIdentifier, radius)
+			getNodeGroupInputs(nodeTree)[1].default_value = radius
 		elif codeInt == self._typeSphereAreaHash:
 			radius = strToFloat(xmlRoot.find("radius").text)
 			obj.scale = (radius, radius, radius)
@@ -636,18 +636,18 @@ class SyncedAreaObject(SyncedXmlObject):
 				sphereNode = nodeTree.nodes.new("GeometryNodeMeshUVSphere")
 				nodeTree.links.new(sphereNode.outputs["Mesh"], outputNode.inputs["Geometry"])
 
-			inputNode.outputs.new("VALUE", "Radius")
+			radiusInput = newNodeGroupInput(nodeTree, "Radius", "NodeSocketFloat")
 			if type == self._typeCylinderAreaHash:
 				nodeTree.links.new(inputNode.outputs["Radius"], circleNode.inputs["Radius"])
 			else:
 				nodeTree.links.new(inputNode.outputs["Radius"], sphereNode.inputs["Radius"])
 			
-			nodeTree.inputs[1].hide_value = False
-			radiusIdentifier = nodeTree.inputs[1].identifier
+			radiusInput.hide_value = False
+			radiusIdentifier = radiusInput.identifier
 			radius = strToFloat(self.xml.find("radius").text) if type == self._typeCylinderAreaHash else 1
-			geometryNodesMod[radiusIdentifier] = radius
-			nodeTree.inputs[1].default_value = radius 
-			nodeTree.inputs[1].hide_value = type == self._typeSphereAreaHash
+			setNodesModifierInput(geometryNodesMod, radiusIdentifier, radius)
+			radiusInput.default_value = radius 
+			radiusInput.hide_value = type == self._typeSphereAreaHash
 		if type == self._typeSphereAreaHash:
 			radius = strToFloat(self.xml.find("radius").text)
 			obj.scale = (radius, radius, radius)
@@ -797,15 +797,15 @@ class SyncedEMGeneratorNodeObject(SyncedXmlObject):
 		sphereNode = nodeTree.nodes.new("GeometryNodeMeshUVSphere")
 		nodeTree.links.new(sphereNode.outputs["Mesh"], outputNode.inputs["Geometry"])
 
-		inputNode.outputs.new("VALUE", "Radius")
+		radiusInput = newNodeGroupInput(nodeTree, "Radius", "NodeSocketFloat")
 		nodeTree.links.new(inputNode.outputs["Radius"], sphereNode.inputs["Radius"])
 		
-		nodeTree.inputs[1].hide_value = False
-		radiusIdentifier = nodeTree.inputs[1].identifier
+		radiusInput.hide_value = False
+		radiusIdentifier = radiusInput.identifier
 		radius = 1
-		geometryNodesMod[radiusIdentifier] = radius
-		nodeTree.inputs[1].default_value = radius 
-		nodeTree.inputs[1].hide_value = True
+		setNodesModifierInput(geometryNodesMod, radiusIdentifier, radius)
+		radiusInput.default_value = radius 
+		radiusInput.hide_value = True
 
 class SyncedEMGeneratorDistObject(SyncedXmlObject):
 	# syncable props: dist { position, areaDist?, resetDist?, searchDist?, guardSDist?, guardLDist?, escapeDist? }

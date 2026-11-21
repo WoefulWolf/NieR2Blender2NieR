@@ -19,7 +19,7 @@ from .shader_Wtr01_XXXXX import wtr01_xxxxx
 from .shader_Wtr02_XXXXX import wtr02_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings, clearTextureIndex, findPreferenceTexture
-from ...utils.nodes import invert_channel
+from ...utils.nodes import invert_channel, mix_socket
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -171,13 +171,16 @@ def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = F
 	objmesh.loops.foreach_get('vertex_index', loop_vertices)
 
 	if len(mesh_data[8]) != 0:
-		if objmesh.vertex_colors:
-			vcol_layer = objmesh.vertex_colors.active
+		# A byte face-corner color attribute is what the deprecated Mesh.vertex_colors.new() made; color_srgb
+		# holds the game's bytes / 255 unchanged, like the legacy layer's color did.
+		if objmesh.color_attributes.active_color:
+			vcol_layer = objmesh.color_attributes.active_color
 		else:
-			vcol_layer = objmesh.vertex_colors.new()
+			vcol_layer = objmesh.color_attributes.new("Col", 'BYTE_COLOR', 'CORNER')
+			objmesh.color_attributes.active_color = vcol_layer
 
 		loop_colors = np.asarray(mesh_data[8], np.float64)[loop_vertices] / 255
-		vcol_layer.data.foreach_set('color', loop_colors.astype(np.float32).ravel())
+		vcol_layer.data.foreach_set('color_srgb', loop_colors.astype(np.float32).ravel())
 
 	# UVs
 	for m, uv_data in enumerate(mesh_data[9]):
@@ -274,19 +277,24 @@ def construct_materials(texture_dir, material_array):
 	material = bpy.data.materials.new( '%s' % (material_name))
 	material['Shader_Name'] = shader_name
 	material['Technique_Name'] = technique_name
-	# Enable Nodes
-	material.use_nodes = True
+	# Enable Nodes (always on since Blender 5.0, where Material.use_nodes is deprecated)
+	if bpy.app.version < (5, 0):
+		material.use_nodes = True
 	# Clear Nodes and Links
 	material.node_tree.links.clear()
 	material.node_tree.nodes.clear()
 
-	material.blend_method = 'CLIP'
+	# EEVEE since 4.2 has no alpha clip mode: blend_method 'CLIP' (deprecated) only selected the dithered method
+	if hasattr(material, 'surface_render_method'):
+		material.surface_render_method = 'DITHERED'
+	else:
+		material.blend_method = 'CLIP'
 	material.use_backface_culling = True
 
 	# Custom Shader Parameters
 
-	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/" + getPreferences().shaderParamsFile, "r")
-	shaders = json.load(shaderFile)
+	with open(os.path.dirname(os.path.realpath(__file__)) + "/" + getPreferences().shaderParamsFile, "r") as shaderFile:
+		shaders = json.load(shaderFile)
 
 	# One list of names per parameter group.
 	names = shaders.get(shader_name, {}).get("Parameters", [])
@@ -391,7 +399,8 @@ def construct_materials(texture_dir, material_array):
 			albedo_image.label = texture_name
 
 			if i > 0:
-				mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+				mixRGB_shader = nodes.new(type='ShaderNodeMix')
+				mixRGB_shader.data_type = 'RGBA'
 				albedo_mixRGB_nodes.append(mixRGB_shader)
 				mixRGB_shader.location = 300,(i-1)*-60
 				mixRGB_shader.hide = True
@@ -401,13 +410,13 @@ def construct_materials(texture_dir, material_array):
 		alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
 	else:
 		if len(albedo_mixRGB_nodes) > 0:
-			albedo_link = links.new(albedo_nodes[0].outputs['Color'], albedo_mixRGB_nodes[0].inputs['Color2'])
+			albedo_link = links.new(albedo_nodes[0].outputs['Color'], mix_socket(albedo_mixRGB_nodes[0].inputs, 'B', 'Color'))
 			for i in range(len(albedo_mixRGB_nodes)):
-				albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color1'])
-				alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], albedo_mixRGB_nodes[i].inputs['Fac'])
+				albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], mix_socket(albedo_mixRGB_nodes[i].inputs, 'A', 'Color'))
+				alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], mix_socket(albedo_mixRGB_nodes[i].inputs, 'Factor', 'Float'))
 				if i > 0:
-					mixRGB_link = links.new(albedo_mixRGB_nodes[i-1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color2'])
-			mixRGB_link = links.new(albedo_mixRGB_nodes[-1].outputs['Color'], principled.inputs['Base Color'])
+					mixRGB_link = links.new(mix_socket(albedo_mixRGB_nodes[i-1].outputs, 'Result', 'Color'), mix_socket(albedo_mixRGB_nodes[i].inputs, 'B', 'Color'))
+			mixRGB_link = links.new(mix_socket(albedo_mixRGB_nodes[-1].outputs, 'Result', 'Color'), principled.inputs['Base Color'])
 
 	# Mask Nodes
 	# Mask Image Texture (R = Metallic, G = Glossines (Inverted Roughness), B = AO)
@@ -472,7 +481,8 @@ def construct_materials(texture_dir, material_array):
 			normal_nodes.append(invert_g_node)
 
 			if i > 0:
-				n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+				n_mixRGB_shader = nodes.new(type='ShaderNodeMix')
+				n_mixRGB_shader.data_type = 'RGBA'
 				normal_mixRGB_nodes.append(n_mixRGB_shader)
 				n_mixRGB_shader.location = 300, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-(i-1)*60
 				n_mixRGB_shader.hide = True
@@ -486,12 +496,12 @@ def construct_materials(texture_dir, material_array):
 		normal_link = links.new(normal_nodes[0].outputs['Color'], normalmap_shader.inputs['Color'])
 	else:
 		if len(normal_mixRGB_nodes) > 0:
-			normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
+			normal_link = links.new(normal_nodes[0].outputs['Color'], mix_socket(normal_mixRGB_nodes[0].inputs, 'B', 'Color'))
 			for i in range(len(normal_mixRGB_nodes)):
-				normal_link = links.new(normal_nodes[i+1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color1'])
+				normal_link = links.new(normal_nodes[i+1].outputs['Color'], mix_socket(normal_mixRGB_nodes[i].inputs, 'A', 'Color'))
 				if i > 0:
-					n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color2'])
-			mixRGB_link = links.new(normal_mixRGB_nodes[-1].outputs['Color'], normalmap_shader.inputs['Color'])
+					n_mixRGB_link = links.new(mix_socket(normal_mixRGB_nodes[i-1].outputs, 'Result', 'Color'), mix_socket(normal_mixRGB_nodes[i].inputs, 'B', 'Color'))
+			mixRGB_link = links.new(mix_socket(normal_mixRGB_nodes[-1].outputs, 'Result', 'Color'), normalmap_shader.inputs['Color'])
 
 	# Curvature Nodes
 	curvature_nodes = []
@@ -719,6 +729,11 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
+def closeWtp(wmb):
+	# WMB3 keeps the .wtp open for get_wmb_material's texture dump
+	if getattr(wmb, 'wtp_fp', None):
+		wmb.wtp_fp.close()
+
 def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb'), import_mesh_indices = False):
 	clearTextureIndex()
 	wmb = WMB3(wmb_file, only_extract)
@@ -727,6 +742,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	if only_extract:
 		texture_dir = wmb_file.replace(wmbname, 'textures')
 		wmb_materials = get_wmb_material(wmb, texture_dir)
+		closeWtp(wmb)
 		print('Extraction finished. ;)')
 		return {'FINISHED'}
 
@@ -744,6 +760,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	if not hasattr(wmb, 'wmb3_header'):
 		print('Error: Could not open .wmb file, is it missing?')
 		ShowMessageBox("Error: Could not open .wmb file, is it missing?", 'Could Not Open .wmb File', 'ERROR')
+		closeWtp(wmb)
 		return {'FINISHED'}
 	
 	armature = None
@@ -755,6 +772,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 		armature = construct_armature(armature_name, wmb.boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
 	meshes, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
+	closeWtp(wmb)
 	materials = []
 	bpy.context.scene.WTAMaterials.clear()
 	for materialIndex in range(len(wmb_materials)):

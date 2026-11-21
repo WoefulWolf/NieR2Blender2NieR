@@ -378,7 +378,11 @@ class UpdateCLPVisualizer(bpy.types.Operator):
         for obj in clpCollection.objects:
             bpy.data.objects.remove(obj)
 
-        gpencil_data = bpy.data.grease_pencils.new("CLP") if bpy.app.version < (4, 3) else bpy.data.grease_pencils_v3.new("CLP")
+        # Grease Pencil v3 lived in bpy.data.grease_pencils_v3 in 4.3-4.5; Blender 5.0 made it bpy.data.grease_pencils
+        if (4, 3) <= bpy.app.version < (5, 0):
+            gpencil_data = bpy.data.grease_pencils_v3.new("CLP")
+        else:
+            gpencil_data = bpy.data.grease_pencils.new("CLP")
         gpencil = bpy.data.objects.new("CLP", gpencil_data)
         # gpencil.rotation_euler = mathutils.Euler((math.radians(90), 0, 0), 'XYZ')
         clpCollection.objects.link(gpencil)

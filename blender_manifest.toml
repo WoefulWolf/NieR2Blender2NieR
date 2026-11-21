@@ -1,16 +1,34 @@
 schema_version = "1.0.0"
 
 id = "nier2blender2nier"
-version = "0.4.10"
+version = "0.5.1"
 name = "NieR2Blender2NieR (NieR:Automata Asset Tools)"
 tagline = "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files"
 maintainer = "Woeful_Wolf & RaiderB"
 type = "add-on"
 website = "https://github.com/WoefulWolf/NieR2Blender2NieR"
 tags = ["Import-Export"]
-permissions = ["files"]
 
 blender_version_min = "4.2.0"
 license = [
   "SPDX:GPL-3.0-or-later",
+]
+
+# websocket-client 1.9.2 (Apache-2.0), for Sync; Blender installs it with the extension
+wheels = [
+  "./wheels/websocket_client-1.9.2-py3-none-any.whl",
+]
+
+[permissions]
+files = "Import and export NieR:Automata files"
+network = "Sync talks to F-SERVO over a local websocket"
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "/.git/",
+  "/.gitignore",
+  "/.vscode/",
+  "/.idea/",
+  "/*.zip",
 ]

@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from typing import List
 from ..common.bxm import xmlToBxm
 from ...utils.xmlIntegrationUtils import objPosToXmlVec4, floatToStr, vecToXmlVec4, transferXmlPropsToXml
-from ...utils.util import getChildrenInOrder
+from ...utils.util import getChildrenInOrder, getNodeGroupInputs, getNodesModifierInput
 
 
 def getChildByStr(obj: bpy.types.Object, name: str) -> bpy.types.Object:
@@ -160,8 +160,8 @@ def handleLoftedVolume(shapeObj: bpy.types.Object, shapeElement: ET.Element) -> 
 		leftPos = point.data.vertices[0].co[:] + (allPosW[0],)
 		rightPos = point.data.vertices[1].co[:] + (allPosW[1],)
 		geometryNodeTree = point.modifiers[0].node_group
-		heightIdentifier = geometryNodeTree.inputs[1].identifier
-		height = point.modifiers[0][heightIdentifier]
+		heightIdentifier = getNodeGroupInputs(geometryNodeTree)[1].identifier
+		height = getNodesModifierInput(point.modifiers[0], heightIdentifier)
 
 		pointXml.attrib["RightPos"] = vecToXmlVec4(rightPos)
 		pointXml.attrib["LeftPos"] = vecToXmlVec4(leftPos)

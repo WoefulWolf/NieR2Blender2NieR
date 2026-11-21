@@ -455,6 +455,7 @@ class WMB3(object):
 			self.materialArray.append(material)
 
 		if only_extract:
+			wmb_fp.close()
 			return
 
 		self.vertexGroupArray: list[wmb3_vertexGroup] = []
@@ -507,6 +508,8 @@ class WMB3(object):
 			wmb_fp.seek(self.wmb3_header.unknownWorldDataArrayOffset)
 			for index in range(self.wmb3_header.unknownWorldDataArrayCount):
 				self.unknownWorldDataArray.append(wmb3_worldData(wmb_fp))
+
+		wmb_fp.close()
 				
 
 	def clear_unused_vertex(self, meshArrayIndex,vertexGroupIndex):

@@ -10,13 +10,13 @@ widely known so that others can start modding too. :)
 **We still have much more to share, but we are trying to get this out as fast as possible, expect much more documentation incoming. And things to become easier.**
 
 ## Installation Instructions:
-1. Install [Blender](https://www.blender.org/) (also available on Steam).
+1. Install [Blender](https://www.blender.org/) 4.2 or newer (also available on Steam).
 2. Download this repository as a ZIP (Green button labelled "Code" near the top-right, `Download ZIP`).
 3. Launch Blender.
 4. Go to `Edit > Preferences`.
-5. Go to the `Add-ons` section and press `Install...` near the top-right.
-6. Select the ZIP you downloaded in step 2 and press `Install Add-on`.
-7. Check the tickbox next to `Import-Export: Nier2Blender2NieR (NieR:Automata Data Exporter)`.
+5. Go to the `Get Extensions` section, open the drop-down (`v`) at the top-right and choose `Install from Disk...`.
+6. Select the ZIP you downloaded in step 2 and press `Install from Disk`.
+7. Make sure `NieR2Blender2NieR (NieR:Automata Asset Tools)` is enabled in the `Add-ons` section.
 
 ## Some Tips:
 #### For now, you should just understand these basic things:
@@ -42,6 +42,9 @@ widely known so that others can start modding too. :)
 * The One-Click Exporter is highly recommended to save you time!
 * WMB & WTP is packed in the DTT. Other files (like the WTA) is packed in the DAT.
  
+## Third-Party Software
+* Sync uses [websocket-client](https://github.com/websocket-client/websocket-client) (Apache License 2.0), bundled as `wheels/websocket_client-1.9.2-py3-none-any.whl`; its licence text is inside the wheel.
+
 ## Bug Reports and Contact
 * Please leave bug reports. You can leave them here on the GitHub under issues. Remember to post as much info as you can. <br>
 * Feel free to contact me for any questions or issues you might be having. You can contact me, and some other members of the NieR:Modding community at our Discord server: https://discord.gg/7F76ZVv

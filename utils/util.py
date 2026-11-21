@@ -32,6 +32,11 @@ class Vector3(object):
         return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 
 def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
+    # Without a window (blender -b, timers, handlers) there is nothing to show a popup in, and Blender 5.2
+    # crashes in popup_menu_end when asked to: print the message instead.
+    if bpy.app.background or bpy.context.window is None:
+        print(f"{title}: {message}")
+        return
     def draw(self, context):
         self.layout.label(text = message)
         self.layout.alignment = 'CENTER'
@@ -177,24 +182,24 @@ def calculateVertexFlags(obj):
             new_layer = obj.data.uv_layers.new(name="UVMap2")
 
     if len(obj.data.uv_layers) == 1:         # 0, 3
-        if obj.data.vertex_colors:
+        if obj.data.color_attributes:
             return 3
         else:
             return 0
     elif len(obj.data.uv_layers) == 2:       # 1, 4, 7, 10
         if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:        # > 7, 10
-            if obj.data.vertex_colors:       # >> 10
+            if obj.data.color_attributes:       # >> 10
                 return 10
             else:                                               # >> 7
                 return 7
         else:                                                   # > 1, 4
-            if obj.data.vertex_colors:       # >> 4
+            if obj.data.color_attributes:       # >> 4
                 return 4
             else:                                               # >> 1
                 return 1
     elif len(obj.data.uv_layers) == 3:       # 5, 8, 11
         if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:
-            if obj.data.vertex_colors:       # >> 11
+            if obj.data.color_attributes:       # >> 11
                 return 11
             else:                                               # >> 8
                 return 8
@@ -523,10 +528,11 @@ def setTiming(path: List[str], time: float, inner: Dict|None = None):
         setTiming(path[1:], time, inner[path[0]])
 
 def getVersionString():
-    from .. import __init__ as addon_main
-    version = addon_main.bl_info["version"]
-    version_string = ".".join(map(str, version))
-    return version_string
+    # An extension's version lives in its manifest (Blender ignores bl_info for extensions)
+    import tomllib
+    manifestPath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "blender_manifest.toml")
+    with open(manifestPath, "rb") as manifestFile:
+        return tomllib.load(manifestFile)["version"]
 
 def getFullVersionText():
     version_string = getVersionString()
@@ -711,14 +717,36 @@ def newGeometryNodesModifier(obj: bpy.types.Object) -> bpy.types.NodesModifier:
         nodeTree = bpy.data.node_groups.new("Geometry Nodes", "GeometryNodeTree")
         modifier.node_group = nodeTree
 
+        nodeTree.interface.new_socket("Geometry", in_out='INPUT', socket_type="NodeSocketGeometry")
+        nodeTree.interface.new_socket("Geometry", in_out='OUTPUT', socket_type="NodeSocketGeometry")
+
         inputNode = nodeTree.nodes.new("NodeGroupInput")
         inputNode.location = (-200, 0)
-        inputNode.outputs.new("NodeSocketGeometry", "Geometry")
 
         outputNode = nodeTree.nodes.new("NodeGroupOutput")
         outputNode.location = (200, 0)
-        outputNode.inputs.new("NodeSocketGeometry", "Geometry")
 
         nodeTree.links.new(inputNode.outputs["Geometry"], outputNode.inputs["Geometry"])
     return modifier
+
+# Since Blender 4.0 a node group's sockets live in NodeTree.interface: the group nodes can no longer add them
+# ("Cannot add socket to built-in node") and NodeTree.inputs is gone.
+def newNodeGroupInput(nodeTree: bpy.types.NodeTree, name: str, socketType: str):
+    return nodeTree.interface.new_socket(name, in_out='INPUT', socket_type=socketType)
+
+def getNodeGroupInputs(nodeTree: bpy.types.NodeTree) -> list:
+    return [item for item in nodeTree.interface.items_tree if item.item_type == 'SOCKET' and item.in_out == 'INPUT']
+
+# A Geometry Nodes modifier's input values: modifier[identifier] (ID properties) up to Blender 4.x; Blender 5.2
+# exposes them as modifier.properties.inputs.<identifier>.value and refuses the ID property access.
+def setNodesModifierInput(modifier: bpy.types.NodesModifier, identifier: str, value) -> None:
+    if hasattr(modifier, "properties"):
+        getattr(modifier.properties.inputs, identifier).value = value
+    else:
+        modifier[identifier] = value
+
+def getNodesModifierInput(modifier: bpy.types.NodesModifier, identifier: str):
+    if hasattr(modifier, "properties"):
+        return getattr(modifier.properties.inputs, identifier).value
+    return modifier[identifier]
 
