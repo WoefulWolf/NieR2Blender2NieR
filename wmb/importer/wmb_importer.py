@@ -290,8 +290,8 @@ def construct_materials(texture_dir, material_array):
 
 	# Custom Shader Parameters
 
-	shaderFile = open(os.path.dirname(os.path.realpath(__file__)) + "/" + getPreferences().shaderParamsFile, "r")
-	shaders = json.load(shaderFile)
+	with open(os.path.dirname(os.path.realpath(__file__)) + "/" + getPreferences().shaderParamsFile, "r") as shaderFile:
+		shaders = json.load(shaderFile)
 
 	# One list of names per parameter group.
 	names = shaders.get(shader_name, {}).get("Parameters", [])
@@ -724,6 +724,11 @@ def import_unknowWorldDataArray(wmb):
 		unknownWorldDataDict[unknownWorldDataName] = unknownWorldData.unknownWorldData
 	bpy.context.scene['unknownWorldData'] = unknownWorldDataDict
 
+def closeWtp(wmb):
+	# WMB3 keeps the .wtp open for get_wmb_material's texture dump
+	if getattr(wmb, 'wtp_fp', None):
+		wmb.wtp_fp.close()
+
 def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'test', 'pl0000.dtt', 'pl0000.wmb'), import_mesh_indices = False):
 	clearTextureIndex()
 	wmb = WMB3(wmb_file, only_extract)
@@ -732,6 +737,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	if only_extract:
 		texture_dir = wmb_file.replace(wmbname, 'textures')
 		wmb_materials = get_wmb_material(wmb, texture_dir)
+		closeWtp(wmb)
 		print('Extraction finished. ;)')
 		return {'FINISHED'}
 
@@ -749,6 +755,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 	if not hasattr(wmb, 'wmb3_header'):
 		print('Error: Could not open .wmb file, is it missing?')
 		ShowMessageBox("Error: Could not open .wmb file, is it missing?", 'Could Not Open .wmb File', 'ERROR')
+		closeWtp(wmb)
 		return {'FINISHED'}
 	
 	armature = None
@@ -760,6 +767,7 @@ def main(only_extract = False, wmb_file = os.path.join(os.path.split(os.path.rea
 		armature = construct_armature(armature_name, wmb.boneArray, wmb.firstLevel, wmb.secondLevel, wmb.thirdLevel, wmb.boneMap, wmb.boneSetArray, collection_name)
 	meshes, usedVerticeIndexArrays = format_wmb_mesh(wmb, collection_name, armature, import_mesh_indices)
 	wmb_materials = get_wmb_material(wmb, texture_dir)
+	closeWtp(wmb)
 	materials = []
 	bpy.context.scene.WTAMaterials.clear()
 	for materialIndex in range(len(wmb_materials)):
