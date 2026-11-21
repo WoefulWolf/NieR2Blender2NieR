@@ -5,7 +5,7 @@ from ..common.bxm import *
 from ...utils.xmlIntegrationUtils import xmlVecToVec3, makeSphereObj, strToFloat, setObjPosFromXmlPos, makeCurve, \
 	xmlVecToVec4, makeMeshObj, makeCube, makeCircle, setXmlAttributesOnObj, tryAddEmpty, randomRgb, tryAddCollection, \
 	setCurrentCollection
-from ...utils.util import newGeometryNodesModifier, setViewportColorTypeToObject
+from ...utils.util import newGeometryNodesModifier, newNodeGroupInput, getNodeGroupInputs, setNodesModifierInput, setViewportColorTypeToObject
 from ..common.approxMapOffsets import approxMapOffsets
 
 class HandleShapeParams:
@@ -286,7 +286,7 @@ def handleLoftedVolume(params: HandleShapeParams) -> None:
 		combineXyzNode = nodeTree.nodes.new("ShaderNodeCombineXYZ")
 
 		extrudeNode.mode = "EDGES"
-		inputNode.outputs.new("VALUE", "Height")
+		newNodeGroupInput(nodeTree, "Height", "NodeSocketFloat")
 		combineXyzNode.location = (-170, -140)
 
 		nodeTree.links.new(inputNode.outputs["Geometry"], extrudeNode.inputs["Mesh"])
@@ -294,8 +294,8 @@ def handleLoftedVolume(params: HandleShapeParams) -> None:
 		nodeTree.links.new(inputNode.outputs["Height"], combineXyzNode.inputs["Z"])
 		nodeTree.links.new(combineXyzNode.outputs["Vector"], extrudeNode.inputs["Offset"])
 
-		heightIdentifier = nodeTree.inputs[1].identifier
-		geometryNodesMod[heightIdentifier] = strToFloat(point.attrib["Height"])
+		heightIdentifier = getNodeGroupInputs(nodeTree)[1].identifier
+		setNodesModifierInput(geometryNodesMod, heightIdentifier, strToFloat(point.attrib["Height"]))
 
 encounteredShapes = set()
 def handleShape(params: HandleShapeParams) -> None:

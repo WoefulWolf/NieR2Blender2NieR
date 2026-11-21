@@ -717,14 +717,36 @@ def newGeometryNodesModifier(obj: bpy.types.Object) -> bpy.types.NodesModifier:
         nodeTree = bpy.data.node_groups.new("Geometry Nodes", "GeometryNodeTree")
         modifier.node_group = nodeTree
 
+        nodeTree.interface.new_socket("Geometry", in_out='INPUT', socket_type="NodeSocketGeometry")
+        nodeTree.interface.new_socket("Geometry", in_out='OUTPUT', socket_type="NodeSocketGeometry")
+
         inputNode = nodeTree.nodes.new("NodeGroupInput")
         inputNode.location = (-200, 0)
-        inputNode.outputs.new("NodeSocketGeometry", "Geometry")
 
         outputNode = nodeTree.nodes.new("NodeGroupOutput")
         outputNode.location = (200, 0)
-        outputNode.inputs.new("NodeSocketGeometry", "Geometry")
 
         nodeTree.links.new(inputNode.outputs["Geometry"], outputNode.inputs["Geometry"])
     return modifier
+
+# Since Blender 4.0 a node group's sockets live in NodeTree.interface: the group nodes can no longer add them
+# ("Cannot add socket to built-in node") and NodeTree.inputs is gone.
+def newNodeGroupInput(nodeTree: bpy.types.NodeTree, name: str, socketType: str):
+    return nodeTree.interface.new_socket(name, in_out='INPUT', socket_type=socketType)
+
+def getNodeGroupInputs(nodeTree: bpy.types.NodeTree) -> list:
+    return [item for item in nodeTree.interface.items_tree if item.item_type == 'SOCKET' and item.in_out == 'INPUT']
+
+# A Geometry Nodes modifier's input values: modifier[identifier] (ID properties) up to Blender 4.x; Blender 5.2
+# exposes them as modifier.properties.inputs.<identifier>.value and refuses the ID property access.
+def setNodesModifierInput(modifier: bpy.types.NodesModifier, identifier: str, value) -> None:
+    if hasattr(modifier, "properties"):
+        getattr(modifier.properties.inputs, identifier).value = value
+    else:
+        modifier[identifier] = value
+
+def getNodesModifierInput(modifier: bpy.types.NodesModifier, identifier: str):
+    if hasattr(modifier, "properties"):
+        return getattr(modifier.properties.inputs, identifier).value
+    return modifier[identifier]
 
