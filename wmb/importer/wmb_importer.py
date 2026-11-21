@@ -274,13 +274,18 @@ def construct_materials(texture_dir, material_array):
 	material = bpy.data.materials.new( '%s' % (material_name))
 	material['Shader_Name'] = shader_name
 	material['Technique_Name'] = technique_name
-	# Enable Nodes
-	material.use_nodes = True
+	# Enable Nodes (always on since Blender 5.0, where Material.use_nodes is deprecated)
+	if bpy.app.version < (5, 0):
+		material.use_nodes = True
 	# Clear Nodes and Links
 	material.node_tree.links.clear()
 	material.node_tree.nodes.clear()
 
-	material.blend_method = 'CLIP'
+	# EEVEE since 4.2 has no alpha clip mode: blend_method 'CLIP' (deprecated) only selected the dithered method
+	if hasattr(material, 'surface_render_method'):
+		material.surface_render_method = 'DITHERED'
+	else:
+		material.blend_method = 'CLIP'
 	material.use_backface_culling = True
 
 	# Custom Shader Parameters

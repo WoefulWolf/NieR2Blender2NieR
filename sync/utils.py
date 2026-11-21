@@ -72,8 +72,12 @@ def getTransparentMat() -> bpy.types.Material:
 	if transparentMatName in bpy.data.materials:
 		return bpy.data.materials[transparentMatName]
 	mat = bpy.data.materials.new(transparentMatName)
-	mat.use_nodes = True
-	mat.blend_method = "BLEND"
+	if bpy.app.version < (5, 0):
+		mat.use_nodes = True
+	if hasattr(mat, "surface_render_method"):
+		mat.surface_render_method = "BLENDED"
+	else:
+		mat.blend_method = "BLEND"
 	mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = transparentMatColor
 	return mat
 
