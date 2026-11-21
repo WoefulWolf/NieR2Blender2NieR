@@ -42,6 +42,9 @@ widely known so that others can start modding too. :)
 * The One-Click Exporter is highly recommended to save you time!
 * WMB & WTP is packed in the DTT. Other files (like the WTA) is packed in the DAT.
  
+## Third-Party Software
+* Sync uses [websocket-client](https://github.com/websocket-client/websocket-client) (Apache License 2.0), bundled as `wheels/websocket_client-1.9.2-py3-none-any.whl`; its licence text is inside the wheel.
+
 ## Bug Reports and Contact
 * Please leave bug reports. You can leave them here on the GitHub under issues. Remember to post as much info as you can. <br>
 * Feel free to contact me for any questions or issues you might be having. You can contact me, and some other members of the NieR:Modding community at our Discord server: https://discord.gg/7F76ZVv

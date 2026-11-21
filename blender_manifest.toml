@@ -14,9 +14,14 @@ license = [
   "SPDX:GPL-3.0-or-later",
 ]
 
+# websocket-client 1.9.2 (Apache-2.0), for Sync; Blender installs it with the extension
+wheels = [
+  "./wheels/websocket_client-1.9.2-py3-none-any.whl",
+]
+
 [permissions]
 files = "Import and export NieR:Automata files"
-network = "Sync installs websocket-client with pip"
+network = "Sync talks to F-SERVO over a local websocket"
 
 [build]
 paths_exclude_pattern = [
