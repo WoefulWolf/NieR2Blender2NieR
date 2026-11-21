@@ -54,17 +54,37 @@ def getArmatureObject() -> bpy.types.Object:
 		return allArmatures[0]
 	return armaturesInWmbColl[0]
 
+def getActionFCurves(obj: bpy.types.Object):
+	"""The F-curves the object's assigned action holds for the object, or None.
+
+	Since Blender 4.4 an action keeps its F-curves per slot, in the channelbag of the slot the object is assigned,
+	and Blender 5.0 removed the old Action.fcurves list; before 4.4 the F-curves are on the action itself."""
+	animData = obj.animation_data
+	if animData is None or animData.action is None:
+		return None
+	if bpy.app.version < (4, 4):
+		return animData.action.fcurves
+	from bpy_extras.anim_utils import action_get_channelbag_for_slot
+	channelbag = action_get_channelbag_for_slot(animData.action, animData.action_slot)
+	return channelbag.fcurves if channelbag is not None else None
+
+def getAllActionFCurves(action: bpy.types.Action) -> list:
+	"""Every F-curve list of an action: one per channelbag (one per slot) since Blender 4.4, the action's own before."""
+	if bpy.app.version < (4, 4):
+		return [action.fcurves]
+	return [channelbag.fcurves for layer in action.layers for strip in layer.strips for channelbag in strip.channelbags]
+
 def getBoneFCurve(armatureObj: bpy.types.Object, bone: bpy.types.PoseBone, property: str, index: int) -> bpy.types.FCurve:
-	for fCurve in armatureObj.animation_data.action.fcurves:
-		if fCurve.data_path == f"pose.bones[\"{bone.name}\"].{property}" and fCurve.array_index == index:
-			return fCurve
-	return None
+	fCurves = getActionFCurves(armatureObj)
+	if fCurves is None:
+		return None
+	return fCurves.find(f"pose.bones[\"{bone.name}\"].{property}", index=index)
 
 def getObjFCurve(obj: bpy.types.Object, property: str, index: int) -> bpy.types.FCurve:
-	for fCurve in obj.animation_data.action.fcurves:
-		if fCurve.data_path == property and fCurve.array_index == index:
-			return fCurve
-	return None
+	fCurves = getActionFCurves(obj)
+	if fCurves is None:
+		return None
+	return fCurves.find(property, index=index)
 
 def interpolateLinearVal(p0: KeyFrame, p1: KeyFrame, frame: int) -> float:
 	return \

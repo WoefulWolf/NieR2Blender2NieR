@@ -4,7 +4,7 @@ import re
 from typing import List, Dict
 
 from ...utils.util import getBoneID
-from .motUtils import getArmatureObject
+from .motUtils import getArmatureObject, getAllActionFCurves
 
 # there are some bones that should not be animated when animating pl000f
 
@@ -53,18 +53,20 @@ def removeInvalidAnimations(armature: bpy.types.Object, boneIds: List[int], oper
 	action: bpy.types.Action
 	for action in bpy.data.actions:
 		fCurve: bpy.types.FCurve
-		for fCurve in action.fcurves:
-			if not "pose.bones[" in fCurve.data_path:
-				continue
-			boneName = re.search(r"pose\.bones\[\"bone(\d+)\"\]", fCurve.data_path)
-			if boneName is None:
-				continue
-			boneIndex = int(boneName.group(1))
-			boneId = boneIndexToId[boneIndex]
-			if boneId not in boneIds:
-				continue
-			action.fcurves.remove(fCurve)
-			removedAnimations += 1
+		for fCurves in getAllActionFCurves(action):
+			# iterate over a copy: removing from the list being walked would skip the curve after each removal
+			for fCurve in list(fCurves):
+				if not "pose.bones[" in fCurve.data_path:
+					continue
+				boneName = re.search(r"pose\.bones\[\"bone(\d+)\"\]", fCurve.data_path)
+				if boneName is None:
+					continue
+				boneIndex = int(boneName.group(1))
+				boneId = boneIndexToId[boneIndex]
+				if boneId not in boneIds:
+					continue
+				fCurves.remove(fCurve)
+				removedAnimations += 1
 	print(f"Removed {removedAnimations} f curves")
 	if operator is not None:
 		operator.report({"INFO"}, f"Removed {removedAnimations} f curves")

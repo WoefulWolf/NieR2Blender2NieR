@@ -5,7 +5,7 @@ import os
 from typing import List
 
 from ...utils.util import getBoneID
-from ..common.motUtils import KeyFrame, Spline, getArmatureObject
+from ..common.motUtils import KeyFrame, Spline, getArmatureObject, getActionFCurves
 from ..common.mot import MotFile, MotHeader, MotRecord, MotInterpolValues, MotInterpolSplines
 
 class AnimationObject:
@@ -18,7 +18,7 @@ class AnimationObject:
 	valueOffset: float
 
 def getAllAnimationObjects(arm: bpy.types.Object) -> List[AnimationObject]:
-	curves = arm.animation_data.action.fcurves
+	curves = getActionFCurves(arm) or []
 	animObjs: List[AnimationObject] = []
 	for curve in curves:
 		animObj = AnimationObject()
