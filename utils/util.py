@@ -32,6 +32,11 @@ class Vector3(object):
         return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 
 def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
+    # Without a window (blender -b, timers, handlers) there is nothing to show a popup in, and Blender 5.2
+    # crashes in popup_menu_end when asked to: print the message instead.
+    if bpy.app.background or bpy.context.window is None:
+        print(f"{title}: {message}")
+        return
     def draw(self, context):
         self.layout.label(text = message)
         self.layout.alignment = 'CENTER'
