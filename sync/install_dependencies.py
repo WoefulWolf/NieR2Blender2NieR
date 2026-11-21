@@ -24,7 +24,6 @@ from collections import namedtuple
 
 from .shared import dependencies_installed, setDropDownOperatorAndIcon, removeDropDownOperatorAndIcon
 from ..utils.util import drawMultilineLabel
-from ..__init__ import bl_info
 
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
 

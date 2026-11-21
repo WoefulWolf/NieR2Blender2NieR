@@ -528,10 +528,11 @@ def setTiming(path: List[str], time: float, inner: Dict|None = None):
         setTiming(path[1:], time, inner[path[0]])
 
 def getVersionString():
-    from .. import __init__ as addon_main
-    version = addon_main.bl_info["version"]
-    version_string = ".".join(map(str, version))
-    return version_string
+    # An extension's version lives in its manifest (Blender ignores bl_info for extensions)
+    import tomllib
+    manifestPath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "blender_manifest.toml")
+    with open(manifestPath, "rb") as manifestFile:
+        return tomllib.load(manifestFile)["version"]
 
 def getFullVersionText():
     version_string = getVersionString()
