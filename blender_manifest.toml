@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "nier2blender2nier"
-version = "0.5.0"
+version = "0.5.1"
 name = "NieR2Blender2NieR (NieR:Automata Asset Tools)"
 tagline = "Import/Export NieR:Automata WMB/WTP/WTA/DTT/DAT/COL/LAY files"
 maintainer = "Woeful_Wolf & RaiderB"
