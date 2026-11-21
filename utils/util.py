@@ -182,24 +182,24 @@ def calculateVertexFlags(obj):
             new_layer = obj.data.uv_layers.new(name="UVMap2")
 
     if len(obj.data.uv_layers) == 1:         # 0, 3
-        if obj.data.vertex_colors:
+        if obj.data.color_attributes:
             return 3
         else:
             return 0
     elif len(obj.data.uv_layers) == 2:       # 1, 4, 7, 10
         if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:        # > 7, 10
-            if obj.data.vertex_colors:       # >> 10
+            if obj.data.color_attributes:       # >> 10
                 return 10
             else:                                               # >> 7
                 return 7
         else:                                                   # > 1, 4
-            if obj.data.vertex_colors:       # >> 4
+            if obj.data.color_attributes:       # >> 4
                 return 4
             else:                                               # >> 1
                 return 1
     elif len(obj.data.uv_layers) == 3:       # 5, 8, 11
         if 'boneSetIndex' in obj and obj['boneSetIndex'] != -1:
-            if obj.data.vertex_colors:       # >> 11
+            if obj.data.color_attributes:       # >> 11
                 return 11
             else:                                               # >> 8
                 return 8

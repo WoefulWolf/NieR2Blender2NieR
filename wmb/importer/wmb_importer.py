@@ -171,13 +171,16 @@ def construct_mesh(mesh_data, collection_name, armature, import_mesh_indices = F
 	objmesh.loops.foreach_get('vertex_index', loop_vertices)
 
 	if len(mesh_data[8]) != 0:
-		if objmesh.vertex_colors:
-			vcol_layer = objmesh.vertex_colors.active
+		# A byte face-corner color attribute is what the deprecated Mesh.vertex_colors.new() made; color_srgb
+		# holds the game's bytes / 255 unchanged, like the legacy layer's color did.
+		if objmesh.color_attributes.active_color:
+			vcol_layer = objmesh.color_attributes.active_color
 		else:
-			vcol_layer = objmesh.vertex_colors.new()
+			vcol_layer = objmesh.color_attributes.new("Col", 'BYTE_COLOR', 'CORNER')
+			objmesh.color_attributes.active_color = vcol_layer
 
 		loop_colors = np.asarray(mesh_data[8], np.float64)[loop_vertices] / 255
-		vcol_layer.data.foreach_set('color', loop_colors.astype(np.float32).ravel())
+		vcol_layer.data.foreach_set('color_srgb', loop_colors.astype(np.float32).ravel())
 
 	# UVs
 	for m, uv_data in enumerate(mesh_data[9]):

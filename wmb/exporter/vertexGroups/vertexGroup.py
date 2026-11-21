@@ -206,9 +206,9 @@ class c_vertexGroup(object):
                 if uvSlot > len(mesh.uv_layers)-1:
                     print(" - UV Maps Error: Not enough UV Map layers! (Tried accessing UV layer number", uvSlot + 1, "of object", obj.name, "but it does not exist. Adding one!")
                     mesh.uv_layers.new()
-            if 'color' in sources and len(mesh.vertex_colors) == 0:
+            if 'color' in sources and len(mesh.color_attributes) == 0:
                 print("Object had no vertex colour layer when one was expected - creating one.")
-                mesh.vertex_colors.active = mesh.vertex_colors.new()
+                mesh.color_attributes.active_color = mesh.color_attributes.new("Col", 'BYTE_COLOR', 'CORNER')
 
             columns = {}
             positions = getValues(mesh.vertices, 'co', len(mesh.vertices), 3)[used]
@@ -232,9 +232,13 @@ class c_vertexGroup(object):
                 columns[uvSlot] = toHalfFloats(np.stack((uvs[:, 0], 1 - uvs[:, 1]), axis=1))
 
             if 'color' in sources:
-                colorLayer = mesh.vertex_colors.active or mesh.vertex_colors[0]
-                colors = getValues(colorLayer.data, 'color', loopCount, 4)[firstLoops].astype(np.float64)
-                columns['color'] = toBytes(colors * 255)
+                # color_srgb is the byte value / 255 for byte and float color attributes alike
+                colorLayer = mesh.color_attributes.active_color or mesh.color_attributes[0]
+                if colorLayer.domain == 'POINT':
+                    colors = getValues(colorLayer.data, 'color_srgb', len(mesh.vertices), 4)[used].astype(np.float64)
+                else:
+                    colors = getValues(colorLayer.data, 'color_srgb', loopCount, 4)[firstLoops].astype(np.float64)
+                columns['color'] = toBytes(np.clip(colors, 0.0, 1.0) * 255)
 
             if boneLookups is not None:
                 bones = np.zeros((count, 4), np.int64)
