@@ -19,7 +19,7 @@ from .shader_Wtr01_XXXXX import wtr01_xxxxx
 from .shader_Wtr02_XXXXX import wtr02_xxxxx
 
 from ...utils.util import ShowMessageBox, getPreferences, getTexture, printTimings, clearTextureIndex, findPreferenceTexture
-from ...utils.nodes import invert_channel
+from ...utils.nodes import invert_channel, mix_socket
 from .wmb import *
 from ...wta_wtp.exporter.wta_wtp_ui_manager import isTextureTypeSupported, makeWtaMaterial
 
@@ -399,7 +399,8 @@ def construct_materials(texture_dir, material_array):
 			albedo_image.label = texture_name
 
 			if i > 0:
-				mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+				mixRGB_shader = nodes.new(type='ShaderNodeMix')
+				mixRGB_shader.data_type = 'RGBA'
 				albedo_mixRGB_nodes.append(mixRGB_shader)
 				mixRGB_shader.location = 300,(i-1)*-60
 				mixRGB_shader.hide = True
@@ -409,13 +410,13 @@ def construct_materials(texture_dir, material_array):
 		alpha_link = links.new(albedo_nodes[0].outputs['Alpha'], principled.inputs['Alpha'])
 	else:
 		if len(albedo_mixRGB_nodes) > 0:
-			albedo_link = links.new(albedo_nodes[0].outputs['Color'], albedo_mixRGB_nodes[0].inputs['Color2'])
+			albedo_link = links.new(albedo_nodes[0].outputs['Color'], mix_socket(albedo_mixRGB_nodes[0].inputs, 'B', 'Color'))
 			for i in range(len(albedo_mixRGB_nodes)):
-				albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color1'])
-				alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], albedo_mixRGB_nodes[i].inputs['Fac'])
+				albedo_link = links.new(albedo_nodes[i+1].outputs['Color'], mix_socket(albedo_mixRGB_nodes[i].inputs, 'A', 'Color'))
+				alpha_link = links.new(albedo_nodes[i].outputs['Alpha'], mix_socket(albedo_mixRGB_nodes[i].inputs, 'Factor', 'Float'))
 				if i > 0:
-					mixRGB_link = links.new(albedo_mixRGB_nodes[i-1].outputs['Color'], albedo_mixRGB_nodes[i].inputs['Color2'])
-			mixRGB_link = links.new(albedo_mixRGB_nodes[-1].outputs['Color'], principled.inputs['Base Color'])
+					mixRGB_link = links.new(mix_socket(albedo_mixRGB_nodes[i-1].outputs, 'Result', 'Color'), mix_socket(albedo_mixRGB_nodes[i].inputs, 'B', 'Color'))
+			mixRGB_link = links.new(mix_socket(albedo_mixRGB_nodes[-1].outputs, 'Result', 'Color'), principled.inputs['Base Color'])
 
 	# Mask Nodes
 	# Mask Image Texture (R = Metallic, G = Glossines (Inverted Roughness), B = AO)
@@ -480,7 +481,8 @@ def construct_materials(texture_dir, material_array):
 			normal_nodes.append(invert_g_node)
 
 			if i > 0:
-				n_mixRGB_shader = nodes.new(type='ShaderNodeMixRGB')
+				n_mixRGB_shader = nodes.new(type='ShaderNodeMix')
+				n_mixRGB_shader.data_type = 'RGBA'
 				normal_mixRGB_nodes.append(n_mixRGB_shader)
 				n_mixRGB_shader.location = 300, ((len(albedo_maps)+1)*-60) + ((len(mask_maps)+1)*-60)-(i-1)*60
 				n_mixRGB_shader.hide = True
@@ -494,12 +496,12 @@ def construct_materials(texture_dir, material_array):
 		normal_link = links.new(normal_nodes[0].outputs['Color'], normalmap_shader.inputs['Color'])
 	else:
 		if len(normal_mixRGB_nodes) > 0:
-			normal_link = links.new(normal_nodes[0].outputs['Color'], normal_mixRGB_nodes[0].inputs['Color2'])
+			normal_link = links.new(normal_nodes[0].outputs['Color'], mix_socket(normal_mixRGB_nodes[0].inputs, 'B', 'Color'))
 			for i in range(len(normal_mixRGB_nodes)):
-				normal_link = links.new(normal_nodes[i+1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color1'])
+				normal_link = links.new(normal_nodes[i+1].outputs['Color'], mix_socket(normal_mixRGB_nodes[i].inputs, 'A', 'Color'))
 				if i > 0:
-					n_mixRGB_link = links.new(normal_mixRGB_nodes[i-1].outputs['Color'], normal_mixRGB_nodes[i].inputs['Color2'])
-			mixRGB_link = links.new(normal_mixRGB_nodes[-1].outputs['Color'], normalmap_shader.inputs['Color'])
+					n_mixRGB_link = links.new(mix_socket(normal_mixRGB_nodes[i-1].outputs, 'Result', 'Color'), mix_socket(normal_mixRGB_nodes[i].inputs, 'B', 'Color'))
+			mixRGB_link = links.new(mix_socket(normal_mixRGB_nodes[-1].outputs, 'Result', 'Color'), normalmap_shader.inputs['Color'])
 
 	# Curvature Nodes
 	curvature_nodes = []
