@@ -31,7 +31,7 @@ class RecalculateObjectIndices(bpy.types.Operator):
 
         for obj in bpy.data.collections[collectionName].all_objects:
             if obj.type == "MESH":
-                regex = re.search(".*(?=\.)", obj.name)
+                regex = re.search(r".*(?=\.)", obj.name)
                 if regex != None:
                     obj.name = regex.group()
 
@@ -60,7 +60,7 @@ class RemoveUnusedVertexGroups(bpy.types.Operator):
                 if g.weight > 0.0:
                     vgroup_used[g.group] = True
                     vgroup_name = vgroup_names[g.group]
-                    armatch = re.search('((.R|.L)(.(\d)+)?)(?!.)', vgroup_name)
+                    armatch = re.search(r'((.R|.L)(.(\d)+)?)(?!.)', vgroup_name)
                     if armatch != None:
                         tag = armatch.group()
                         mirror_tag =  tag.replace(".R", ".L") if armatch.group(2) == ".R" else tag.replace(".L", ".R")
